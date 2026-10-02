@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#161922" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cassola库存" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Cassola Inventory</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true">📦</div>
+      <div>
+        <div class="eyebrow">PIETRO 石器时代 ERP</div>
+        <h1>Cassola Inventory</h1>
+      </div>
+    </div>
+    <div id="offlineBadge" class="badge">离线可用</div>
+  </header>
+
+  <main>
+    <section id="view-stock" class="view active">
+      <div class="toolbar sticky-panel">
+        <input id="searchInput" class="search" type="search" placeholder="搜索 SKU…" autocomplete="off" />
+        <select id="categoryFilter" aria-label="分类筛选"></select>
+      </div>
+      <div id="stockSummary" class="summary-grid"></div>
+      <div id="stockList" class="card-list"></div>
+    </section>
+
+    <section id="view-count" class="view">
+      <div class="section-head">
+        <div>
+          <h2>快速盘货</h2>
+          <p>填“现场实际数量”，一次保存整轮盘点。</p>
+        </div>
+        <button id="fillCurrentBtn" class="btn secondary">带入当前库存</button>
+      </div>
+      <div id="countList" class="count-list"></div>
+      <div class="bottom-action-spacer"></div>
+      <div class="floating-action">
+        <button id="saveCountBtn" class="btn primary large">保存本轮盘货</button>
+      </div>
+    </section>
+
+    <section id="view-order" class="view">
+      <div class="section-head">
+        <div>
+          <h2>订货草稿</h2>
+          <p>草稿不会自动计入库存，实际到货后再登记。</p>
+        </div>
+        <button id="copyOrderBtn" class="btn secondary">复制订单</button>
+      </div>
+      <div class="supplier-tabs" id="supplierTabs"></div>
+      <div id="orderList" class="card-list"></div>
+      <div class="order-actions">
+        <button id="clearOrderBtn" class="btn danger ghost">清空草稿</button>
+      </div>
+    </section>
+
+    <section id="view-history" class="view">
+      <div class="section-head">
+        <div>
+          <h2>历史记录</h2>
+          <p>盘货、到货、报损、内部转换都留痕。</p>
+        </div>
+        <select id="historyFilter" aria-label="历史筛选">
+          <option value="all">全部</option>
+          <option value="count">盘货</option>
+          <option value="arrival">到货</option>
+          <option value="loss">报损</option>
+          <option value="transfer">内部转换</option>
+          <option value="adjust">调整</option>
+        </select>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+
+    <section id="view-settings" class="view">
+      <div class="settings-card">
+        <h2>数据</h2>
+        <p>数据默认只保存在这台 iPhone 上。建议偶尔导出一份 JSON 备份。</p>
+        <div class="settings-actions">
+          <button id="exportBtn" class="btn primary">导出完整备份</button>
+          <label class="btn secondary file-btn">导入备份<input id="importInput" type="file" accept="application/json,.json" /></label>
+        </div>
+      </div>
+      <div class="settings-card">
+        <h2>本地存储</h2>
+        <p id="storageStatus">正在检查…</p>
+        <button id="persistBtn" class="btn secondary">请求持久化存储</button>
+      </div>
+      <div class="settings-card">
+        <h2>SKU</h2>
+        <p><span id="skuCount">0</span> 个 SKU。v0.1 内置 Cassola 当前常用清单。</p>
+        <button id="resetDemoBtn" class="btn danger ghost">恢复初始 SKU（保留历史需谨慎）</button>
+      </div>
+      <div class="settings-card small-print">
+        <strong>v0.2 · Soft UI</strong>
+        <p>Offline-first / Single-user / Local-only</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="主导航">
+    <button data-view="stock" class="nav-btn active"><span>📦</span><small>库存</small></button>
+    <button data-view="count" class="nav-btn"><span>🧾</span><small>盘货</small></button>
+    <button data-view="order" class="nav-btn"><span>🛒</span><small>订货</small></button>
+    <button data-view="history" class="nav-btn"><span>🕘</span><small>历史</small></button>
+    <button data-view="settings" class="nav-btn"><span>⚙️</span><small>设置</small></button>
+  </nav>
+
+  <dialog id="actionDialog">
+    <form method="dialog" id="actionForm">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow" id="dialogCategory">SKU</div>
+          <h3 id="dialogTitle">操作</h3>
+        </div>
+        <button value="cancel" class="icon-btn" aria-label="关闭">✕</button>
+      </div>
+      <input type="hidden" id="dialogSkuId" />
+      <label>操作
+        <select id="actionType">
+          <option value="arrival">到货（增加）</option>
+          <option value="loss">报损（减少）</option>
+          <option value="adjust">手动调整</option>
+          <option value="transfer">内部转换</option>
+        </select>
+      </label>
+      <label id="qtyWrap">数量
+        <div class="input-unit"><input id="actionQty" type="number" step="0.1" inputmode="decimal" /><span id="actionUnit"></span></div>
+      </label>
+      <label id="targetWrap" class="hidden">转入 SKU
+        <select id="transferTarget"></select>
+      </label>
+      <label>备注（可选）
+        <input id="actionNote" type="text" placeholder="例如：草莓发霉 / 周三到货" />
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn secondary">取消</button>
+        <button id="confirmActionBtn" value="default" class="btn primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
