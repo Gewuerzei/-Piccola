@@ -514,6 +514,7 @@
   function attendanceGet(personId,date){
     return state.attendance?.[date]?.[personId]||null;
   }
+  function isRestLike(rec){return rec?.status==='rest'||rec?.status==='swap'}
   function setAttendanceRange(personId,start,end,status,note='',portion='full'){
     const p=personById(personId);if(!p)return;
     let a=dateObj(start),b=dateObj(end||start);if(b<a)b=new Date(a);
@@ -545,7 +546,9 @@
     document.querySelectorAll('[data-att-status]').forEach(b=>b.classList.toggle('active',b.dataset.attStatus===status));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.classList.toggle('active',b.dataset.attPortion===portion));
     document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',status==='work');
-    document.getElementById('staffSwapRestBtn').classList.toggle('hidden',status!=='rest');
+    const canMove=isRestLike(rec);
+    document.getElementById('staffSwapRestBtn').classList.toggle('hidden',!canMove);
+    document.getElementById('staffMoveRestBtn').classList.toggle('hidden',!canMove);
     document.getElementById('staffAttendanceDialog').showModal();
   }
   function cloneJson(v){return JSON.parse(JSON.stringify(v))}
@@ -621,7 +624,7 @@
     document.getElementById('staffWeekVersionsDialog').showModal();
   }
   function restDatesFor(personId,iso=currentDate){
-    return weekDates(iso).filter(date=>attendanceGet(personId,date)?.status==='rest');
+    return weekDates(iso).filter(date=>isRestLike(attendanceGet(personId,date)));
   }
   function refreshSwapDialog(){
     const partnerSel=document.getElementById('staffSwapPartner'),dateSel=document.getElementById('staffSwapTargetDate'),initSel=document.getElementById('staffSwapInitiator');
@@ -635,7 +638,7 @@
   }
   function openSwapDialog(){
     const source=personById(attendanceEdit.personId),rec=attendanceGet(attendanceEdit.personId,attendanceEdit.date);
-    if(!source||rec?.status!=='rest'){toast('先把这一天设为休息');return}
+    if(!source||!isRestLike(rec)){toast('先把这一天设为休息');return}
     const partners=state.people.filter(p=>p.active!==false&&p.id!==source.id&&restDatesFor(p.id,attendanceEdit.date).some(d=>d!==attendanceEdit.date));
     if(!partners.length){toast('这周没有可交换休息日的人');return}
     document.getElementById('staffSwapTitle').textContent=source.name+' · 换休';
@@ -653,7 +656,7 @@
     const initiatorId=document.getElementById('staffSwapInitiator').value||aId,note=document.getElementById('staffSwapNote').value.trim();
     const a=personById(aId),b=personById(bId),aRec=attendanceGet(aId,aDate),bRec=attendanceGet(bId,bDate);
     if(!a||!b||!bDate){toast('没有可交换的休息日');return}
-    if(aRec?.status!=='rest'||bRec?.status!=='rest'){toast('休息表刚刚变了，请重新打开');document.getElementById('staffSwapDialog').close();renderWeek();return}
+    if(!isRestLike(aRec)||!isRestLike(bRec)){toast('休息表刚刚变了，请重新打开');document.getElementById('staffSwapDialog').close();renderWeek();return}
     if(aDate===bDate){toast('不能和同一天交换');return}
     const id=uid('swap'),stamp=now(),weekStart=weekStartIso(aDate),latest=latestWeekPublication(aDate);
     const aNew={...cloneJson(aRec),swapId:id,updatedAt:stamp};
@@ -680,6 +683,47 @@
     renderWeek();renderMonth();renderHistory();
     toast('换休已记录，记得重新发布修改版');
   }
+  function openRestMoveDialog(){
+    const p=personById(attendanceEdit.personId),rec=attendanceGet(attendanceEdit.personId,attendanceEdit.date);
+    if(!p||!isRestLike(rec)){toast('先点一个休息日');return}
+    document.getElementById('staffRestMoveTitle').textContent=p.name+' · 个人调休';
+    document.getElementById('staffRestMoveSource').innerHTML='<b>'+esc(p.name)+'</b><span>'+esc(dateLabel(attendanceEdit.date))+' → 新休息日</span>';
+    const d=dateObj(attendanceEdit.date);d.setDate(d.getDate()+1);
+    document.getElementById('staffRestMoveTarget').value=localIso(d);
+    document.getElementById('staffRestMoveNote').value='';
+    document.getElementById('staffAttendanceDialog').close();
+    document.getElementById('staffRestMoveDialog').showModal();
+  }
+  function confirmRestMove(){
+    const personId=attendanceEdit.personId,fromDate=attendanceEdit.date,toDate=document.getElementById('staffRestMoveTarget').value;
+    const note=document.getElementById('staffRestMoveNote').value.trim(),p=personById(personId),src=attendanceGet(personId,fromDate);
+    if(!p||!toDate||!isRestLike(src)){toast('原休息日已经变了');document.getElementById('staffRestMoveDialog').close();renderWeek();return}
+    if(toDate===fromDate){toast('新休息日不能和原来一样');return}
+    const target=attendanceGet(personId,toDate);
+    if(target){toast('目标日期已经有状态，先处理那一天');return}
+    const crossWeek=weekStartIso(fromDate)!==weekStartIso(toDate);
+    if(crossWeek&&!confirm('这次调休跨周：原周会少一个休息日，新周会多一个。继续吗？'))return;
+    const id=uid('move'),stamp=now(),sourceVersion=latestWeekPublication(fromDate)?.version||0,targetVersion=latestWeekPublication(toDate)?.version||0;
+    delete state.attendance[fromDate][personId];
+    if(!Object.keys(state.attendance[fromDate]).length)delete state.attendance[fromDate];
+    if(!state.attendance[toDate])state.attendance[toDate]={};
+    state.attendance[toDate][personId]={
+      status:'swap',portion:src.portion||'full',note:note||src.note||'',moveId:id,updatedAt:stamp
+    };
+    state.restMoves.push({
+      id,createdAt:stamp,personId,personName:p.name,fromDate,toDate,
+      portion:src.portion||'full',note,crossWeek,
+      sourcePublishedVersionBefore:sourceVersion,targetPublishedVersionBefore:targetVersion
+    });
+    log('move',p.name+' 个人调休：'+fromDate+' → '+toDate,note,fromDate,'all');
+    save();
+    document.getElementById('staffRestMoveDialog').close();
+    renderWeek();renderMonth();renderHistory();
+    toast(crossWeek?'跨周调休已记录，记得重新发布两周':'个人调休已记录，记得重新发布修改版');
+  }
+  function monthlyRestMoves(personId,month=monthKey()){
+    return (state.restMoves||[]).filter(x=>x.personId===personId&&(x.fromDate||'').startsWith(month)).length;
+  }
   function monthlySwapInitiated(personId,month=monthKey()){
     return (state.swaps||[]).filter(x=>{
       if(x.initiatorId!==personId)return false;
@@ -704,7 +748,7 @@
       html+='<div class="staff-week-grid staff-week-row"><div class="staff-week-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><span>'+esc(p.name)+'</span></div>';
       dates.forEach(d=>{
         const rec=attendanceGet(p.id,d),status=rec?.status||'work',m=ATTENDANCE_STATUS[status]||ATTENDANCE_STATUS.work;
-        html+='<button type="button" class="staff-week-cell status-'+esc(status)+(rec?.swapId?' has-swap':'')+'" data-att-person="'+esc(p.id)+'" data-att-date="'+d+'" title="'+esc(rec?.note||m.label)+'"><span>'+m.icon+'</span><small>'+m.label+'</small>'+(rec?.swapId?'<i class="staff-swap-mark">↔</i>':'')+'</button>';
+        html+='<button type="button" class="staff-week-cell status-'+esc(status)+(rec?.swapId?' has-swap':'')+(rec?.moveId?' has-move':'')+'" data-att-person="'+esc(p.id)+'" data-att-date="'+d+'" title="'+esc(rec?.note||m.label)+'"><span>'+m.icon+'</span><small>'+m.label+'</small>'+(rec?.swapId?'<i class="staff-swap-mark">↔</i>':rec?.moveId?'<i class="staff-swap-mark staff-move-mark">↪</i>':'')+'</button>';
       });
       html+='</div>';
     }
@@ -1009,7 +1053,7 @@
   function renderHistory(){
     const list=document.getElementById('staffHistoryList');if(!list)return;
     list.innerHTML=state.history.length?state.history.slice(0,300).map(h=>{
-      const labels={schedule:'排班',attendance:'出勤',swap:'换休',publish:'发布',person:'人员',role:'岗位',import:'导入',copy:'复制'};
+      const labels={schedule:'排班',attendance:'出勤',swap:'换休',move:'调休',publish:'发布',person:'人员',role:'岗位',import:'导入',copy:'复制'};
       return '<div class="staff-history-item"><span class="staff-history-badge">'+esc(labels[h.type]||h.type)+'</span><div class="staff-history-copy">'+esc(h.text)+'<small>'+esc(h.note||'')+(h.date?' · '+esc(h.date)+' '+esc(shiftLabel(h.shift)):'')+'</small></div><div class="staff-history-time">'+esc(new Date(h.time).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</div></div>';
     }).join(''):'<div class="staff-settings-card"><p>还没有历史记录。</p></div>';
   }
@@ -1227,8 +1271,9 @@
       document.getElementById('staffAttendanceStatus').value=b.dataset.attStatus;
       document.querySelectorAll('[data-att-status]').forEach(x=>x.classList.toggle('active',x===b));
       document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',b.dataset.attStatus==='work');
-      const stored=attendanceGet(attendanceEdit.personId,attendanceEdit.date);
-      document.getElementById('staffSwapRestBtn').classList.toggle('hidden',b.dataset.attStatus!=='rest'||stored?.status!=='rest');
+      const stored=attendanceGet(attendanceEdit.personId,attendanceEdit.date),canMove=isRestLike(stored)&&['rest','swap'].includes(b.dataset.attStatus);
+      document.getElementById('staffSwapRestBtn').classList.toggle('hidden',!canMove);
+      document.getElementById('staffMoveRestBtn').classList.toggle('hidden',!canMove);
     }));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.addEventListener('click',()=>{
       document.getElementById('staffAttendancePortion').value=b.dataset.attPortion;
@@ -1238,6 +1283,8 @@
       const end=document.getElementById('staffAttendanceEnd');if(!end.value||end.value<e.target.value)end.value=e.target.value;
     });
     document.getElementById('staffSwapRestBtn').addEventListener('click',openSwapDialog);
+    document.getElementById('staffMoveRestBtn').addEventListener('click',openRestMoveDialog);
+    document.getElementById('staffConfirmRestMove').addEventListener('click',confirmRestMove);
     document.getElementById('staffSwapPartner').addEventListener('change',refreshSwapDialog);
     document.getElementById('staffConfirmSwap').addEventListener('click',confirmSwap);
     document.getElementById('staffSaveAttendance').addEventListener('click',()=>{
