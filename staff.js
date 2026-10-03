@@ -528,6 +528,7 @@
     document.querySelectorAll('[data-att-status]').forEach(b=>b.classList.toggle('active',b.dataset.attStatus===status));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.classList.toggle('active',b.dataset.attPortion===portion));
     document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',status==='work');
+    document.getElementById('staffSwapRestBtn').classList.toggle('hidden',status!=='rest');
     document.getElementById('staffAttendanceDialog').showModal();
   }
   function cloneJson(v){return JSON.parse(JSON.stringify(v))}
@@ -666,6 +667,7 @@
   }
   function renderWeek(){
     const box=document.getElementById('staffWeekTable');if(!box)return;
+    renderWeekRelease();
     const dates=weekDates(currentDate),days=['一','二','三','四','五','六','日'];
     document.getElementById('staffWeekLabel').textContent=weekLabel(currentDate);
     const people=state.people.filter(p=>p.active!==false);
@@ -680,13 +682,14 @@
       html+='<div class="staff-week-grid staff-week-row"><div class="staff-week-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><span>'+esc(p.name)+'</span></div>';
       dates.forEach(d=>{
         const rec=attendanceGet(p.id,d),status=rec?.status||'work',m=ATTENDANCE_STATUS[status]||ATTENDANCE_STATUS.work;
-        html+='<button type="button" class="staff-week-cell status-'+esc(status)+'" data-att-person="'+esc(p.id)+'" data-att-date="'+d+'" title="'+esc(rec?.note||m.label)+'"><span>'+m.icon+'</span><small>'+m.label+'</small></button>';
+        html+='<button type="button" class="staff-week-cell status-'+esc(status)+(rec?.swapId?' has-swap':'')+'" data-att-person="'+esc(p.id)+'" data-att-date="'+d+'" title="'+esc(rec?.note||m.label)+'"><span>'+m.icon+'</span><small>'+m.label+'</small>'+(rec?.swapId?'<i class="staff-swap-mark">↔</i>':'')+'</button>';
       });
       html+='</div>';
     }
     box.innerHTML=html;
     box.querySelectorAll('[data-att-person]').forEach(b=>b.addEventListener('click',()=>openAttendance(b.dataset.attPerson,b.dataset.attDate)));
     hydrateAvatars(box);
+    renderWeekRelease();
   }
   function moveWeek(delta){
     const d=dateObj(currentDate);d.setDate(d.getDate()+delta*7);currentDate=localIso(d);renderWeek();
