@@ -734,7 +734,7 @@
   function renderHistory(){
     const list=document.getElementById('staffHistoryList');if(!list)return;
     list.innerHTML=state.history.length?state.history.slice(0,300).map(h=>{
-      const labels={schedule:'排班',person:'人员',role:'岗位',import:'导入',copy:'复制'};
+      const labels={schedule:'排班',attendance:'出勤',person:'人员',role:'岗位',import:'导入',copy:'复制'};
       return '<div class="staff-history-item"><span class="staff-history-badge">'+esc(labels[h.type]||h.type)+'</span><div class="staff-history-copy">'+esc(h.text)+'<small>'+esc(h.note||'')+(h.date?' · '+esc(h.date)+' '+esc(shiftLabel(h.shift)):'')+'</small></div><div class="staff-history-time">'+esc(new Date(h.time).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</div></div>';
     }).join(''):'<div class="staff-settings-card"><p>还没有历史记录。</p></div>';
   }
