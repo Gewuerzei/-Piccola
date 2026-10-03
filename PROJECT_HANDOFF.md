@@ -10,7 +10,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.3.1 · JSON Handoff**
-- Staff: **v0.2.2 · Weekly Rest**
+- Staff: **v0.3 · Published Weekly Rest**
 - 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -120,7 +120,7 @@ SKU 可使用手动阈值或历史周耗。
 
 # Staff
 
-## 4. Staff v0.2 · Weekly Rest
+## 4. Staff v0.3 · Published Weekly Rest
 
 主要文件：
 - `staff.js`
@@ -162,8 +162,23 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
 - 支持连续日期一次录入，例如 3 天请假
 - 月度汇总：按员工统计休息 / 请假 / 调休 / 缺勤天数
 - 有缺勤的人在月度页突出显示
+- 周休息表支持“发布版本”：
+  - 第一次发布 = v1
+  - 发布后有修改时显示“未发布修改”
+  - 再发布 = v2 / v3 …
+  - 每次发布保留时间、设备名、修改数量和该周快照
+- 可查看某周的发布版本历史
+- 周表 PDF 文件名优先使用周表发布版本；有未发布修改时标记 draft
+- 支持真正的双人“换休”：
+  - 从一个人的休息格进入“与他人换休”
+  - 选择对方及对方本周休息日
+  - 选择谁发起这次换休
+  - 两人的休息日期成对交换
+  - 记录发起人、双方、交换前后日期、备注和当时已发布周表版本
+- 月度页新增“换休发起”次数，区分主动提出者和被动配合者
+- 人物记录页显示换休事件，并统计累计主动发起次数
 - 周休息表可生成 A4 横向 PDF
-- 月度汇总可生成 A4 横向 PDF
+- 月度汇总 PDF 也包含“换休发起”
 - 人员新增 / 编辑 / 删除
 - 人员头像导入
 - 头像自动方形裁切并压缩为约 256×256 WebP
@@ -194,6 +209,8 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
   roles: [],
   schedules: {},
   attendance: {},
+  swaps: [],
+  weekPublications: {},
   history: [],
   syncMeta: {
     revision,
@@ -244,6 +261,27 @@ attendance[YYYY-MM-DD][personId] = {
 ```
 
 没有 attendance 记录的日期默认视为正常上班。这样日常只记录“例外”，月底统计更干净。
+
+换休事件单独保存在 `swaps[]`，不是简单把两个格子改成“调休”。一笔事件会绑定两个人、两个原休息日、交换后的日期、发起人和备注，因此可以统计谁经常主动换休。
+
+周表发布记录保存在：
+
+```js
+weekPublications[weekStart] = [
+  {
+    version,
+    publishedAt,
+    publishedBy,
+    changes,
+    note,
+    snapshot
+  }
+]
+```
+
+发布版本号和 Staff JSON 的 `syncMeta.revision` 是两套概念：
+- 周表 v1/v2/v3 = 给群里看的某一周排休版本
+- JSON revision = 本地数据交接版本
 
 ### Staff JSON handoff
 
@@ -300,7 +338,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v0423
+cassola-suite-v043
 ```
 
 当前 CORE 必须包含：
@@ -326,7 +364,7 @@ Inventory：
 - JSON fork 只检测，不自动合并。
 
 Staff：
-- v0.2 的周休息表是真正主功能，需要在 iPhone 实机测试横向周表滚动和连续请假录入。
+- v0.3 的周休息表是真正主功能，需要在 iPhone 实机测试横向周表滚动、连续异常录入、周表发布和双人换休流程。
 - 原岗位拖拽板保留为可选功能，仍需要真实 iPhone 触摸测试。
 - 周表 / 月报 PDF 当前都是单页 A4 横向，人员非常多时会压缩布局。
 - 请假 / 调休是记录功能，不是完整 HR 审批系统。
