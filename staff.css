@@ -93,3 +93,37 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
 .staff-move-mark{color:var(--warn)}
 .staff-person-record-item.move-event{border-color:rgba(243,207,122,.16);background:rgba(243,207,122,.035)}
 .staff-month-stat.rest-moves b{color:var(--warn)}
+
+/* Staff v0.3.2 · clearer person records */
+.staff-person-record-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.staff-person-record-summary-grid .staff-person-record-summary{min-width:0;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 11px}
+.staff-person-record-summary-grid .staff-person-record-summary span{font-size:9px;white-space:nowrap}
+.staff-person-record-summary-grid .staff-person-record-summary b{font-size:15px}
+.staff-person-record-summary.initiated{background:rgba(155,231,173,.055);border-color:rgba(155,231,173,.16)}
+.staff-person-record-summary.participated{background:rgba(185,201,255,.055);border-color:rgba(185,201,255,.16)}
+.staff-person-record-summary.moved{background:rgba(243,207,122,.05);border-color:rgba(243,207,122,.16)}
+.staff-person-record-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.staff-person-record-filters button{border:1px solid var(--line);border-radius:13px;background:var(--panel2);color:var(--muted);padding:8px 6px;font-size:9.5px;font-weight:800}
+.staff-person-record-filters button.active{background:var(--accent);color:var(--accentText);border-color:transparent}
+.staff-person-records{max-height:48vh}
+.staff-person-record-item.swap-event.initiated{border-color:rgba(155,231,173,.22);background:linear-gradient(145deg,rgba(155,231,173,.07),rgba(255,255,255,.025))}
+.staff-person-record-item.swap-event.participated{border-color:rgba(185,201,255,.22);background:linear-gradient(145deg,rgba(185,201,255,.075),rgba(255,255,255,.025))}
+.staff-person-record-date{line-height:1.35}
+.staff-record-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.staff-record-title b{font-size:12.5px!important}
+.staff-record-title span{font-size:10px;color:var(--muted);white-space:nowrap}
+.staff-record-route{display:block;margin-top:5px;font-size:11.5px;line-height:1.35}
+.staff-person-record-item.swap-event.initiated .staff-record-route{color:var(--good)}
+.staff-person-record-item.swap-event.participated .staff-record-route{color:#cbd4ff}
+.staff-person-record-item.move-event .staff-record-route{color:var(--warn)}
+.staff-person-record-empty{padding:18px 12px;text-align:center;border-radius:17px;background:rgba(255,255,255,.025);border:1px dashed var(--line);color:var(--muted);font-size:10.5px}
+@media(max-width:560px){
+  .staff-person-record-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .staff-person-record-summary-grid .staff-person-record-summary{padding:9px 8px}
+  .staff-person-record-summary-grid .staff-person-record-summary span{font-size:8px}
+  .staff-person-record-summary-grid .staff-person-record-summary b{font-size:13px}
+  .staff-person-record-filters button{font-size:8.5px;padding:8px 4px}
+  .staff-person-record-item{grid-template-columns:84px 1fr}
+  .staff-record-title{align-items:flex-start;flex-direction:column;gap:2px}
+  .staff-record-title span{white-space:normal}
+}
