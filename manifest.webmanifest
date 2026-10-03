@@ -1,11 +1,11 @@
 {
-  "name":"Cassola Inventory",
-  "short_name":"Cassola库存",
+  "name":"Cassola",
+  "short_name":"Cassola",
   "start_url":"./",
   "display":"standalone",
   "background_color":"#101218",
   "theme_color":"#161922",
-  "description":"Pietro 的离线 Cassola 寿司库存管理工具",
+  "description":"Cassola 的离线库存与人员排班工具",
   "icons":[
     {"src":"icon-192.png","sizes":"192x192","type":"image/png"},
     {"src":"icon-512.png","sizes":"512x512","type":"image/png"}
