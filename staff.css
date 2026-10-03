@@ -127,3 +127,18 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
   .staff-record-title{align-items:flex-start;flex-direction:column;gap:2px}
   .staff-record-title span{white-space:normal}
 }
+
+
+/* Staff v0.3.3 · swap lifecycle */
+.staff-attendance-actions .staff-swap-manage-btn{color:var(--warn);border-color:rgba(243,207,122,.18);background:rgba(243,207,122,.045)}
+.staff-swap-lifecycle-tip{padding:11px 12px;border-radius:17px;background:rgba(243,207,122,.055);border:1px solid rgba(243,207,122,.15);color:var(--muted);font-size:10px;line-height:1.5}
+.staff-swap-lifecycle-actions{display:grid;grid-template-columns:.8fr 1fr 1fr;gap:8px;margin-top:3px}
+.staff-swap-lifecycle-actions .btn{min-height:43px;border-radius:15px;font-size:10px;padding:9px 8px}
+.staff-person-record-item.swap-event.inactive{opacity:.7;filter:saturate(.72);border-style:dashed}
+.staff-swap-life-badge{display:inline-flex;width:max-content;margin:5px 0 1px;padding:4px 7px;border-radius:999px;font-size:8.5px;font-weight:850;background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--line)}
+.staff-swap-life-badge.revoked{color:var(--danger);background:rgba(255,141,145,.045);border-color:rgba(255,141,145,.14)}
+.staff-swap-life-badge.superseded{color:var(--warn);background:rgba(243,207,122,.045);border-color:rgba(243,207,122,.14)}
+@media(max-width:560px){
+  .staff-swap-lifecycle-actions{grid-template-columns:1fr 1fr}
+  .staff-swap-lifecycle-actions .btn.secondary{grid-column:1/-1;order:3}
+}
