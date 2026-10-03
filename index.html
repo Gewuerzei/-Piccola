@@ -10,6 +10,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="v03.css" />
   <title>Cassola Inventory</title>
 </head>
 <body>
@@ -29,6 +30,7 @@
       <div class="toolbar sticky-panel">
         <input id="searchInput" class="search" type="search" placeholder="搜索 SKU…" autocomplete="off" />
         <select id="categoryFilter" aria-label="分类筛选"></select>
+        <button id="addSkuBtn" class="btn primary compact">＋ SKU</button>
       </div>
       <div id="stockSummary" class="summary-grid"></div>
       <div id="stockList" class="card-list"></div>
@@ -52,15 +54,28 @@
     <section id="view-order" class="view">
       <div class="section-head">
         <div>
-          <h2>订货草稿</h2>
-          <p>草稿不会自动计入库存，实际到货后再登记。</p>
+          <h2>订货</h2>
+          <p>建议、草稿、已下单、实际到货分开记录。</p>
         </div>
-        <button id="copyOrderBtn" class="btn secondary">复制订单</button>
+        <button id="copyOrderBtn" class="btn secondary">复制草稿</button>
       </div>
-      <div class="supplier-tabs" id="supplierTabs"></div>
-      <div id="orderList" class="card-list"></div>
-      <div class="order-actions">
-        <button id="clearOrderBtn" class="btn danger ghost">清空草稿</button>
+      <div class="v3-segment">
+        <button class="active" data-v3-order-mode="draft">订货草稿</button>
+        <button data-v3-order-mode="placed">已下单</button>
+      </div>
+      <div id="v3DraftPane">
+        <div class="supplier-tabs" id="supplierTabs"></div>
+        <div class="v3-order-tools">
+          <button id="v3SuggestBtn" class="btn secondary">✨ 生成建议</button>
+          <button id="v3PlaceBtn" class="btn primary">确认已下单</button>
+        </div>
+        <div id="orderList" class="card-list"></div>
+        <div class="order-actions">
+          <button id="clearOrderBtn" class="btn danger ghost">清空草稿</button>
+        </div>
+      </div>
+      <div id="v3PlacedPane" class="hidden">
+        <div id="v3PlacedList" class="v3-placed-list"></div>
       </div>
     </section>
 
@@ -77,6 +92,7 @@
           <option value="loss">报损</option>
           <option value="transfer">内部转换</option>
           <option value="adjust">调整</option>
+          <option value="order">下单</option>
         </select>
       </div>
       <div id="historyList" class="history-list"></div>
@@ -97,12 +113,15 @@
         <button id="persistBtn" class="btn secondary">请求持久化存储</button>
       </div>
       <div class="settings-card">
-        <h2>SKU</h2>
-        <p><span id="skuCount">0</span> 个 SKU。v0.1 内置 Cassola 当前常用清单。</p>
-        <button id="resetDemoBtn" class="btn danger ghost">恢复初始 SKU（保留历史需谨慎）</button>
+        <h2>SKU 管理</h2>
+        <p><span id="skuCount">0</span> 个 SKU。现在可以自己新建、编辑、删除，并设置预警和订货目标。</p>
+        <div class="settings-actions">
+          <button id="addSkuSettingsBtn" class="btn primary">＋ 新建 SKU</button>
+          <button id="resetDemoBtn" class="btn danger ghost">恢复初始 SKU</button>
+        </div>
       </div>
       <div class="settings-card small-print">
-        <strong>v0.2 · Soft UI</strong>
+        <strong>v0.3 · Orders & SKU</strong>
         <p>Offline-first / Single-user / Local-only</p>
       </div>
     </section>
@@ -150,7 +169,56 @@
     </form>
   </dialog>
 
+  <dialog id="v3SkuDialog">
+    <form method="dialog" id="v3SkuForm">
+      <div class="dialog-head">
+        <div><div class="eyebrow">SKU MANAGER</div><h3 id="v3SkuTitle">新建 SKU</h3></div>
+        <button value="cancel" class="icon-btn" aria-label="关闭">✕</button>
+      </div>
+      <input type="hidden" id="v3SkuId" />
+      <div class="v3-form-grid two">
+        <label>名称<input id="v3Name" required /></label>
+        <label>图标<input id="v3Icon" placeholder="🥑" /></label>
+      </div>
+      <div class="v3-form-grid two">
+        <label>规格<input id="v3Spec" placeholder="900g / 20kg" /></label>
+        <label>单位<input id="v3Unit" placeholder="箱 / 盒 / 包" required /></label>
+      </div>
+      <div class="v3-form-grid two">
+        <label>分类<input id="v3Category" list="v3CategoryOptions" required /></label>
+        <label>供应商<input id="v3Supplier" list="v3SupplierOptions" required /></label>
+      </div>
+      <datalist id="v3CategoryOptions"><option>寿司基础</option><option>干货</option><option>酱料</option><option>冷藏</option><option>蔬果</option><option>冷冻</option><option>处理库存</option><option>耗材</option></datalist>
+      <datalist id="v3SupplierOptions"><option>大兴</option><option>米兰</option><option>Tosano</option><option>内部</option><option>自种</option></datalist>
+      <label>当前 / 初始库存<input id="v3Qty" type="number" step="0.1" inputmode="decimal" /></label>
+      <div class="v3-subcard">
+        <label>库存预警模式
+          <select id="v3WarningMode"><option value="auto">按周耗自动判断</option><option value="manual">手动阈值</option></select>
+        </label>
+        <div id="v3ManualThresholds" class="v3-form-grid three hidden">
+          <label>🔵 ≤<input id="v3Blue" type="number" step="0.1" /></label>
+          <label>🟡 ≤<input id="v3Yellow" type="number" step="0.1" /></label>
+          <label>🔴 ≤<input id="v3Red" type="number" step="0.1" /></label>
+        </div>
+        <div class="v3-form-grid two">
+          <label>手动周耗（可空）<input id="v3Weekly" type="number" step="0.1" placeholder="自动算不到时可填" /></label>
+          <label>目标覆盖周数<input id="v3Weeks" type="number" step="0.1" /></label>
+        </div>
+        <label>目标库存（可空）<input id="v3Target" type="number" step="0.1" placeholder="填写后优先按目标库存计算" /></label>
+        <label class="v3-check"><input id="v3AutoOrder" type="checkbox" /> 参与自动订货建议</label>
+      </div>
+      <div class="v3-dialog-actions">
+        <button id="v3DeleteSku" class="btn danger ghost hidden">删除</button>
+        <button value="cancel" class="btn secondary">取消</button>
+        <button id="v3SaveSku" value="default" class="btn primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="app.js" defer></script>
+  <script src="v03-core.js" defer></script>
+  <script src="v03-orders.js" defer></script>
+  <script src="v03-ui.js" defer></script>
 </body>
 </html>
