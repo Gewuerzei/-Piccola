@@ -273,5 +273,14 @@ document.getElementById('persistBtn').addEventListener('click',requestPersist);
 document.getElementById('resetDemoBtn').addEventListener('click',()=>{if(confirm('恢复内置 SKU？库存会归零，但历史记录保留。')){const hist=state.history;state=initialState();state.history=hist;saveState();renderAll();showToast('SKU 已恢复')}});
 window.addEventListener('online',updateNetworkBadge);window.addEventListener('offline',updateNetworkBadge);
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'})
+      .then(reg=>{
+        reg.update().catch(()=>{});
+        document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{})});
+      })
+      .catch(()=>{});
+  });
+}
 renderAll();
