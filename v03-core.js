@@ -1,11 +1,20 @@
 /* Cassola Inventory v0.3 addon: SKU manager, stock warnings, order suggestions, placed-order receiving */
 let v3OrderMode='draft';
+let v4AreaFilter='sushi';
+const v4Areas=[
+  {id:'sushi',label:'Sushi',icon:'🍣'},
+  {id:'cucina',label:'Cucina',icon:'🔪'},
+  {id:'bar',label:'Bar / Sala',icon:'🍸'},
+  {id:'common',label:'Comune',icon:'📦'}
+];
+function v4AreaMeta(id){return v4Areas.find(x=>x.id===id)||v4Areas[0]}
+function v4AreaOf(s){return s?.area||'sushi'}
 const v3Builtins=new Set(seedSkus.map(s=>s.id));
 const v3NoAuto=new Set(['redapple','daikon','mango_hard','basil','avocado_half','avocado_soft']);
 function v3Num(v){if(v===''||v==null)return null;const n=Number(v);return Number.isFinite(n)?n:null}
 function v3DefaultWeeks(cat){if(cat==='蔬果')return .6;if(cat==='冷藏')return 1;if(cat==='处理库存')return 0;return 2}
 function v3NormalizeSku(s){
-  if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto';
+  if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto'; if(!s.area)s.area='sushi';
   ['blueAt','yellowAt','redAt','targetQty','manualWeeklyUse'].forEach(k=>{s[k]=v3Num(s[k])});
   s.targetWeeks=v3Num(s.targetWeeks)??v3DefaultWeeks(s.category);
   if(s.autoOrder==null)s.autoOrder=!v3NoAuto.has(s.id)&&!['内部','自种'].includes(s.supplier)&&s.category!=='处理库存';
@@ -13,11 +22,43 @@ function v3NormalizeSku(s){
 }
 state.placedOrders=Array.isArray(state.placedOrders)?state.placedOrders:[];
 state.hiddenSkuIds=Array.isArray(state.hiddenSkuIds)?state.hiddenSkuIds:[];
+function v4NormalizeOrder(o){
+  o.receiptBatches=Array.isArray(o.receiptBatches)?o.receiptBatches:[];
+  o.items=Array.isArray(o.items)?o.items:[];
+  o.items.forEach(i=>{
+    const s=(state.skus||[]).find(x=>x.id===i.skuId);
+    if(!i.area)i.area=v4AreaOf(s);
+    const ordered=Math.max(0,Number(i.orderedQty)||0);
+    const oldActual=Math.max(0,Number(i.actualQty)||0);
+    if(i.creditedQty==null){
+      if(o.status==='received')i.creditedQty=oldActual;
+      else i.creditedQty=0;
+    }
+    i.creditedQty=Math.max(0,Number(i.creditedQty)||0);
+    if(!i.lineStatus){
+      if(o.status==='received'||i.reviewed){
+        const q=oldActual;
+        i.lineStatus=q<=0?'out':q<ordered?'short':q>ordered?'over':'received';
+        i.dirty=false;
+      }else{
+        i.lineStatus='pending';
+        i.actualQty=i.creditedQty;
+        i.dirty=false;
+      }
+    }
+    if(i.actualQty==null)i.actualQty=i.creditedQty;
+    i.actualQty=Math.max(i.creditedQty,Number(i.actualQty)||0);
+    if(i.dirty==null)i.dirty=false;
+  });
+  if(o.status!=='received')o.status='open';
+  return o;
+}
 function v3EnsureState(){
   state.placedOrders=Array.isArray(state.placedOrders)?state.placedOrders:[];
   state.hiddenSkuIds=Array.isArray(state.hiddenSkuIds)?state.hiddenSkuIds:[];
   state.skus=(Array.isArray(state.skus)?state.skus:[]).map(v3NormalizeSku);
-  state.version=3;
+  state.placedOrders=state.placedOrders.map(v4NormalizeOrder);
+  state.version=4;
 }
 v3EnsureState(); saveState();
 function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id))}
