@@ -738,10 +738,14 @@
   async function generateWeekPdf(){
     const people=state.people.filter(p=>p.active!==false);if(!people.length){toast('还没有人员');return}
     toast('正在生成周表 PDF…');
-    const dates=weekDates(currentDate),W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+    const dates=weekDates(currentDate),latest=latestWeekPublication(currentDate),snap=weekSnapshot(currentDate);
+    const pending=latest?weekSnapshotDiff(latest.snapshot,snap):null;
+    const releaseLabel=latest&&!pending?('发布 v'+latest.version):(latest?('草稿 · 基于 v'+latest.version):'草稿 · 未发布');
+    const fileVersion=latest&&!pending?('v'+latest.version):('draft-r'+state.syncMeta.revision);
+    const W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 周休息表',70,82);
-    ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(weekLabel(currentDate)+' · version #'+state.syncMeta.revision,72,128);
+    ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(weekLabel(currentDate)+' · '+releaseLabel,72,128);
     const left=70,top=180,nameW=300,colW=(W-left*2-nameW)/7;
     const rowH=Math.min(68,(H-top-75)/(people.length+1));
     const days=['一','二','三','四','五','六','日'];
@@ -758,20 +762,28 @@
         ctx.fillText(m.short,left+nameW+i*colW+colW*.42,y+rowH*.63);
       });
     });
-    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('班=上班  休=休息  假=请假  调=调休  缺=缺勤',70,H-34);
-    await shareCanvasPdf(canvas,'Cassola-Week-'+dates[0]+'-v'+state.syncMeta.revision+'.pdf');
+    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('班=上班  休=休息  假=请假  调=调休  缺=缺勤 · ↔ 换休记录在系统中保留',70,H-34);
+    await shareCanvasPdf(canvas,'Cassola-Week-'+dates[0]+'-'+fileVersion+'.pdf');
   }
   async function generateMonthPdf(){
     const people=state.people.filter(p=>p.active!==false);if(!people.length){toast('还没有人员');return}
     const month=monthKey();toast('正在生成月报 PDF…');
     const W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 月度缺勤汇总',70,82);
-    ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(month+' · version #'+state.syncMeta.revision,72,128);
-    const cols=[70,650,900,1150,1400],heads=['人员','休息','请假','调休','缺勤'],top=180,rowH=Math.min(62,(H-top-70)/(people.length+1));
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 月度汇总',70,82);
+    ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(month+' · data #'+state.syncMeta.revision,72,128);
+    const cols=[70,560,785,1010,1235,1470],heads=['人员','休息','请假','调休','缺勤','换休发起'],top=180,rowH=Math.min(62,(H-top-70)/(people.length+1));
     ctx.fillStyle='#f0f2f5';ctx.fillRect(70,top,W-140,rowH);ctx.fillStyle='#242a35';ctx.font='700 23px system-ui,sans-serif';
     heads.forEach((h,i)=>ctx.fillText(h,cols[i]+10,top+rowH*.64));
-    people.forEach((p,i)=>{const y=top+rowH*(i+1),c=monthlyCounts(p.id,month);ctx.fillStyle=i%2?'#fafafa':'#f5f6f8';ctx.fillRect(70,y,W-140,rowH);ctx.fillStyle='#222833';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';ctx.fillText(p.name,cols[0]+10,y+rowH*.64);ctx.font='600 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';ctx.fillText(String(c.rest),cols[1]+20,y+rowH*.64);ctx.fillText(String(c.leave),cols[2]+20,y+rowH*.64);ctx.fillText(String(c.swap),cols[3]+20,y+rowH*.64);ctx.fillStyle=c.absent?'#b4232c':'#222833';ctx.fillText(String(c.absent),cols[4]+20,y+rowH*.64)});
-    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('空白日期默认视为上班；本表只汇总已记录的非正常状态。',70,H-34);
+    people.forEach((p,i)=>{
+      const y=top+rowH*(i+1),c=monthlyCounts(p.id,month),req=monthlySwapInitiated(p.id,month);
+      ctx.fillStyle=i%2?'#fafafa':'#f5f6f8';ctx.fillRect(70,y,W-140,rowH);
+      ctx.fillStyle='#222833';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';ctx.fillText(p.name,cols[0]+10,y+rowH*.64);
+      ctx.font='600 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';
+      ctx.fillText(String(c.rest),cols[1]+20,y+rowH*.64);ctx.fillText(String(c.leave),cols[2]+20,y+rowH*.64);ctx.fillText(String(c.swap),cols[3]+20,y+rowH*.64);
+      ctx.fillStyle=c.absent?'#b4232c':'#222833';ctx.fillText(String(c.absent),cols[4]+20,y+rowH*.64);
+      ctx.fillStyle=req>=3?'#9c5b00':'#222833';ctx.fillText(String(req),cols[5]+20,y+rowH*.64);
+    });
+    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('全天=1，上午/下午=0.5；“换休发起”只统计主动提出交换的人。',70,H-34);
     await shareCanvasPdf(canvas,'Cassola-Month-'+month+'-v'+state.syncMeta.revision+'.pdf');
   }
   function dateLabel(date){
