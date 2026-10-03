@@ -832,19 +832,19 @@
     const W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
     ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 月度汇总',70,82);
     ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(month+' · data #'+state.syncMeta.revision,72,128);
-    const cols=[70,560,785,1010,1235,1470],heads=['人员','休息','请假','调休','缺勤','换休发起'],top=180,rowH=Math.min(62,(H-top-70)/(people.length+1));
+    const cols=[70,455,640,825,1010,1195,1425],heads=['人员','休息','请假','调休','缺勤','换休发起','个人调休'],top=180,rowH=Math.min(62,(H-top-70)/(people.length+1));
     ctx.fillStyle='#f0f2f5';ctx.fillRect(70,top,W-140,rowH);ctx.fillStyle='#242a35';ctx.font='700 23px system-ui,sans-serif';
     heads.forEach((h,i)=>ctx.fillText(h,cols[i]+10,top+rowH*.64));
     people.forEach((p,i)=>{
-      const y=top+rowH*(i+1),c=monthlyCounts(p.id,month),req=monthlySwapInitiated(p.id,month);
+      const y=top+rowH*(i+1),c=monthlyCounts(p.id,month),req=monthlySwapInitiated(p.id,month),move=monthlyRestMoves(p.id,month);
       ctx.fillStyle=i%2?'#fafafa':'#f5f6f8';ctx.fillRect(70,y,W-140,rowH);
       ctx.fillStyle='#222833';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';ctx.fillText(p.name,cols[0]+10,y+rowH*.64);
       ctx.font='600 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';
       ctx.fillText(String(c.rest),cols[1]+20,y+rowH*.64);ctx.fillText(String(c.leave),cols[2]+20,y+rowH*.64);ctx.fillText(String(c.swap),cols[3]+20,y+rowH*.64);
       ctx.fillStyle=c.absent?'#b4232c':'#222833';ctx.fillText(String(c.absent),cols[4]+20,y+rowH*.64);
-      ctx.fillStyle=req>=3?'#9c5b00':'#222833';ctx.fillText(String(req),cols[5]+20,y+rowH*.64);
+      ctx.fillStyle=req>=3?'#9c5b00':'#222833';ctx.fillText(String(req),cols[5]+18,y+rowH*.64);ctx.fillStyle=move>=3?'#9c5b00':'#222833';ctx.fillText(String(move),cols[6]+18,y+rowH*.64);
     });
-    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('全天=1，上午/下午=0.5；“换休发起”只统计主动提出交换的人。',70,H-34);
+    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('全天=1，上午/下午=0.5；换休发起与个人调休按事件次数统计。',70,H-34);
     await shareCanvasPdf(canvas,'Cassola-Month-'+month+'-v'+state.syncMeta.revision+'.pdf');
   }
   function dateLabel(date){
