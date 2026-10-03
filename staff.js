@@ -249,7 +249,7 @@
           <div class="staff-week-release" id="staffWeekRelease"></div>
           <div class="staff-week-wrap" id="staffWeekTable"></div>
           <div class="staff-status-legend">
-            <span>· 上班</span><span>💤 休息</span><span>📝 请假</span><span>🔁 调休</span><span>❌ 缺勤</span>
+            <span>· 上班</span><span>💤 休息</span><span>📝 请假</span><span>🔁 调休</span><span>❌ 缺勤</span><span>↔ 换休</span>
           </div>
         </section>
 
@@ -259,7 +259,7 @@
             <button class="btn primary" id="staffMonthPdfBtn">📄 月报 PDF</button>
           </div>
           <div class="staff-section-head">
-            <div><h2>月度汇总</h2><p>月底一眼看所有人的休息、请假、调休和缺勤。</p></div>
+            <div><h2>月度汇总</h2><p>月底看休息 / 请假 / 缺勤，也能看到谁经常主动换休。</p></div>
           </div>
           <div class="staff-month-summary" id="staffMonthSummary"></div>
         </section>
@@ -334,7 +334,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.2</h3><p>Weekly rest · monthly absence summary · optional role board · split JSON backup · local PDF</p>
+              <h3>Staff v0.3</h3><p>Published weekly rest · paired rest swaps · monthly audit · optional role board · JSON handoff</p>
             </div>
           </div>
         </section>
@@ -1071,7 +1071,11 @@
       const ids=new Set([...Object.keys(a),...Object.keys(b)]);
       ids.forEach(id=>{if(JSON.stringify(a[id]||null)!==JSON.stringify(b[id]||null))attendance++});
     });
-    return {people,roles,hist,attendance};
+    const localSwapIds=new Set((state.swaps||[]).map(x=>x.id));
+    const swaps=(data.swaps||[]).filter(x=>!localSwapIds.has(x.id)).length;
+    const localPubIds=new Set(Object.values(state.weekPublications||{}).flat().map(x=>x.id));
+    const publications=Object.values(data.weekPublications||{}).flat().filter(x=>!localPubIds.has(x.id)).length;
+    return {people,roles,hist,attendance,swaps,publications};
   }
   function previewImport(data){
     const incoming=normalize(data),localRev=num(state.syncMeta.revision),inRev=num(incoming.syncMeta.revision);
@@ -1086,7 +1090,7 @@
     document.getElementById('staffImportSummary').innerHTML=
       '<div class="staff-import-banner '+cls+'"><strong>'+esc(title)+'</strong><span>'+esc(detail)+'</span></div>'+
       '<div class="staff-import-compare" style="margin-top:10px"><div><span>本机</span><b>#'+localRev+'</b></div><div class="arrow">→</div><div><span>文件</span><b>#'+(inRev||'?')+'</b></div></div>'+
-      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>休假/缺勤变化</span><b>'+d.attendance+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
+      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>休假/缺勤变化</span><b>'+d.attendance+'</b></div><div class="staff-sync-stat"><span>新增换休</span><b>'+d.swaps+'</b></div><div class="staff-sync-stat"><span>新增周表版本</span><b>'+d.publications+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
     document.getElementById('staffAcceptImport').style.display=mode==='newer'?'inline-block':'none';
     document.getElementById('staffForceImport').style.display=['older','legacy','fork'].includes(mode)?'inline-block':'none';
     document.getElementById('staffImportDialog').showModal();
