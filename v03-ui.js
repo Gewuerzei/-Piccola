@@ -14,7 +14,7 @@ renderHistory=function(){
 };
 
 renderSettings=function(){document.getElementById('skuCount').textContent=v3Skus().length;checkStorage()};
-renderAll=function(){renderCategoryFilter();renderStock();renderCount();renderSupplierTabs();v3RenderOrder();renderHistory();renderSettings();updateNetworkBadge()};
+renderAll=function(){v3EnsureState();renderCategoryFilter();renderStock();renderCount();renderSupplierTabs();v3RenderOrder();renderHistory();renderSettings();updateNetworkBadge()};
 
 document.addEventListener('click',e=>{
   const edit=e.target.closest('[data-v3-edit]');if(edit){v3OpenSku(edit.dataset.v3Edit);return}
