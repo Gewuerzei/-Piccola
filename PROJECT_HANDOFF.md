@@ -11,7 +11,7 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.4.1 · Sala Starter Catalog**
 - Staff: **v0.3.2 · Published Weekly Rest**
-- 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
+- 当前实现基线 commit（本次维护理论刷新时）: `c0c11b74310f8ecd8f4a4d692546ec9cfc242985`
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
 - 多设备协作目前使用 **群聊 JSON 数据包交接**
@@ -35,6 +35,93 @@ Hub 文件：
 - `hub.css`
 
 首次打开默认进入主菜单。Inventory 和 Staff 各自管理自己的本地数据，避免互相污染。
+
+
+## 2.1 维护理论（2026-10-03 刷新）
+
+现在的维护思路不再只是“加功能 + 修 UI”，而是围绕**数据契约、状态机、可追溯性和非破坏升级**来维护。
+
+### A. 代码 / 文档 / 运行现场三层真相
+1. `main` 当前代码 = 实现真相。
+2. `PROJECT_HANDOFF.md` = 架构与维护规则。
+3. `CHANGELOG.md` = 版本演化记录。
+4. iPhone 实机结果 = 运行时最终真相。静态语法通过不等于浏览器行为已验证。
+
+维护顺序仍是：先读 handoff → changelog → 当前源码；不能反过来根据聊天记忆猜代码。
+
+### B. 先保护“数据不变量”，再改界面
+任何改动前先确认哪些东西绝不能被破坏，例如：
+- Inventory localStorage key `cassola_inventory_v01`
+- Staff localStorage key `cassola_staff_v01`
+- Staff 头像 IndexedDB
+- 已确认库存数量
+- 已发布周表版本
+- 已经入库的收货批次
+- JSON revision / hash 语义
+
+UI 可以重做，数据契约不能悄悄变。
+
+### C. 新字段必须可向后迁移
+新增字段采用“旧数据无此字段也能跑”的方式：
+- SKU 无 `area` → 默认 `sushi`
+- 旧订单无 `creditedQty` / `lineStatus` → 按旧状态推断
+- Staff 旧 attendance 无 `portion` → 默认全天
+- 新事件数组不存在 → 初始化为空数组
+
+原则：**normalize / migrate，不清库重建。**
+
+### D. 业务流程尽量做成状态机，不做一次性布尔开关
+例如收货不再只有“未收 / 已收”，而是：
+`pending → later / other → received / short / over / out`
+
+Staff 也区分：
+- 原始休息
+- 个人调休事件
+- 双人换休事件
+- 周表发布版本
+
+这样状态变化能解释“发生了什么”，而不是只留下结果。
+
+### E. 主数据、事务、视图分开
+- SKU / 人员 = 主数据
+- 收货批次 / 换休 / 发布 = 事务
+- 库存警报 / 月度统计 / 待办铃铛 = 从事务和主数据推导的视图
+
+不要为了某个页面方便，把派生结果直接塞回主数据污染历史。
+
+### F. 多维分类不复制数据库
+Inventory 的“区域”和“供应商”是两个不同维度：
+- 库存 / 盘货按 area 看
+- 下单 / 收货按 supplier 组织
+- 一张供应商单内部再按 area 分区
+
+不要为 Sushi / Cucina / Bar 各建一套孤立 Inventory。
+
+### G. 自动化只负责建议，关键动作必须人工确认
+- 自动订货只能进入草稿，不能自动下单
+- PDF 报价识别以后必须人工核对 SKU / 规格 / 单位
+- 收货必须明确每行结果
+- 未确认 supplier / spec 的 SKU 不参与自动建议
+
+宁可显示“待确认”，不要编一个看起来很完整但错误的值。
+
+### H. 事务必须幂等
+已经入库的数据不能因为重开页面、导入 JSON、第二次收货而重复计入。
+Inventory 用：
+- `creditedQty`
+- `receiptBatches[].id`
+- receipt history
+
+以后新增类似事务，也优先设计唯一 event id / batch id，而不是靠“应该不会点两次”。
+
+### I. 修改后固定走一遍发布闭环
+1. 改源码
+2. 静态检查 JS / DOM
+3. 更新 handoff + changelog（架构或业务规则变化时）
+4. 涉及 PWA 资源时 bump Service Worker cache
+5. 检查 GitHub Pages Actions
+6. iPhone 实机验证
+7. 若实机结果与静态判断冲突，以实机为准继续修
 
 ---
 
