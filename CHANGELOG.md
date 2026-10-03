@@ -2,6 +2,52 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.3 · Published Weekly Rest & Paired Swaps
+**2026-10-03**
+
+### Weekly publishing
+- 周休表新增正式发布版本。
+- 第一次发布为 v1。
+- 发布后继续修改，会显示“未发布修改”数量。
+- 再次发布生成 v2 / v3 等修改版。
+- 每次发布保留：
+  - 发布时间
+  - 发布设备
+  - 修改数量
+  - 当时的周表快照
+- 新增周表版本历史。
+- 周表 PDF 使用发布版本号；当前有未发布修改时标记为 draft。
+
+### Paired rest swaps
+- 正常“调休”状态继续保留。
+- 新增真正的双人“换休”事务：
+  - 从已存在的休息格进入
+  - 选择另一名员工
+  - 选择对方本周的休息日
+  - 指定谁主动发起
+  - 系统成对交换双方休息日期
+- 换休事件独立保存在 `swaps[]`。
+- 事件记录双方、换前/换后日期、发起人、备注和当时的周表发布版本。
+- 周表换休格显示小型 ↔ 标记。
+
+### Audit
+- 月度汇总新增“换休发起”次数。
+- 只给主动提出交换的人计数，避免把帮别人配合换休的人也算成“麻烦精”。
+- 人员记录页显示每次换休是“发起”还是“参与”。
+- 月报 PDF 加入“换休发起”列。
+
+### JSON
+- Staff JSON 自动包含 `swaps` 和 `weekPublications`。
+- 导入预览新增：
+  - 新增换休
+  - 新增周表版本
+- Inventory JSON 仍完全独立。
+
+### PWA
+- Service Worker cache 更新为 `cassola-suite-v043`。
+
+---
+
 ## PWA Update Reliability
 **2026-10-03**
 
