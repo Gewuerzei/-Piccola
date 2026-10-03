@@ -10,7 +10,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.3.1 · JSON Handoff**
-- Staff: **v0.3.1 · Published Weekly Rest**
+- Staff: **v0.3.2 · Published Weekly Rest**
 - 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -120,7 +120,7 @@ SKU 可使用手动阈值或历史周耗。
 
 # Staff
 
-## 4. Staff v0.3.1 · Published Weekly Rest
+## 4. Staff v0.3.2 · Published Weekly Rest
 
 主要文件：
 - `staff.js`
@@ -185,6 +185,12 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
   - 记录发起人、双方、交换前后日期、备注和当时已发布周表版本
 - 月度页新增“换休发起”和“个人调休”次数
 - 人物记录页显示双人换休与个人调休事件，并分别统计次数
+- 人物记录顶部明确区分：
+  - 🔄 发起换休
+  - 🤝 参与换休
+  - ↪️ 个人调休
+- 人物记录支持筛选：全部 / 换休与调休 / 请假 / 缺勤
+- 换休事件卡强调“与谁换”和“原休 → 改休”，所有历史事件都会保留并按时间倒序显示
 - 周休息表可生成 A4 横向 PDF
 - 月度汇总 PDF 也包含“换休发起”
 - 人员新增 / 编辑 / 删除
@@ -349,7 +355,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v0431
+cassola-suite-v0432
 ```
 
 当前 CORE 必须包含：
