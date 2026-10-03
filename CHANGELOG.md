@@ -2,6 +2,35 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.3.1 · Personal Rest Moves
+**2026-10-03**
+
+- 明确“调休”的语义：
+  - 旧版中它只是一个泛用标签
+  - 新版不再让用户新建孤立的“调休”
+  - 现在主要由“移动自己的休息日”自动生成
+- 新增 **↪️ 移动自己的休息日**：
+  - 从已有休息 / 调休日发起
+  - 选择新日期
+  - 原日期恢复默认上班
+  - 新日期自动变成 🔁 调休
+- 支持跨周移动；跨周时提示原周会少 1 个休息日、新周会多 1 个休息日。
+- 新增 `restMoves[]` 审计记录：
+  - 人员
+  - 原休息日
+  - 新休息日
+  - 时段
+  - 备注
+  - 是否跨周
+  - 操作前周表发布版本
+- 月度页新增“个人调休”次数。
+- 人员记录页新增个人调休事件。
+- 月报 PDF 新增“个人调休”列。
+- Staff JSON 导入预览新增“新增个人调休”。
+- Service Worker cache 更新为 `cassola-suite-v0431`。
+
+---
+
 ## Staff v0.3 · Published Weekly Rest & Paired Swaps
 **2026-10-03**
 
