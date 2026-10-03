@@ -376,8 +376,8 @@
             <button type="button" data-att-status="absent">❌ 缺勤</button>
           </div>
           <input type="hidden" id="staffAttendanceStatus" value="work">
-          <div class="staff-leave-portion hidden" id="staffLeavePortion">
-            <span>请假时段</span>
+          <div class="staff-leave-portion hidden" id="staffAttendancePortionWrap">
+            <span>时段</span>
             <div class="staff-portion-seg">
               <button type="button" data-att-portion="full" class="active">全天</button>
               <button type="button" data-att-portion="am">上午</button>
@@ -471,12 +471,12 @@
       const iso=localIso(d);
       if(!state.attendance[iso])state.attendance[iso]={};
       if(status==='work')delete state.attendance[iso][personId];
-      else state.attendance[iso][personId]={status,note:note.trim(),portion:status==='leave'?(portion||'full'):'full',updatedAt:now()};
+      else state.attendance[iso][personId]={status,note:note.trim(),portion:portion||'full',updatedAt:now()};
       if(!Object.keys(state.attendance[iso]).length)delete state.attendance[iso];
       count++;
     }
     const meta=ATTENDANCE_STATUS[status]||ATTENDANCE_STATUS.work;
-    const portionText=status==='leave'?(portion==='am'?' · 上午':portion==='pm'?' · 下午':' · 全天'):'';
+    const portionText=status!=='work'?(portion==='am'?' · 上午':portion==='pm'?' · 下午':' · 全天'):'';
     log('attendance',p.name+' · '+meta.label+portionText+(count>1?' × '+count+'天':''),note,start,'all');
     save();renderWeek();renderMonth();renderHistory();
   }
@@ -493,7 +493,7 @@
     document.getElementById('staffAttendancePortion').value=portion;
     document.querySelectorAll('[data-att-status]').forEach(b=>b.classList.toggle('active',b.dataset.attStatus===status));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.classList.toggle('active',b.dataset.attPortion===portion));
-    document.getElementById('staffLeavePortion').classList.toggle('hidden',status!=='leave');
+    document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',status==='work');
     document.getElementById('staffAttendanceDialog').showModal();
   }
   function renderWeek(){
@@ -530,7 +530,7 @@
       if(!date.startsWith(month))continue;
       const rec=map?.[personId],st=rec?.status;
       if(st&&out[st]!==undefined){
-        out[st]+=st==='leave'&&['am','pm'].includes(rec?.portion)?0.5:1;
+        out[st]+=['am','pm'].includes(rec?.portion)?0.5:1;
       }
     }
     return out;
@@ -732,7 +732,7 @@
     title.textContent=p.name+' · 人员记录';
     list.innerHTML=rows.length?rows.map(rec=>{
       const meta=ATTENDANCE_STATUS[rec.status]||{icon:'·',label:rec.status||'记录'};
-      const part=rec.status==='leave'?(rec.portion==='am'?'上午':rec.portion==='pm'?'下午':'全天'):'';
+      const part=rec.status!=='work'?(rec.portion==='am'?'上午':rec.portion==='pm'?'下午':'全天'):'';
       return '<div class="staff-person-record-item">'+
         '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
         '<div class="staff-person-record-main"><b>'+esc(meta.icon+' '+meta.label)+(part?' · '+esc(part):'')+'</b>'+
@@ -993,7 +993,7 @@
     document.querySelectorAll('[data-att-status]').forEach(b=>b.addEventListener('click',()=>{
       document.getElementById('staffAttendanceStatus').value=b.dataset.attStatus;
       document.querySelectorAll('[data-att-status]').forEach(x=>x.classList.toggle('active',x===b));
-      document.getElementById('staffLeavePortion').classList.toggle('hidden',b.dataset.attStatus!=='leave');
+      document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',b.dataset.attStatus==='work');
     }));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.addEventListener('click',()=>{
       document.getElementById('staffAttendancePortion').value=b.dataset.attPortion;
