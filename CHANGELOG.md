@@ -2,6 +2,22 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.4.2 · Supplier Order Text
+**2026-10-03**
+
+- “复制草稿”改名为 **📋 复制订货单**。
+- 供应商外发文本不再带内部标题和 ERP 信息，只保留：
+  - 商品名
+  - 规格（有则显示）
+  - 数量
+  - 单位
+- 如果“全部供应商”下同时有多家供应商的草稿，系统要求先点具体 supplier tag，避免把不同供应商订单混发。
+- 已下单卡片新增 **📋 复制订单**，供应商要求重发时无需回聊天记录考古。
+- 新订单会把 SKU spec 快照进 order item，保证后续 SKU 资料修改后仍尽量保留当时的订货表达。
+- Service Worker cache 更新为 `cassola-suite-v0443`。
+
+---
+
 ## Maintenance Theory Refresh
 **2026-10-03**
 
