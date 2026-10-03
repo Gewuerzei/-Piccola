@@ -2,6 +2,22 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Maintenance Theory Refresh
+**2026-10-03**
+
+- 维护方式从“功能补丁式”升级为以数据不变量、状态机、幂等事务和非破坏迁移为核心。
+- 明确三层真相：
+  - main 代码 = 实现真相
+  - handoff = 架构与维护规则
+  - iPhone 实机 = 运行时最终真相
+- 明确主数据 / 事务 / 派生视图分离。
+- 新字段必须向后兼容，优先 normalize / migrate，禁止为了升级清空现有数据。
+- 自动化只负责建议，订货、收货、报价映射等关键业务动作继续要求人工确认。
+- Inventory 收货等事务要求幂等，优先使用唯一 event / batch id 防止重复入账。
+- 固化维护闭环：源码 → 静态检查 → 文档 → cache → Actions → iPhone 实机。
+
+---
+
 ## Inventory v0.4.1 · Sala Starter Catalog
 **2026-10-03**
 
