@@ -39,7 +39,7 @@ function v4NormalizeOrder(o){
       if(o.status==='received'||i.reviewed){
         const q=oldActual;
         i.lineStatus=q<=0?'out':q<ordered?'short':q>ordered?'over':'received';
-        i.dirty=false;
+        i.dirty=o.status==='received'?false:!!i.reviewed;
       }else{
         i.lineStatus='pending';
         i.actualQty=i.creditedQty;
