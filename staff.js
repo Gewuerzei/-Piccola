@@ -169,7 +169,7 @@
     }));
   }
 
-  function shiftLabel(v){return v==='lunch'?'午班':'晚班'}
+  function shiftLabel(v){return v==='lunch'?'午班':v==='dinner'?'晚班':'整日'}
   function roleById(id){return state.roles.find(r=>r.id===id)}
   function personById(id){return state.people.find(p=>p.id===id)}
   function scheduleFor(date=currentDate,shift=currentShift,create=true){
@@ -806,7 +806,14 @@
     new Set([...lp.keys(),...ip.keys()]).forEach(id=>{if(JSON.stringify(lp.get(id))!==JSON.stringify(ip.get(id)))people++});
     new Set([...lr.keys(),...ir.keys()]).forEach(id=>{if(JSON.stringify(lr.get(id))!==JSON.stringify(ir.get(id)))roles++});
     const localHist=new Set(state.history.map(h=>h.id));const hist=(data.history||[]).filter(h=>!localHist.has(h.id)).length;
-    return {people,roles,hist};
+    let attendance=0;
+    const dates=new Set([...Object.keys(state.attendance||{}),...Object.keys(data.attendance||{})]);
+    dates.forEach(date=>{
+      const a=state.attendance?.[date]||{},b=data.attendance?.[date]||{};
+      const ids=new Set([...Object.keys(a),...Object.keys(b)]);
+      ids.forEach(id=>{if(JSON.stringify(a[id]||null)!==JSON.stringify(b[id]||null))attendance++});
+    });
+    return {people,roles,hist,attendance};
   }
   function previewImport(data){
     const incoming=normalize(data),localRev=num(state.syncMeta.revision),inRev=num(incoming.syncMeta.revision);
@@ -821,7 +828,7 @@
     document.getElementById('staffImportSummary').innerHTML=
       '<div class="staff-import-banner '+cls+'"><strong>'+esc(title)+'</strong><span>'+esc(detail)+'</span></div>'+
       '<div class="staff-import-compare" style="margin-top:10px"><div><span>本机</span><b>#'+localRev+'</b></div><div class="arrow">→</div><div><span>文件</span><b>#'+(inRev||'?')+'</b></div></div>'+
-      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>岗位变化</span><b>'+d.roles+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
+      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>休假/缺勤变化</span><b>'+d.attendance+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
     document.getElementById('staffAcceptImport').style.display=mode==='newer'?'inline-block':'none';
     document.getElementById('staffForceImport').style.display=['older','legacy','fork'].includes(mode)?'inline-block':'none';
     document.getElementById('staffImportDialog').showModal();
