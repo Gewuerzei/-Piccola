@@ -10,7 +10,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.3.1 · JSON Handoff**
-- Staff: **v0.1 · Staff Board**
+- Staff: **v0.1.1 · Staff Board**
 - 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -211,15 +211,16 @@ schedules[YYYY-MM-DD][lunch|dinner] = {
 
 ### Staff JSON handoff
 
-Staff JSON 会同时包含：
+普通“导出 Staff JSON”只包含：
 - 人员
 - 岗位
 - 排班
 - 历史
 - revision/hash/deviceName
-- 压缩后的头像 Data URL
 
-因此 Staff JSON 比 Inventory JSON 大一些，但几十名员工仍适合群聊交接。
+**普通交接 JSON 不包含头像图片。** 日常发群用这一份，体积更小。
+
+“完整备份（含头像）”会在以上数据之外加入压缩后的头像 Data URL，用于换手机、灾备或完整迁移。导入器同时兼容普通 JSON 和完整备份。
 
 导入保护逻辑与 Inventory 相同：
 - 新版本：允许导入
@@ -263,7 +264,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v04
+cassola-suite-v041
 ```
 
 当前 CORE 必须包含：
