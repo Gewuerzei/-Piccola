@@ -35,6 +35,7 @@
       schedules:{},
       attendance:{},
       swaps:[],
+      restMoves:[],
       weekPublications:{},
       history:[],
       syncMeta:{revision:1,updatedAt:now(),contentHash:'',deviceName:'本设备'}
@@ -48,6 +49,7 @@
       schedules:s.schedules||{},
       attendance:s.attendance||{},
       swaps:s.swaps||[],
+      restMoves:s.restMoves||[],
       weekPublications:s.weekPublications||{},
       history:s.history||[]
     };
@@ -66,6 +68,7 @@
     s.schedules=s.schedules&&typeof s.schedules==='object'?s.schedules:{};
     s.attendance=s.attendance&&typeof s.attendance==='object'?s.attendance:{};
     s.swaps=Array.isArray(s.swaps)?s.swaps:[];
+    s.restMoves=Array.isArray(s.restMoves)?s.restMoves:[];
     s.weekPublications=s.weekPublications&&typeof s.weekPublications==='object'?s.weekPublications:{};
     s.history=Array.isArray(s.history)?s.history:[];
     s.syncMeta={...base.syncMeta,...(s.syncMeta||{})};
@@ -383,7 +386,7 @@
             <button type="button" data-att-status="work">· 上班</button>
             <button type="button" data-att-status="rest">💤 休息</button>
             <button type="button" data-att-status="leave">📝 请假</button>
-            <button type="button" data-att-status="swap">🔁 调休</button>
+            <button type="button" data-att-status="swap" class="staff-system-status" disabled>🔁 调休（系统）</button>
             <button type="button" data-att-status="absent">❌ 缺勤</button>
           </div>
           <input type="hidden" id="staffAttendanceStatus" value="work">
@@ -403,6 +406,7 @@
           <label>备注<textarea id="staffAttendanceNote" placeholder="例如：已批准 / 与 Luca 对调 / 临时缺勤"></textarea></label>
           <div class="staff-dialog-actions staff-attendance-actions">
             <button type="button" class="btn secondary hidden" id="staffSwapRestBtn">🔄 与他人换休</button>
+            <button type="button" class="btn secondary hidden" id="staffMoveRestBtn">↪️ 移动自己的休息日</button>
             <button value="cancel" class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffSaveAttendance">保存</button>
           </div>
@@ -420,6 +424,19 @@
           <div class="staff-dialog-actions">
             <button value="cancel" class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffConfirmSwap">确认交换</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog class="staff-dialog" id="staffRestMoveDialog">
+        <form method="dialog">
+          <div class="dialog-head"><div><div class="eyebrow">REST MOVE</div><h3 id="staffRestMoveTitle">移动休息日</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="staff-swap-source" id="staffRestMoveSource"></div>
+          <label>改休到<input id="staffRestMoveTarget" type="date"></label>
+          <label>备注<textarea id="staffRestMoveNote" placeholder="例如：临时有事 / 已批准"></textarea></label>
+          <div class="staff-dialog-actions">
+            <button value="cancel" class="btn secondary">取消</button>
+            <button type="button" class="btn primary" id="staffConfirmRestMove">确认移动</button>
           </div>
         </form>
       </dialog>
