@@ -10,7 +10,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.5 · Price Layer**
-- Staff: **v0.3.2 · Published Weekly Rest**
+- Staff: **v0.3.3 · Swap Lifecycle**
 - 当前实现基线 commit（本次维护理论刷新时）: `c0c11b74310f8ecd8f4a4d692546ec9cfc242985`
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -66,6 +66,7 @@ UI 可以重做，数据契约不能悄悄变。
 - SKU 无 `area` → 默认 `sushi`
 - 旧订单无 `creditedQty` / `lineStatus` → 按旧状态推断
 - Staff 旧 attendance 无 `portion` → 默认全天
+- Staff 旧 swap 无生命周期 → 根据当前 swapId 链接迁移为 active / superseded
 - 新事件数组不存在 → 初始化为空数组
 
 原则：**normalize / migrate，不清库重建。**
@@ -306,7 +307,7 @@ priceRecords[] = {
 
 # Staff
 
-## 4. Staff v0.3.2 · Published Weekly Rest
+## 4. Staff v0.3.3 · Swap Lifecycle
 
 主要文件：
 - `staff.js`
@@ -369,7 +370,17 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
   - 选择谁发起这次换休
   - 两人的休息日期成对交换
   - 记录发起人、双方、交换前后日期、备注和当时已发布周表版本
-- 月度页新增“换休发起”和“个人调休”次数
+  - 新换休事件写入 `status: "active"`
+  - 每个换休格只能属于一笔 active 换休，禁止在未处理旧换休时继续叠加新换休 / 个人调休
+- 换休增加生命周期：
+  - `active` = 当前有效
+  - `revoked` = 手滑撤销
+  - `superseded` = 临时反悔 / 请求未通过 / 后续重新安排
+- active 换休格点开后出现“↩️ 处理这次换休”
+  - “撤销（手滑）”和“后续修改”都会恢复换休前休息日
+  - 两者区别只在审计语义
+  - 非 active 事件仍保留在人物历史，不删除
+- 月度页新增“换休发起”和“个人调休”次数；“换休发起”只统计 active 换休
 - 人物记录页显示双人换休与个人调休事件，并分别统计次数
 - 人物记录顶部明确区分：
   - 🔄 发起换休
@@ -465,6 +476,12 @@ attendance[YYYY-MM-DD][personId] = {
 
 换休事件单独保存在 `swaps[]`，不是简单把两个格子改成“调休”。一笔事件会绑定两个人、两个原休息日、交换后的日期、发起人和备注，因此可以统计谁经常主动换休。
 
+v0.3.3 起，swap 还保存生命周期与换休前原始 attendance 快照。旧 swap 没有 status 时会在 normalize 阶段检查双方当前 `swapId`：
+- 两边仍完整关联 → 迁移为 active
+- 已经被手工改散 / 不再完整关联 → 迁移为 superseded，并从当前格子清除残留 ↔ 标记
+
+因此旧的“幽灵换休计数”不会继续进入月度 active 统计。
+
 个人休息日移动保存在 `restMoves[]`。此时原休息日会恢复为默认上班，目标日自动写成 `status: "swap"`。因此“调休”现在是一个**有来源的结果状态**，而不是新的随手标签。
 
 周表发布记录保存在：
@@ -541,7 +558,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v05
+cassola-suite-v051
 ```
 
 当前 CORE 必须包含：
