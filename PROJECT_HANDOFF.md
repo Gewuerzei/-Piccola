@@ -376,7 +376,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v044
+cassola-suite-v0441
 ```
 
 当前 CORE 必须包含：
