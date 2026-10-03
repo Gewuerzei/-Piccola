@@ -10,7 +10,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.3.1 · JSON Handoff**
-- Staff: **v0.1.1 · Staff Board**
+- Staff: **v0.2 · Weekly Rest**
 - 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -120,7 +120,7 @@ SKU 可使用手动阈值或历史周耗。
 
 # Staff
 
-## 4. Staff Board v0.1
+## 4. Staff v0.2 · Weekly Rest
 
 主要文件：
 - `staff.js`
@@ -141,25 +141,41 @@ DB: cassola_staff_assets_v01
 Store: avatars
 ```
 
-### Staff 当前功能
+### Staff 当前主功能
 
-- 主菜单进入 Staff
+Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降为可选二级功能。
+
+- 默认首页：周休息表
+- 每人每周 7 天状态：
+  - 空白 / · = 上班（默认，不需要逐日录入）
+  - 💤 休息
+  - 📝 请假
+  - 🔁 调休
+  - ❌ 缺勤
+- 点日期格即可编辑状态和备注
+- 支持连续日期一次录入，例如 3 天请假
+- 月度汇总：按员工统计休息 / 请假 / 调休 / 缺勤天数
+- 有缺勤的人在月度页突出显示
+- 周休息表可生成 A4 横向 PDF
+- 月度汇总可生成 A4 横向 PDF
 - 人员新增 / 编辑 / 删除
 - 人员头像导入
 - 头像自动方形裁切并压缩为约 256×256 WebP
+- Staff 历史记录
+- Staff JSON 版本交接
+
+### 可选岗位排班
+
+原来的岗位排班保留在“排岗”页，不再是 Staff 默认首页：
+
 - 岗位新增 / 编辑 / 删除
 - 每天午班 / 晚班独立排班
 - 岗位卡槽
-- “待安排”
-- “休息”
-- “请假 / 调休”
-- 人员头像轻点后选择岗位
+- 待安排 / 休息 / 请假调休
+- 人员头像轻点选择岗位
 - 长按头像拖拽排岗
 - 桌面原生 drag/drop
 - 复制昨日同班次
-- Staff 历史记录
-- Staff JSON 版本交接
-- 一键生成 / 分享单页 A4 横向 PDF
 
 ### Staff 数据模型
 
@@ -171,6 +187,7 @@ Store: avatars
   people: [],
   roles: [],
   schedules: {},
+  attendance: {},
   history: [],
   syncMeta: {
     revision,
@@ -208,6 +225,18 @@ schedules[YYYY-MM-DD][lunch|dinner] = {
 ```
 
 未出现在任何 assignment 中的 active 人员 = “待安排”。
+
+周休/出勤状态：
+
+```js
+attendance[YYYY-MM-DD][personId] = {
+  status: "rest" | "leave" | "swap" | "absent",
+  note,
+  updatedAt
+}
+```
+
+没有 attendance 记录的日期默认视为正常上班。这样日常只记录“例外”，月底统计更干净。
 
 ### Staff JSON handoff
 
@@ -264,7 +293,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v041
+cassola-suite-v042
 ```
 
 当前 CORE 必须包含：
@@ -290,9 +319,10 @@ Inventory：
 - JSON fork 只检测，不自动合并。
 
 Staff：
-- Staff v0.1 需要真实 iPhone 触摸测试，尤其是长按拖拽。
-- PDF 当前是单页 A4 横向，人员/岗位非常多时会压缩布局。
-- “请假 / 调休”当前作为排班状态和历史记录，不是完整 HR 请假审批系统。
+- v0.2 的周休息表是真正主功能，需要在 iPhone 实机测试横向周表滚动和连续请假录入。
+- 原岗位拖拽板保留为可选功能，仍需要真实 iPhone 触摸测试。
+- 周表 / 月报 PDF 当前都是单页 A4 横向，人员非常多时会压缩布局。
+- 请假 / 调休是记录功能，不是完整 HR 审批系统。
 - 暂无工时统计、工资、打卡。
 - 暂无权限系统。
 - 暂无云同步。
