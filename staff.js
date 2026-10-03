@@ -7,7 +7,8 @@
   const todayLocal=()=>{const d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day};
   let currentDate=todayLocal();
   let currentShift='dinner';
-  let currentView='board';
+  let currentView='week';
+  let attendanceEdit={personId:null,date:null};
   let pendingAvatarBlob=null;
   let editPersonId=null;
   let importCandidate=null;
@@ -32,6 +33,7 @@
         {id:'cassa',name:'Cassa',icon:'💳'}
       ],
       schedules:{},
+      attendance:{},
       history:[],
       syncMeta:{revision:1,updatedAt:now(),contentHash:'',deviceName:'本设备'}
     };
@@ -42,6 +44,7 @@
       people:s.people||[],
       roles:s.roles||[],
       schedules:s.schedules||{},
+      attendance:s.attendance||{},
       history:s.history||[]
     };
   }
@@ -57,6 +60,7 @@
     s.people=Array.isArray(s.people)?s.people:[];
     s.roles=Array.isArray(s.roles)&&s.roles.length?s.roles:base.roles;
     s.schedules=s.schedules&&typeof s.schedules==='object'?s.schedules:{};
+    s.attendance=s.attendance&&typeof s.attendance==='object'?s.attendance:{};
     s.history=Array.isArray(s.history)?s.history:[];
     s.syncMeta={...base.syncMeta,...(s.syncMeta||{})};
     s.syncMeta.revision=Math.max(1,num(s.syncMeta.revision)||1);
