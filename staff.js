@@ -9,6 +9,7 @@
   let currentShift='dinner';
   let currentView='week';
   let attendanceEdit={personId:null,date:null};
+  let swapLifecycleEditId=null;
   let personRecordsView={personId:null,filter:'all'};
   let pendingAvatarBlob=null;
   let editPersonId=null;
@@ -355,7 +356,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.3.2</h3><p>Published weekly rest · clearer swap audit · personal rest moves · monthly audit · JSON handoff</p>
+              <h3>Staff v0.3.3</h3><p>Published weekly rest · swap lifecycle · personal rest moves · monthly audit · JSON handoff</p>
             </div>
           </div>
         </section>
@@ -425,6 +426,7 @@
           <div class="staff-dialog-actions staff-attendance-actions">
             <button type="button" class="btn secondary hidden" id="staffSwapRestBtn">🔄 与他人换休</button>
             <button type="button" class="btn secondary hidden" id="staffMoveRestBtn">↪️ 移动自己的休息日</button>
+            <button type="button" class="btn secondary hidden staff-swap-manage-btn" id="staffManageSwapBtn">↩️ 处理这次换休</button>
             <button value="cancel" class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffSaveAttendance">保存</button>
           </div>
@@ -442,6 +444,20 @@
           <div class="staff-dialog-actions">
             <button value="cancel" class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffConfirmSwap">确认交换</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog class="staff-dialog" id="staffSwapLifecycleDialog">
+        <form method="dialog">
+          <div class="dialog-head"><div><div class="eyebrow">SWAP LIFECYCLE</div><h3 id="staffSwapLifecycleTitle">处理换休</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="staff-swap-source" id="staffSwapLifecycleSource"></div>
+          <div class="staff-swap-lifecycle-tip">两种操作都会恢复换休前的休息日。区别只在历史语义：手滑用“撤销”；后来反悔、请求未通过或重新安排，用“后续修改”。</div>
+          <label>说明（可选）<textarea id="staffSwapLifecycleNote" placeholder="例如：手滑 / 请求未通过 / 后来重新安排"></textarea></label>
+          <div class="staff-swap-lifecycle-actions">
+            <button value="cancel" class="btn secondary">取消</button>
+            <button type="button" class="btn danger ghost" id="staffRevokeSwap">↩️ 撤销（手滑）</button>
+            <button type="button" class="btn primary" id="staffSupersedeSwap">📝 后续修改</button>
           </div>
         </form>
       </dialog>
@@ -691,6 +707,7 @@
   function openSwapDialog(){
     const source=personById(attendanceEdit.personId),rec=attendanceGet(attendanceEdit.personId,attendanceEdit.date);
     if(!source||!isRestLike(rec)){toast('先把这一天设为休息');return}
+    if(activeSwapForRecord(rec)){toast('这一天已经属于一次有效换休，先处理旧换休');return}
     const partners=state.people.filter(p=>p.active!==false&&p.id!==source.id&&restDatesFor(p.id,attendanceEdit.date).some(d=>d!==attendanceEdit.date));
     if(!partners.length){toast('这周没有可交换休息日的人');return}
     document.getElementById('staffSwapTitle').textContent=source.name+' · 换休';
@@ -726,7 +743,8 @@
       id,createdAt:stamp,weekStart,
       personAId:a.id,personAName:a.name,personADateBefore:aDate,personADateAfter:bDate,
       personBId:b.id,personBName:b.name,personBDateBefore:bDate,personBDateAfter:aDate,
-      initiatorId:initiator.id,initiatorName:initiator.name,note,
+      personARecordBefore:cloneJson(aRec),personBRecordBefore:cloneJson(bRec),
+      initiatorId:initiator.id,initiatorName:initiator.name,note,status:'active',
       publishedVersionBefore:latest?.version||0
     });
     log('swap',initiator.name+' 发起换休：'+a.name+' '+aDate+' ↔ '+b.name+' '+bDate,note,aDate,'all');
@@ -735,9 +753,76 @@
     renderWeek();renderMonth();renderHistory();
     toast('换休已记录，记得重新发布修改版');
   }
+  function swapRestoreRecord(ev,side,stamp){
+    const raw=side==='A'?ev.personARecordBefore:ev.personBRecordBefore;
+    const rec=raw?cloneJson(raw):{status:'rest',portion:'full',note:''};
+    delete rec.swapId;
+    rec.updatedAt=stamp;
+    return rec;
+  }
+  function canRestoreSwap(ev){
+    const aExisting=attendanceGet(ev.personAId,ev.personADateBefore);
+    const bExisting=attendanceGet(ev.personBId,ev.personBDateBefore);
+    if(aExisting||bExisting)return false;
+    return true;
+  }
+  function removeLinkedSwapCell(personId,date,swapId){
+    const map=state.attendance?.[date],rec=map?.[personId];
+    if(rec?.swapId!==swapId)return;
+    delete map[personId];
+    if(!Object.keys(map).length)delete state.attendance[date];
+  }
+  function restoreSwapSchedule(ev){
+    if(!swapIsActive(ev))return false;
+    if(!canRestoreSwap(ev)){
+      toast('原休息日已经有后续安排，先手动处理冲突');
+      return false;
+    }
+    const stamp=now();
+    removeLinkedSwapCell(ev.personAId,ev.personADateAfter,ev.id);
+    removeLinkedSwapCell(ev.personBId,ev.personBDateAfter,ev.id);
+    if(!state.attendance[ev.personADateBefore])state.attendance[ev.personADateBefore]={};
+    if(!state.attendance[ev.personBDateBefore])state.attendance[ev.personBDateBefore]={};
+    state.attendance[ev.personADateBefore][ev.personAId]=swapRestoreRecord(ev,'A',stamp);
+    state.attendance[ev.personBDateBefore][ev.personBId]=swapRestoreRecord(ev,'B',stamp);
+    return true;
+  }
+  function openSwapLifecycleDialog(){
+    const rec=attendanceGet(attendanceEdit.personId,attendanceEdit.date),ev=activeSwapForRecord(rec);
+    if(!ev){toast('这一天没有有效换休');return}
+    swapLifecycleEditId=ev.id;
+    document.getElementById('staffSwapLifecycleTitle').textContent=(ev.initiatorName||'换休')+' · 处理换休';
+    document.getElementById('staffSwapLifecycleSource').innerHTML=
+      '<b>'+esc(ev.personAName)+' '+esc(shortRecordDate(ev.personADateBefore))+' ↔ '+esc(ev.personBName)+' '+esc(shortRecordDate(ev.personBDateBefore))+'</b>'+
+      '<span>当前：'+esc(ev.personAName)+' '+esc(shortRecordDate(ev.personADateAfter))+' · '+esc(ev.personBName)+' '+esc(shortRecordDate(ev.personBDateAfter))+'</span>';
+    document.getElementById('staffSwapLifecycleNote').value='';
+    document.getElementById('staffAttendanceDialog').close();
+    document.getElementById('staffSwapLifecycleDialog').showModal();
+  }
+  function finishSwapLifecycle(status){
+    const ev=swapById(swapLifecycleEditId);
+    if(!ev||!swapIsActive(ev)){toast('这次换休已经不是有效状态');return}
+    if(!restoreSwapSchedule(ev))return;
+    const note=document.getElementById('staffSwapLifecycleNote').value.trim(),stamp=now();
+    ev.status=status;
+    ev.lifecycleUpdatedAt=stamp;
+    ev.lifecycleReason=note||(status==='revoked'?'手滑撤销':'后续修改');
+    log('swap',
+      status==='revoked'
+        ?('撤销换休（手滑）：'+ev.personAName+' '+ev.personADateBefore+' ↔ '+ev.personBName+' '+ev.personBDateBefore)
+        :('换休后续修改：'+ev.personAName+' '+ev.personADateBefore+' ↔ '+ev.personBName+' '+ev.personBDateBefore),
+      ev.lifecycleReason,ev.personADateBefore,'all');
+    save();
+    document.getElementById('staffSwapLifecycleDialog').close();
+    swapLifecycleEditId=null;
+    renderWeek();renderMonth();renderHistory();
+    if(personRecordsView.personId)renderPersonRecords();
+    toast(status==='revoked'?'换休已撤销，不计入统计':'已记为后续修改，不再计入当前换休统计');
+  }
   function openRestMoveDialog(){
     const p=personById(attendanceEdit.personId),rec=attendanceGet(attendanceEdit.personId,attendanceEdit.date);
     if(!p||!isRestLike(rec)){toast('先点一个休息日');return}
+    if(activeSwapForRecord(rec)){toast('这一天已经属于一次有效换休，先处理旧换休');return}
     document.getElementById('staffRestMoveTitle').textContent=p.name+' · 个人调休';
     document.getElementById('staffRestMoveSource').innerHTML='<b>'+esc(p.name)+'</b><span>'+esc(dateLabel(attendanceEdit.date))+' → 新休息日</span>';
     const d=dateObj(attendanceEdit.date);d.setDate(d.getDate()+1);
@@ -778,7 +863,7 @@
   }
   function monthlySwapInitiated(personId,month=monthKey()){
     return (state.swaps||[]).filter(x=>{
-      if(x.initiatorId!==personId)return false;
+      if(!swapIsActive(x)||x.initiatorId!==personId)return false;
       const d=x.initiatorId===x.personBId?x.personBDateBefore:x.personADateBefore;
       return (d||x.weekStart||'').startsWith(month);
     }).length;
@@ -1036,7 +1121,8 @@
       const before=isA?ev.personADateBefore:ev.personBDateBefore,after=isA?ev.personADateAfter:ev.personBDateAfter;
       rows.push({
         kind:'swapEvent',date:ev.createdAt?.slice(0,10)||before,createdAt:ev.createdAt,
-        before,after,otherName,note:ev.note||'',initiated:ev.initiatorId===personId
+        before,after,otherName,note:ev.note||'',initiated:ev.initiatorId===personId,
+        status:ev.status||'active',lifecycleReason:ev.lifecycleReason||'',lifecycleUpdatedAt:ev.lifecycleUpdatedAt||''
       });
     }
     for(const ev of state.restMoves||[]){
@@ -1070,8 +1156,8 @@
     const personId=personRecordsView.personId,p=personById(personId);if(!p)return;
     const allRows=personRecordRows(personId),filter=personRecordsView.filter;
     const rows=allRows.filter(rec=>personRecordMatches(rec,filter));
-    const initiated=(state.swaps||[]).filter(x=>x.initiatorId===personId).length;
-    const participated=(state.swaps||[]).filter(x=>(x.personAId===personId||x.personBId===personId)&&x.initiatorId!==personId).length;
+    const initiated=(state.swaps||[]).filter(x=>swapIsActive(x)&&x.initiatorId===personId).length;
+    const participated=(state.swaps||[]).filter(x=>swapIsActive(x)&&(x.personAId===personId||x.personBId===personId)&&x.initiatorId!==personId).length;
     const moveCount=(state.restMoves||[]).filter(x=>x.personId===personId).length;
     document.getElementById('staffPersonRecordsTitle').textContent=p.name+' · 人员记录';
     document.getElementById('staffPersonRecordsSummary').innerHTML=
@@ -1090,11 +1176,13 @@
         '</div>';
       }
       if(rec.kind==='swapEvent'){
-        return '<div class="staff-person-record-item swap-event '+(rec.initiated?'initiated':'participated')+'">'+
+        const inactive=rec.status!=='active',life=rec.status==='revoked'?'↩️ 已撤销':rec.status==='superseded'?'📝 后续修改':'';
+        return '<div class="staff-person-record-item swap-event '+(rec.initiated?'initiated':'participated')+(inactive?' inactive':'')+'">'+
           '<div class="staff-person-record-date">'+esc(recordStamp(rec.createdAt,rec.date))+'</div>'+
           '<div class="staff-person-record-main"><div class="staff-record-title"><b>'+(rec.initiated?'🔄 发起换休':'🤝 参与换休')+'</b><span>与 '+esc(rec.otherName)+'</span></div>'+
+          (life?'<div class="staff-swap-life-badge '+esc(rec.status)+'">'+esc(life)+'</div>':'')+
           '<strong class="staff-record-route">原休 '+esc(shortRecordDate(rec.before))+' → 改休 '+esc(shortRecordDate(rec.after))+'</strong>'+
-          (rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
+          (rec.lifecycleReason?'<small>'+esc(rec.lifecycleReason)+'</small>':rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
         '</div>';
       }
       const meta=ATTENDANCE_STATUS[rec.status]||{icon:'·',label:rec.status||'记录'};
@@ -1373,9 +1461,10 @@
       document.getElementById('staffAttendanceStatus').value=b.dataset.attStatus;
       document.querySelectorAll('[data-att-status]').forEach(x=>x.classList.toggle('active',x===b));
       document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',b.dataset.attStatus==='work');
-      const stored=attendanceGet(attendanceEdit.personId,attendanceEdit.date),canMove=isRestLike(stored)&&['rest','swap'].includes(b.dataset.attStatus);
+      const stored=attendanceGet(attendanceEdit.personId,attendanceEdit.date),activeSwap=activeSwapForRecord(stored),canMove=isRestLike(stored)&&!activeSwap&&['rest','swap'].includes(b.dataset.attStatus);
       document.getElementById('staffSwapRestBtn').classList.toggle('hidden',!canMove);
       document.getElementById('staffMoveRestBtn').classList.toggle('hidden',!canMove);
+      document.getElementById('staffManageSwapBtn').classList.toggle('hidden',!activeSwap);
     }));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.addEventListener('click',()=>{
       document.getElementById('staffAttendancePortion').value=b.dataset.attPortion;
@@ -1386,6 +1475,9 @@
     });
     document.getElementById('staffSwapRestBtn').addEventListener('click',openSwapDialog);
     document.getElementById('staffMoveRestBtn').addEventListener('click',openRestMoveDialog);
+    document.getElementById('staffManageSwapBtn').addEventListener('click',openSwapLifecycleDialog);
+    document.getElementById('staffRevokeSwap').addEventListener('click',()=>finishSwapLifecycle('revoked'));
+    document.getElementById('staffSupersedeSwap').addEventListener('click',()=>finishSwapLifecycle('superseded'));
     document.getElementById('staffConfirmRestMove').addEventListener('click',confirmRestMove);
     document.getElementById('staffSwapPartner').addEventListener('change',refreshSwapDialog);
     document.getElementById('staffConfirmSwap').addEventListener('click',confirmSwap);
@@ -1396,8 +1488,9 @@
       const status=document.getElementById('staffAttendanceStatus').value||'work';
       const note=document.getElementById('staffAttendanceNote').value||'';
       const portion=document.getElementById('staffAttendancePortion').value||'full';
-      setAttendanceRange(attendanceEdit.personId,start,end,status,note,portion);
-      document.getElementById('staffAttendanceDialog').close();
+      if(setAttendanceRange(attendanceEdit.personId,start,end,status,note,portion)){
+        document.getElementById('staffAttendanceDialog').close();
+      }
     });
     document.querySelectorAll('[data-person-record-filter]').forEach(b=>b.addEventListener('click',()=>{
       personRecordsView.filter=b.dataset.personRecordFilter||'all';
