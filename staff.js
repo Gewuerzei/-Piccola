@@ -710,11 +710,15 @@
     const input=document.getElementById('staffMonthInput'),box=document.getElementById('staffMonthSummary');if(!input||!box)return;
     if(!input.value)input.value=currentDate.slice(0,7);
     const month=input.value,people=state.people.filter(p=>p.active!==false);
-    const total={rest:0,leave:0,swap:0,absent:0};
-    const rows=people.map(p=>{const c=monthlyCounts(p.id,month);Object.keys(total).forEach(k=>total[k]+=c[k]);return {p,c}});
+    const total={rest:0,leave:0,swap:0,absent:0,swapRequested:0};
+    const rows=people.map(p=>{
+      const c=monthlyCounts(p.id,month);c.swapRequested=monthlySwapInitiated(p.id,month);
+      ['rest','leave','swap','absent'].forEach(k=>total[k]+=c[k]);total.swapRequested+=c.swapRequested;
+      return {p,c};
+    });
     box.innerHTML=
-      '<div class="staff-month-total"><div><span>休息</span><b>'+total.rest+'</b></div><div><span>请假</span><b>'+total.leave+'</b></div><div><span>调休</span><b>'+total.swap+'</b></div><div class="'+(total.absent?'danger':'')+'"><span>缺勤</span><b>'+total.absent+'</b></div></div>'+
-      (rows.length?rows.map(({p,c})=>'<div class="staff-month-row '+(c.absent?'has-absence':'')+'"><div class="staff-month-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><b>'+esc(p.name)+'</b></div><div class="staff-month-stat"><span>💤</span><b>'+c.rest+'</b></div><div class="staff-month-stat"><span>📝</span><b>'+c.leave+'</b></div><div class="staff-month-stat"><span>🔁</span><b>'+c.swap+'</b></div><div class="staff-month-stat absent"><span>❌</span><b>'+c.absent+'</b></div></div>').join(''):'<div class="staff-settings-card"><p>还没有人员。</p></div>');
+      '<div class="staff-month-total"><div><span>休息</span><b>'+total.rest+'</b></div><div><span>请假</span><b>'+total.leave+'</b></div><div><span>调休</span><b>'+total.swap+'</b></div><div class="'+(total.absent?'danger':'')+'"><span>缺勤</span><b>'+total.absent+'</b></div><div><span>换休发起</span><b>'+total.swapRequested+'</b></div></div>'+
+      (rows.length?rows.map(({p,c})=>'<div class="staff-month-row '+(c.absent?'has-absence':'')+'"><div class="staff-month-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><b>'+esc(p.name)+'</b></div><div class="staff-month-stat"><span>💤</span><b>'+c.rest+'</b></div><div class="staff-month-stat"><span>📝</span><b>'+c.leave+'</b></div><div class="staff-month-stat"><span>🔁</span><b>'+c.swap+'</b></div><div class="staff-month-stat absent"><span>❌</span><b>'+c.absent+'</b></div><div class="staff-month-stat swap-requested"><span>🔄</span><b>'+c.swapRequested+'</b></div></div>').join(''):'<div class="staff-settings-card"><p>还没有人员。</p></div>');
     hydrateAvatars(box);
   }
   async function shareCanvasPdf(canvas,name){
@@ -895,13 +899,30 @@
     const rows=[];
     for(const [date,map] of Object.entries(state.attendance||{})){
       const rec=map?.[personId];if(!rec)continue;
-      rows.push({date,...rec});
+      rows.push({kind:'attendance',date,...rec});
     }
-    rows.sort((a,b)=>b.date.localeCompare(a.date));
+    for(const ev of state.swaps||[]){
+      if(ev.personAId!==personId&&ev.personBId!==personId)continue;
+      const isA=ev.personAId===personId,otherName=isA?ev.personBName:ev.personAName;
+      const before=isA?ev.personADateBefore:ev.personBDateBefore,after=isA?ev.personADateAfter:ev.personBDateAfter;
+      rows.push({
+        kind:'swapEvent',date:ev.createdAt?.slice(0,10)||before,createdAt:ev.createdAt,
+        before,after,otherName,note:ev.note||'',initiated:ev.initiatorId===personId
+      });
+    }
+    rows.sort((a,b)=>(b.createdAt||b.date).localeCompare(a.createdAt||a.date));
     const title=document.getElementById('staffPersonRecordsTitle');
     const list=document.getElementById('staffPersonRecordsList');
     title.textContent=p.name+' · 人员记录';
-    list.innerHTML=rows.length?rows.map(rec=>{
+    const swapCount=(state.swaps||[]).filter(x=>x.initiatorId===personId).length;
+    const body=rows.length?rows.map(rec=>{
+      if(rec.kind==='swapEvent'){
+        return '<div class="staff-person-record-item swap-event">'+
+          '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
+          '<div class="staff-person-record-main"><b>🔄 换休'+(rec.initiated?' · 发起':' · 参与')+'</b>'+
+          '<small>'+esc(rec.before+' → '+rec.after+' · 与 '+rec.otherName)+(rec.note?' · '+esc(rec.note):'')+'</small></div>'+
+        '</div>';
+      }
       const meta=ATTENDANCE_STATUS[rec.status]||{icon:'·',label:rec.status||'记录'};
       const part=rec.status!=='work'?(rec.portion==='am'?'上午':rec.portion==='pm'?'下午':'全天'):'';
       return '<div class="staff-person-record-item">'+
@@ -910,6 +931,7 @@
         (rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
       '</div>';
     }).join(''):'<div class="staff-settings-card"><p>这个人还没有休假 / 调休 / 缺勤记录。</p></div>';
+    list.innerHTML='<div class="staff-person-record-summary"><span>🔄 累计发起换休</span><b>'+swapCount+' 次</b></div>'+body;
     document.getElementById('staffPersonRecordsDialog').showModal();
   }
 
