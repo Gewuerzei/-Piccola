@@ -218,7 +218,38 @@
         <div class="staff-top-actions"><span class="staff-version-badge" id="staffTopVersion">#1</span></div>
       </header>
       <main class="staff-main">
-        <section class="staff-view active" id="staff-view-board">
+        <section class="staff-view active" id="staff-view-week">
+          <div class="staff-week-tools">
+            <button id="staffPrevWeek">‹</button>
+            <div>
+              <strong id="staffWeekLabel">本周</strong>
+              <small>点格子记录休息 / 请假 / 调休 / 缺勤</small>
+            </div>
+            <button id="staffNextWeek">›</button>
+            <button id="staffThisWeek" class="btn secondary">本周</button>
+          </div>
+          <div class="staff-section-head">
+            <div><h2>周休息表</h2><p>空白默认视为上班，不需要每天逐个打勾。</p></div>
+            <div class="staff-section-actions"><button class="btn primary" id="staffWeekPdfBtn">📄 周表 PDF</button></div>
+          </div>
+          <div class="staff-week-wrap" id="staffWeekTable"></div>
+          <div class="staff-status-legend">
+            <span>· 上班</span><span>💤 休息</span><span>📝 请假</span><span>🔁 调休</span><span>❌ 缺勤</span>
+          </div>
+        </section>
+
+        <section class="staff-view" id="staff-view-month">
+          <div class="staff-month-tools">
+            <input id="staffMonthInput" type="month">
+            <button class="btn primary" id="staffMonthPdfBtn">📄 月报 PDF</button>
+          </div>
+          <div class="staff-section-head">
+            <div><h2>月度汇总</h2><p>月底一眼看所有人的休息、请假、调休和缺勤。</p></div>
+          </div>
+          <div class="staff-month-summary" id="staffMonthSummary"></div>
+        </section>
+
+        <section class="staff-view" id="staff-view-board">
           <div class="staff-board-tools">
             <div class="staff-date-row">
               <button id="staffPrevDay">‹</button>
@@ -284,15 +315,20 @@
               <div class="staff-settings-actions"><button class="btn danger ghost" id="staffResetBtn">清空 Staff 数据</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff Board v0.1.1</h3><p>Offline-first · drag/tap scheduling · split JSON backup · local PDF</p>
+              <h3>历史记录</h3><p>周休、请假、人员和排岗变化都会留痕。</p>
+              <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
+            </div>
+            <div class="staff-settings-card">
+              <h3>Staff v0.2</h3><p>Weekly rest · monthly absence summary · optional role board · split JSON backup · local PDF</p>
             </div>
           </div>
         </section>
       </main>
-      <nav class="staff-bottom-nav">
-        <button class="staff-nav-btn active" data-staff-view="board"><span>📋</span><small>排班</small></button>
+      <nav class="staff-bottom-nav staff-bottom-nav-five">
+        <button class="staff-nav-btn active" data-staff-view="week"><span>📅</span><small>周休</small></button>
+        <button class="staff-nav-btn" data-staff-view="month"><span>📊</span><small>月度</small></button>
         <button class="staff-nav-btn" data-staff-view="people"><span>👥</span><small>人员</small></button>
-        <button class="staff-nav-btn" data-staff-view="history"><span>🕘</span><small>历史</small></button>
+        <button class="staff-nav-btn" data-staff-view="board"><span>🧩</span><small>排岗</small></button>
         <button class="staff-nav-btn" data-staff-view="settings"><span>⚙️</span><small>设置</small></button>
       </nav>
 
@@ -322,6 +358,29 @@
         <form method="dialog">
           <div class="dialog-head"><div><div class="eyebrow">MOVE</div><h3 id="staffMoveTitle">安排岗位</h3></div><button value="cancel" class="icon-btn">✕</button></div>
           <div class="staff-move-grid" id="staffMoveGrid"></div>
+        </form>
+      </dialog>
+
+      <dialog class="staff-dialog" id="staffAttendanceDialog">
+        <form method="dialog">
+          <div class="dialog-head"><div><div class="eyebrow">ATTENDANCE</div><h3 id="staffAttendanceTitle">记录状态</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="staff-attendance-grid" id="staffAttendanceChoices">
+            <button type="button" data-att-status="work">· 上班</button>
+            <button type="button" data-att-status="rest">💤 休息</button>
+            <button type="button" data-att-status="leave">📝 请假</button>
+            <button type="button" data-att-status="swap">🔁 调休</button>
+            <button type="button" data-att-status="absent">❌ 缺勤</button>
+          </div>
+          <input type="hidden" id="staffAttendanceStatus" value="work">
+          <div class="staff-form-grid">
+            <label>开始日期<input id="staffAttendanceStart" type="date"></label>
+            <label>连续到<input id="staffAttendanceEnd" type="date"></label>
+          </div>
+          <label>备注<textarea id="staffAttendanceNote" placeholder="例如：已批准 / 与 Luca 对调 / 临时缺勤"></textarea></label>
+          <div class="staff-dialog-actions">
+            <button value="cancel" class="btn secondary">取消</button>
+            <button type="button" class="btn primary" id="staffSaveAttendance">保存</button>
+          </div>
         </form>
       </dialog>
 
