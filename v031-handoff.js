@@ -214,12 +214,13 @@ function v31ApplyImport(force){
   const p=v31PendingImport;
   if(force&&!confirm('确定强制采用这份数据？这会覆盖本机当前状态。'))return;
   const oldLocalRev=Number(state.syncMeta?.revision)||1;
+  const localDevice=v31DeviceName();
   state=migrate(p.data);
   if(typeof v3EnsureState==='function')v3EnsureState();
   const fp=v31Fingerprint(state);
   const importedName=p.data.syncMeta?.deviceName||p.data.exportDevice||'导入设备';
   const revision=force?Math.max(oldLocalRev,p.incomingRev||0)+1:Math.max(1,p.incomingRev);
-  state.syncMeta={revision,updatedAt:force?stamp():(p.data.syncMeta?.updatedAt||p.data.exportedAt||stamp()),contentHash:fp,deviceName:v31DeviceName()};
+  state.syncMeta={revision,updatedAt:force?stamp():(p.data.syncMeta?.updatedAt||p.data.exportedAt||stamp()),contentHash:fp,deviceName:localDevice};
   v31WriteRaw();
   document.getElementById('v31ImportDialog').close();
   v31PendingImport=null;
