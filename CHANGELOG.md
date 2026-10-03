@@ -2,6 +2,22 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.2.2 · Generic Half-Day Periods
+**2026-10-03**
+
+- 全天 / 上午 / 下午不再只属于“请假”。
+- 休息、请假、调休、缺勤都可以记录时段。
+- 月度统计统一按时长计算：
+  - 全天 = 1 天
+  - 上午 = 0.5 天
+  - 下午 = 0.5 天
+- 周表继续只显示异常类型，保持简洁。
+- 人员记录显示具体状态 + 时段 + 备注。
+- “上班”仍是默认空白状态，不单独保存半天上班；半天上班应记录另一半的异常状态。
+- Service Worker cache 更新为 `cassola-suite-v0422`。
+
+---
+
 ## Staff v0.2.1 · Leave Detail
 **2026-10-03**
 
