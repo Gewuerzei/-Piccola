@@ -975,7 +975,7 @@
   function renderHistory(){
     const list=document.getElementById('staffHistoryList');if(!list)return;
     list.innerHTML=state.history.length?state.history.slice(0,300).map(h=>{
-      const labels={schedule:'排班',attendance:'出勤',person:'人员',role:'岗位',import:'导入',copy:'复制'};
+      const labels={schedule:'排班',attendance:'出勤',swap:'换休',publish:'发布',person:'人员',role:'岗位',import:'导入',copy:'复制'};
       return '<div class="staff-history-item"><span class="staff-history-badge">'+esc(labels[h.type]||h.type)+'</span><div class="staff-history-copy">'+esc(h.text)+'<small>'+esc(h.note||'')+(h.date?' · '+esc(h.date)+' '+esc(shiftLabel(h.shift)):'')+'</small></div><div class="staff-history-time">'+esc(new Date(h.time).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</div></div>';
     }).join(''):'<div class="staff-settings-card"><p>还没有历史记录。</p></div>';
   }
@@ -1180,6 +1180,8 @@
     document.getElementById('staffPrevWeek').addEventListener('click',()=>moveWeek(-1));
     document.getElementById('staffNextWeek').addEventListener('click',()=>moveWeek(1));
     document.getElementById('staffThisWeek').addEventListener('click',()=>{currentDate=todayLocal();renderWeek()});
+    document.getElementById('staffPublishWeekBtn').addEventListener('click',publishWeek);
+    document.getElementById('staffWeekVersionsBtn').addEventListener('click',openWeekVersions);
     document.getElementById('staffWeekPdfBtn').addEventListener('click',generateWeekPdf);
     document.getElementById('staffMonthInput').addEventListener('change',renderMonth);
     document.getElementById('staffMonthPdfBtn').addEventListener('click',generateMonthPdf);
@@ -1187,6 +1189,8 @@
       document.getElementById('staffAttendanceStatus').value=b.dataset.attStatus;
       document.querySelectorAll('[data-att-status]').forEach(x=>x.classList.toggle('active',x===b));
       document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',b.dataset.attStatus==='work');
+      const stored=attendanceGet(attendanceEdit.personId,attendanceEdit.date);
+      document.getElementById('staffSwapRestBtn').classList.toggle('hidden',b.dataset.attStatus!=='rest'||stored?.status!=='rest');
     }));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.addEventListener('click',()=>{
       document.getElementById('staffAttendancePortion').value=b.dataset.attPortion;
@@ -1195,6 +1199,9 @@
     document.getElementById('staffAttendanceStart').addEventListener('change',e=>{
       const end=document.getElementById('staffAttendanceEnd');if(!end.value||end.value<e.target.value)end.value=e.target.value;
     });
+    document.getElementById('staffSwapRestBtn').addEventListener('click',openSwapDialog);
+    document.getElementById('staffSwapPartner').addEventListener('change',refreshSwapDialog);
+    document.getElementById('staffConfirmSwap').addEventListener('click',confirmSwap);
     document.getElementById('staffSaveAttendance').addEventListener('click',()=>{
       if(!attendanceEdit.personId)return;
       const start=document.getElementById('staffAttendanceStart').value||attendanceEdit.date;
