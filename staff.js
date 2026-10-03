@@ -337,7 +337,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.3</h3><p>Published weekly rest · paired rest swaps · monthly audit · optional role board · JSON handoff</p>
+              <h3>Staff v0.3.1</h3><p>Published weekly rest · paired swaps · personal rest moves · monthly audit · JSON handoff</p>
             </div>
           </div>
         </section>
