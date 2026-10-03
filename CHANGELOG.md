@@ -2,6 +2,49 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.5 · Price Layer
+**2026-10-03**
+
+### Manual price records
+- SKU 编辑页新增胖胖的 **💶 价格** 卡片。
+- 支持“＋ 记录价格”和“价格历史”。
+- 价格不覆盖旧值，每次新增为独立 `priceRecords[]` 事务。
+- 来源支持：
+  - ✍️ 手动录入
+  - 📄 报价单
+  - 🧾 实际采购
+
+### IVA
+- 每条价格记录都有独立 IVA 状态：
+  - IVA 未确认
+  - 报价未含 IVA
+  - 报价已含 IVA
+- 可填写 IVA 税率。
+- 自动显示未税价 / 含税价；缺少必要税率时不伪造换算结果。
+- 涨跌比较优先采用可比的未税价格，避免“上月不含 IVA、本月含 IVA”造成假涨价。
+
+### Specification safety
+- 每条价格保存自己的 `quoteSpec` 和 `priceUnit`。
+- 本次报价规格与 SKU 主档规格不同时显示 ⚠️。
+- 规格异常只记录本次事实，不自动修改 SKU 主档。
+- 只有 supplier + priceUnit + quoteSpec 足够可比时才显示价格涨跌。
+
+### UI / handoff
+- 最新价格以小型 💶 tag 显示在库存与订货草稿 SKU 上。
+- 价格历史进入 Inventory JSON handoff / fingerprint。
+- JSON 导入预览新增“价格记录变化”。
+- 新增文件：`inventory-prices.js`。
+- 保持深色、软圆、胖胖 iPhone UI。
+
+### Not yet
+- PDF 报价自动解析 / SKU 自动映射尚未接入。
+- 采购订单预计总额、实际总额与库存估值尚未实现。
+
+### PWA
+- Service Worker cache 更新为 `cassola-suite-v05`。
+
+---
+
 ## Inventory v0.4.2 · Supplier Order Text
 **2026-10-03**
 
