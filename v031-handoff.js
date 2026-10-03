@@ -13,7 +13,8 @@ function v31Snapshot(st=state){
     history:st.history||[],
     order:st.order||{},
     placedOrders:st.placedOrders||[],
-    hiddenSkuIds:st.hiddenSkuIds||[]
+    hiddenSkuIds:st.hiddenSkuIds||[],
+    priceRecords:st.priceRecords||[]
   };
 }
 function v31Fingerprint(st=state){return v31HashString(JSON.stringify(v31Snapshot(st)))}
@@ -83,7 +84,12 @@ function v31Diff(incoming){
     const local=localOrders.get(o.id);
     return !local||JSON.stringify(local)!==JSON.stringify(o);
   }).length;
-  return {stock,skuChanges,newHistory,orderChanges};
+  const localPrices=new Map((state.priceRecords||[]).map(r=>[r.id,r]));
+  const priceChanges=(incoming.priceRecords||[]).filter(r=>{
+    const local=localPrices.get(r.id);
+    return !local||JSON.stringify(local)!==JSON.stringify(r);
+  }).length;
+  return {stock,skuChanges,newHistory,orderChanges,priceChanges};
 }
 function v31InjectUi(){
   const settings=document.getElementById('view-settings');
@@ -190,6 +196,7 @@ function v31PreviewImport(data){
       <div><span>SKU资料变化</span><b>${diff.skuChanges}</b></div>
       <div><span>新增历史</span><b>${diff.newHistory}</b></div>
       <div><span>订单 / 收货变化</span><b>${diff.orderChanges}</b></div>
+      <div><span>价格记录变化</span><b>${diff.priceChanges}</b></div>
     </div>
     <div class="v31-file-time">导出时间：${escapeHtml(v31FmtTime(data.exportedAt||incomingMeta.updatedAt))}</div>
   `;
@@ -220,6 +227,7 @@ function v31ApplyImport(force){
   const localDevice=v31DeviceName();
   state=migrate(p.data);
   if(typeof v3EnsureState==='function')v3EnsureState();
+  if(typeof v45EnsurePriceState==='function')v45EnsurePriceState();
   const fp=v31Fingerprint(state);
   const importedName=p.data.syncMeta?.deviceName||p.data.exportDevice||'导入设备';
   const revision=force?Math.max(oldLocalRev,p.incomingRev||0)+1:Math.max(1,p.incomingRev);
