@@ -34,6 +34,8 @@
       ],
       schedules:{},
       attendance:{},
+      swaps:[],
+      weekPublications:{},
       history:[],
       syncMeta:{revision:1,updatedAt:now(),contentHash:'',deviceName:'本设备'}
     };
@@ -45,6 +47,8 @@
       roles:s.roles||[],
       schedules:s.schedules||{},
       attendance:s.attendance||{},
+      swaps:s.swaps||[],
+      weekPublications:s.weekPublications||{},
       history:s.history||[]
     };
   }
@@ -61,6 +65,8 @@
     s.roles=Array.isArray(s.roles)&&s.roles.length?s.roles:base.roles;
     s.schedules=s.schedules&&typeof s.schedules==='object'?s.schedules:{};
     s.attendance=s.attendance&&typeof s.attendance==='object'?s.attendance:{};
+    s.swaps=Array.isArray(s.swaps)?s.swaps:[];
+    s.weekPublications=s.weekPublications&&typeof s.weekPublications==='object'?s.weekPublications:{};
     s.history=Array.isArray(s.history)?s.history:[];
     s.syncMeta={...base.syncMeta,...(s.syncMeta||{})};
     s.syncMeta.revision=Math.max(1,num(s.syncMeta.revision)||1);
