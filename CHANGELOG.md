@@ -2,6 +2,31 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.3.2 · Clearer Person Swap History
+**2026-10-03**
+
+- 人员记录顶部新增 3 个独立统计：
+  - 🔄 发起换休
+  - 🤝 参与换休
+  - ↪️ 个人调休
+- “参与换休”不再藏在普通记录里。
+- 换休事件卡强化显示：
+  - 发起 / 参与
+  - 与谁换
+  - 原休日期
+  - 改休日期
+  - 记录时间
+  - 备注
+- 新增人员记录筛选：
+  - 全部
+  - 换休 / 调休
+  - 请假
+  - 缺勤
+- 人员记录仍显示全部历史，不只显示最新一条；列表按时间从新到旧排列。
+- Service Worker cache 更新为 `cassola-suite-v0432`。
+
+---
+
 ## Staff v0.3.1 · Personal Rest Moves
 **2026-10-03**
 
