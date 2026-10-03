@@ -261,7 +261,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffAddRole">＋ 岗位</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>📨 群聊 JSON 交接</h3><p>和 Inventory 一样，用版本号防止旧文件静默覆盖。Staff JSON 会包含压缩后的人员头像。</p>
+              <h3>📨 群聊 JSON 交接</h3><p>和 Inventory 一样，用版本号防止旧文件静默覆盖。普通 Staff JSON 不带头像；只有“完整备份”才会打包压缩头像。</p>
               <div class="staff-sync-grid">
                 <div class="staff-sync-stat"><span>本机版本</span><b id="staffRevision">#1</b></div>
                 <div class="staff-sync-stat"><span>最后修改</span><b id="staffUpdated">—</b></div>
@@ -271,6 +271,7 @@
               </label>
               <div class="staff-settings-actions">
                 <button class="btn primary" id="staffExportBtn">导出 Staff JSON</button>
+                <button class="btn secondary" id="staffExportFullBtn">完整备份（含头像）</button>
                 <label class="btn secondary staff-file-label">导入 Staff JSON<input id="staffImportInput" type="file" accept=".json,application/json"></label>
               </div>
             </div>
@@ -279,7 +280,7 @@
               <div class="staff-settings-actions"><button class="btn danger ghost" id="staffResetBtn">清空 Staff 数据</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff Board v0.1</h3><p>Offline-first · drag/tap scheduling · versioned JSON · local PDF</p>
+              <h3>Staff Board v0.1.1</h3><p>Offline-first · drag/tap scheduling · split JSON backup · local PDF</p>
             </div>
           </div>
         </section>
@@ -561,19 +562,25 @@
     log('copy','复制 '+srcDate+' '+shiftLabel(currentShift)+' → '+currentDate,'整班复制');save();renderBoard();renderHistory();toast('昨日排班已复制');
   }
 
-  async function exportJson(){
+  async function exportJson(includeAvatars=false){
     save();
-    const avatars={};
-    for(const p of state.people){
-      if(!p.avatarStamp)continue;
-      const blob=await avatarGet(p.id);if(blob)avatars[p.id]=await blobToDataUrl(blob);
+    const payload={...state,format:includeAvatars?'cassola-staff-backup-v1':'cassola-staff-handoff-v1',exportedAt:now()};
+    if(includeAvatars){
+      const avatars={};
+      for(const p of state.people){
+        if(!p.avatarStamp)continue;
+        const blob=await avatarGet(p.id);
+        if(blob)avatars[p.id]=await blobToDataUrl(blob);
+      }
+      payload.avatars=avatars;
     }
-    const payload={...state,avatars,format:'cassola-staff-handoff-v1',exportedAt:now()};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     const dev=(state.syncMeta.deviceName||'device').replace(/[^\w\u4e00-\u9fff-]+/g,'-').slice(0,20);
-    a.download='cassola-staff-v'+state.syncMeta.revision+'-'+dev+'-'+todayLocal()+'.json';
-    a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('已导出 Staff #'+state.syncMeta.revision);
+    const prefix=includeAvatars?'cassola-staff-full-v':'cassola-staff-v';
+    a.download=prefix+state.syncMeta.revision+'-'+dev+'-'+todayLocal()+'.json';
+    a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast(includeAvatars?'已导出完整 Staff 备份 #'+state.syncMeta.revision:'已导出 Staff #'+state.syncMeta.revision);
   }
   function importDiff(data){
     const lp=new Map(state.people.map(p=>[p.id,p])),ip=new Map((data.people||[]).map(p=>[p.id,p]));
@@ -725,7 +732,8 @@
     });
     document.getElementById('staffCopyPrev').addEventListener('click',copyPreviousDay);
     document.getElementById('staffPdfBtn').addEventListener('click',generatePdf);
-    document.getElementById('staffExportBtn').addEventListener('click',exportJson);
+    document.getElementById('staffExportBtn').addEventListener('click',()=>exportJson(false));
+    document.getElementById('staffExportFullBtn').addEventListener('click',()=>exportJson(true));
     document.getElementById('staffImportInput').addEventListener('change',e=>{
       const file=e.target.files?.[0];if(!file)return;
       const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);if(!Array.isArray(data.people)||!Array.isArray(data.roles))throw new Error();previewImport(data)}catch(_){alert('这个文件不是有效的 Cassola Staff JSON。')}};r.readAsText(file);e.target.value='';
