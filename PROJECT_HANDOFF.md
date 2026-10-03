@@ -300,7 +300,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v0422
+cassola-suite-v0423
 ```
 
 当前 CORE 必须包含：
@@ -315,7 +315,7 @@ cassola-suite-v0422
 2. 递增 cache 名。
 3. 推到 `main`。
 4. 检查 GitHub Pages Actions。
-5. iPhone 端联网打开一次，彻底关闭 PWA，再重开。
+5. iPhone 端联网打开一次，彻底关闭 PWA，再重开。\n6. app.js 注册 Service Worker 时使用 `updateViaCache:'none'`，并在页面重新回到前台时主动 `reg.update()`，减少主屏 PWA 长时间卡旧版本。
 
 ---
 
