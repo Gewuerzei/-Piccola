@@ -2,6 +2,25 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.4.1 · Sala Starter Catalog
+**2026-10-03**
+
+- 根据 Sala / Bar 清单新增 69 个初始 SKU。
+- 全部归入 🍸 Bar / Sala 区域。
+- 分类：
+  - 甜点 31
+  - 酒水 15
+  - 糖浆 6
+  - 饮料 11
+  - Sala 调味 6
+- 供应商尚未确认的项目统一标记为 `待确认`。
+- 未提供的正式包装规格保持空白。
+- `待确认` SKU 默认不参与自动订货建议，避免临时资料触发错误建议。
+- SKU 编辑器补充 Sala 分类与“待确认”供应商选项。
+- Service Worker cache 更新为 `cassola-suite-v0442`。
+
+---
+
 ## Inventory v0.4 · Areas & Open Receiving
 **2026-10-03**
 
