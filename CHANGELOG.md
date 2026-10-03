@@ -1,5 +1,90 @@
 # Changelog
 
+All notable changes to the Cassola PWA suite are recorded here.
+
+## Cassola Hub + Staff Board v0.1
+**2026-10-03**
+
+### Added: Cassola Hub
+- 同一个网址现在先进入主菜单。
+- 两个模块：
+  - 📦 Inventory
+  - 👥 Staff
+- Inventory 保持原有数据和流程，不迁移、不清空。
+- 新增 Inventory 顶部“返回主菜单”按钮。
+- PWA 名称从 Cassola Inventory 调整为 Cassola。
+
+### Added: Staff Board
+- 新 Staff 模块，使用独立 localStorage：
+  `cassola_staff_v01`
+- 默认不内置真实员工名单，避免把人员信息写进公开 GitHub。
+- 人员新增 / 编辑 / 删除。
+- 姓名、昵称、主要岗位、备注。
+- 微信头像等本地图片可导入。
+- 头像自动方形裁切并压缩为约 256×256 WebP。
+- 头像存入 IndexedDB：
+  - DB: `cassola_staff_assets_v01`
+  - Store: `avatars`
+
+### Scheduling
+- 每天独立排班。
+- 午班 / 晚班。
+- 默认岗位：
+  - Nigiri / Sashimi
+  - Maki
+  - Cucina
+  - Sala
+  - Lavaggio
+  - Cassa
+- 岗位可新增、改名、换 Emoji、删除。
+- 特殊状态：
+  - 🧩 待安排
+  - 💤 休息
+  - 📝 请假 / 调休
+- 人员头像轻点后可选择岗位。
+- 长按头像可拖拽排岗。
+- 桌面支持普通 drag/drop。
+- 可复制昨日同班次排班。
+
+### History
+- 记录人员、岗位、排班、复制等操作。
+- 保留最近历史，可人工清理旧记录。
+
+### Staff JSON Handoff
+- 独立 revision / contentHash / deviceName。
+- 新版本允许导入。
+- 旧版本默认拦截。
+- 同版本不同 hash 提示分叉冲突。
+- legacy 数据包默认拦截。
+- 强制采用需二次确认并产生更高 revision。
+- Staff JSON 会带上压缩头像，方便完整迁移到另一台手机。
+
+### Local PDF
+- 当前排班可生成 A4 横向单页 PDF。
+- PDF 在浏览器本地生成，不上传服务器。
+- 包含：
+  - 日期
+  - 午/晚班
+  - 排班版本
+  - 岗位
+  - 人员姓名
+  - 头像
+  - 休息 / 请假 / 待安排
+- iOS 支持文件分享时直接调用系统分享；否则下载 PDF。
+
+### PWA
+- 新增：
+  - `hub.js`
+  - `hub.css`
+  - `staff.js`
+  - `staff.css`
+- Service Worker cache 更新为：
+  `cassola-suite-v04`
+
+---
+
+# Changelog
+
 All notable changes to Cassola Inventory are recorded here.
 
 ## v0.3.1 · JSON Handoff
