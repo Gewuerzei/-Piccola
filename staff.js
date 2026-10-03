@@ -776,15 +776,15 @@
     const input=document.getElementById('staffMonthInput'),box=document.getElementById('staffMonthSummary');if(!input||!box)return;
     if(!input.value)input.value=currentDate.slice(0,7);
     const month=input.value,people=state.people.filter(p=>p.active!==false);
-    const total={rest:0,leave:0,swap:0,absent:0,swapRequested:0};
+    const total={rest:0,leave:0,swap:0,absent:0,swapRequested:0,restMoves:0};
     const rows=people.map(p=>{
-      const c=monthlyCounts(p.id,month);c.swapRequested=monthlySwapInitiated(p.id,month);
-      ['rest','leave','swap','absent'].forEach(k=>total[k]+=c[k]);total.swapRequested+=c.swapRequested;
+      const c=monthlyCounts(p.id,month);c.swapRequested=monthlySwapInitiated(p.id,month);c.restMoves=monthlyRestMoves(p.id,month);
+      ['rest','leave','swap','absent'].forEach(k=>total[k]+=c[k]);total.swapRequested+=c.swapRequested;total.restMoves+=c.restMoves;
       return {p,c};
     });
     box.innerHTML=
-      '<div class="staff-month-total"><div><span>休息</span><b>'+total.rest+'</b></div><div><span>请假</span><b>'+total.leave+'</b></div><div><span>调休</span><b>'+total.swap+'</b></div><div class="'+(total.absent?'danger':'')+'"><span>缺勤</span><b>'+total.absent+'</b></div><div><span>换休发起</span><b>'+total.swapRequested+'</b></div></div>'+
-      (rows.length?rows.map(({p,c})=>'<div class="staff-month-row '+(c.absent?'has-absence':'')+'"><div class="staff-month-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><b>'+esc(p.name)+'</b></div><div class="staff-month-stat"><span>💤</span><b>'+c.rest+'</b></div><div class="staff-month-stat"><span>📝</span><b>'+c.leave+'</b></div><div class="staff-month-stat"><span>🔁</span><b>'+c.swap+'</b></div><div class="staff-month-stat absent"><span>❌</span><b>'+c.absent+'</b></div><div class="staff-month-stat swap-requested"><span>🔄</span><b>'+c.swapRequested+'</b></div></div>').join(''):'<div class="staff-settings-card"><p>还没有人员。</p></div>');
+      '<div class="staff-month-total"><div><span>休息</span><b>'+total.rest+'</b></div><div><span>请假</span><b>'+total.leave+'</b></div><div><span>调休</span><b>'+total.swap+'</b></div><div class="'+(total.absent?'danger':'')+'"><span>缺勤</span><b>'+total.absent+'</b></div><div><span>换休发起</span><b>'+total.swapRequested+'</b></div><div><span>个人调休</span><b>'+total.restMoves+'</b></div></div>'+
+      (rows.length?rows.map(({p,c})=>'<div class="staff-month-row '+(c.absent?'has-absence':'')+'"><div class="staff-month-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><b>'+esc(p.name)+'</b></div><div class="staff-month-stat"><span>💤</span><b>'+c.rest+'</b></div><div class="staff-month-stat"><span>📝</span><b>'+c.leave+'</b></div><div class="staff-month-stat"><span>🔁</span><b>'+c.swap+'</b></div><div class="staff-month-stat absent"><span>❌</span><b>'+c.absent+'</b></div><div class="staff-month-stat swap-requested"><span>🔄</span><b>'+c.swapRequested+'</b></div><div class="staff-month-stat rest-moves"><span>↪️</span><b>'+c.restMoves+'</b></div></div>').join(''):'<div class="staff-settings-card"><p>还没有人员。</p></div>');
     hydrateAvatars(box);
   }
   async function shareCanvasPdf(canvas,name){
@@ -988,12 +988,27 @@
         before,after,otherName,note:ev.note||'',initiated:ev.initiatorId===personId
       });
     }
+    for(const ev of state.restMoves||[]){
+      if(ev.personId!==personId)continue;
+      rows.push({
+        kind:'moveEvent',date:ev.createdAt?.slice(0,10)||ev.fromDate,createdAt:ev.createdAt,
+        before:ev.fromDate,after:ev.toDate,note:ev.note||'',crossWeek:!!ev.crossWeek
+      });
+    }
     rows.sort((a,b)=>(b.createdAt||b.date).localeCompare(a.createdAt||a.date));
     const title=document.getElementById('staffPersonRecordsTitle');
     const list=document.getElementById('staffPersonRecordsList');
     title.textContent=p.name+' · 人员记录';
     const swapCount=(state.swaps||[]).filter(x=>x.initiatorId===personId).length;
+    const moveCount=(state.restMoves||[]).filter(x=>x.personId===personId).length;
     const body=rows.length?rows.map(rec=>{
+      if(rec.kind==='moveEvent'){
+        return '<div class="staff-person-record-item move-event">'+
+          '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
+          '<div class="staff-person-record-main"><b>↪️ 个人调休'+(rec.crossWeek?' · 跨周':'')+'</b>'+
+          '<small>'+esc(rec.before+' → '+rec.after)+(rec.note?' · '+esc(rec.note):'')+'</small></div>'+
+        '</div>';
+      }
       if(rec.kind==='swapEvent'){
         return '<div class="staff-person-record-item swap-event">'+
           '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
@@ -1009,7 +1024,7 @@
         (rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
       '</div>';
     }).join(''):'<div class="staff-settings-card"><p>这个人还没有休假 / 调休 / 缺勤记录。</p></div>';
-    list.innerHTML='<div class="staff-person-record-summary"><span>🔄 累计发起换休</span><b>'+swapCount+' 次</b></div>'+body;
+    list.innerHTML='<div class="staff-person-record-summary"><span>🔄 发起换休</span><b>'+swapCount+' 次</b></div><div class="staff-person-record-summary"><span>↪️ 个人调休</span><b>'+moveCount+' 次</b></div>'+body;
     document.getElementById('staffPersonRecordsDialog').showModal();
   }
 
@@ -1134,9 +1149,11 @@
     });
     const localSwapIds=new Set((state.swaps||[]).map(x=>x.id));
     const swaps=(data.swaps||[]).filter(x=>!localSwapIds.has(x.id)).length;
+    const localMoveIds=new Set((state.restMoves||[]).map(x=>x.id));
+    const moves=(data.restMoves||[]).filter(x=>!localMoveIds.has(x.id)).length;
     const localPubIds=new Set(Object.values(state.weekPublications||{}).flat().map(x=>x.id));
     const publications=Object.values(data.weekPublications||{}).flat().filter(x=>!localPubIds.has(x.id)).length;
-    return {people,roles,hist,attendance,swaps,publications};
+    return {people,roles,hist,attendance,swaps,moves,publications};
   }
   function previewImport(data){
     const incoming=normalize(data),localRev=num(state.syncMeta.revision),inRev=num(incoming.syncMeta.revision);
@@ -1151,7 +1168,7 @@
     document.getElementById('staffImportSummary').innerHTML=
       '<div class="staff-import-banner '+cls+'"><strong>'+esc(title)+'</strong><span>'+esc(detail)+'</span></div>'+
       '<div class="staff-import-compare" style="margin-top:10px"><div><span>本机</span><b>#'+localRev+'</b></div><div class="arrow">→</div><div><span>文件</span><b>#'+(inRev||'?')+'</b></div></div>'+
-      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>休假/缺勤变化</span><b>'+d.attendance+'</b></div><div class="staff-sync-stat"><span>新增换休</span><b>'+d.swaps+'</b></div><div class="staff-sync-stat"><span>新增周表版本</span><b>'+d.publications+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
+      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>休假/缺勤变化</span><b>'+d.attendance+'</b></div><div class="staff-sync-stat"><span>新增换休</span><b>'+d.swaps+'</b></div><div class="staff-sync-stat"><span>新增个人调休</span><b>'+d.moves+'</b></div><div class="staff-sync-stat"><span>新增周表版本</span><b>'+d.publications+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
     document.getElementById('staffAcceptImport').style.display=mode==='newer'?'inline-block':'none';
     document.getElementById('staffForceImport').style.display=['older','legacy','fork'].includes(mode)?'inline-block':'none';
     document.getElementById('staffImportDialog').showModal();
