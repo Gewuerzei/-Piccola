@@ -142,20 +142,21 @@ function v4OrderAreaSections(o){
 function v4RenderReceivingBell(){
   const box=document.getElementById('v4ReceivingBell');if(!box)return;
   const openOrders=(state.placedOrders||[]).filter(o=>o.status!=='received');
-  const items=openOrders.flatMap(o=>v4OrderOpenItems(o));
+  const items=openOrders.flatMap(o=>(o.items||[]).filter(i=>!v4LineClosed(i)||i.dirty));
   if(!items.length){box.classList.add('hidden');box.innerHTML='';return}
-  const later=items.filter(i=>i.lineStatus==='later').length;
-  const other=items.filter(i=>i.lineStatus==='other').length;
+  const later=items.filter(i=>i.lineStatus==='later'&&!i.dirty).length;
+  const other=items.filter(i=>i.lineStatus==='other'&&!i.dirty).length;
   const pending=items.filter(i=>i.lineStatus==='pending').length;
+  const unsaved=items.filter(i=>i.dirty&&i.lineStatus!=='pending').length;
   box.classList.remove('hidden');
-  box.innerHTML=`<div><span class="v4-bell-icon">🔔</span><div><b>还有 ${items.length} 项未结束</b><small>待核对 ${pending} · 晚到 ${later} · 待他人 ${other}</small></div></div><span>${openOrders.length} 张单</span>`;
+  box.innerHTML=`<div><span class="v4-bell-icon">🔔</span><div><b>还有 ${items.length} 项未结束</b><small>待核对 ${pending} · 晚到 ${later} · 待他人 ${other} · 待保存 ${unsaved}</small></div></div><span>${openOrders.length} 张单</span>`;
 }
 function v3RenderPlaced(){
   const orders=state.placedOrders.slice().reverse();
   v4RenderReceivingBell();
   document.getElementById('v3PlacedList').innerHTML=orders.length?orders.map(o=>{
     v4NormalizeOrder(o);
-    const open=v4OrderOpenItems(o),dirty=v4OrderDirty(o),done=o.status==='received'||open.length===0;
+    const open=v4OrderOpenItems(o),dirty=v4OrderDirty(o),done=o.status==='received'||(open.length===0&&dirty.length===0);
     const status=done?'✅ 已结案':`🔔 ${open.length} 项未结束`;
     const batches=(o.receiptBatches||[]).length;
     return `<article class="v3-placed-card ${done?'done':''}">
