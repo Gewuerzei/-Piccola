@@ -9,6 +9,7 @@
   let currentShift='dinner';
   let currentView='week';
   let attendanceEdit={personId:null,date:null};
+  let personRecordsView={personId:null,filter:'all'};
   let pendingAvatarBlob=null;
   let editPersonId=null;
   let importCandidate=null;
@@ -337,7 +338,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.3.1</h3><p>Published weekly rest · paired swaps · personal rest moves · monthly audit · JSON handoff</p>
+              <h3>Staff v0.3.2</h3><p>Published weekly rest · clearer swap audit · personal rest moves · monthly audit · JSON handoff</p>
             </div>
           </div>
         </section>
@@ -451,6 +452,13 @@
       <dialog class="staff-dialog" id="staffPersonRecordsDialog">
         <form method="dialog">
           <div class="dialog-head"><div><div class="eyebrow">PERSON RECORDS</div><h3 id="staffPersonRecordsTitle">人员记录</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="staff-person-record-summary-grid" id="staffPersonRecordsSummary"></div>
+          <div class="staff-person-record-filters">
+            <button type="button" class="active" data-person-record-filter="all">全部</button>
+            <button type="button" data-person-record-filter="swap">换休 / 调休</button>
+            <button type="button" data-person-record-filter="leave">请假</button>
+            <button type="button" data-person-record-filter="absent">缺勤</button>
+          </div>
           <div class="staff-person-records" id="staffPersonRecordsList"></div>
         </form>
       </dialog>
@@ -972,8 +980,7 @@
     hydrateAvatars(list);
   }
 
-  function openPersonRecords(personId){
-    const p=personById(personId);if(!p)return;
+  function personRecordRows(personId){
     const rows=[];
     for(const [date,map] of Object.entries(state.attendance||{})){
       const rec=map?.[personId];if(!rec)continue;
@@ -995,36 +1002,70 @@
         before:ev.fromDate,after:ev.toDate,note:ev.note||'',crossWeek:!!ev.crossWeek
       });
     }
-    rows.sort((a,b)=>(b.createdAt||b.date).localeCompare(a.createdAt||a.date));
-    const title=document.getElementById('staffPersonRecordsTitle');
-    const list=document.getElementById('staffPersonRecordsList');
-    title.textContent=p.name+' · 人员记录';
-    const swapCount=(state.swaps||[]).filter(x=>x.initiatorId===personId).length;
+    return rows.sort((a,b)=>(b.createdAt||b.date).localeCompare(a.createdAt||a.date));
+  }
+  function personRecordMatches(rec,filter){
+    if(filter==='all')return true;
+    if(filter==='swap')return rec.kind==='swapEvent'||rec.kind==='moveEvent';
+    if(filter==='leave')return rec.kind==='attendance'&&rec.status==='leave';
+    if(filter==='absent')return rec.kind==='attendance'&&rec.status==='absent';
+    return true;
+  }
+  function shortRecordDate(date){
+    if(!date)return '—';
+    return date.slice(5).replace('-','/');
+  }
+  function recordStamp(ts,date){
+    if(ts){
+      const d=new Date(ts);
+      if(!Number.isNaN(d.getTime()))return d.toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    }
+    return date||'';
+  }
+  function renderPersonRecords(){
+    const personId=personRecordsView.personId,p=personById(personId);if(!p)return;
+    const allRows=personRecordRows(personId),filter=personRecordsView.filter;
+    const rows=allRows.filter(rec=>personRecordMatches(rec,filter));
+    const initiated=(state.swaps||[]).filter(x=>x.initiatorId===personId).length;
+    const participated=(state.swaps||[]).filter(x=>(x.personAId===personId||x.personBId===personId)&&x.initiatorId!==personId).length;
     const moveCount=(state.restMoves||[]).filter(x=>x.personId===personId).length;
-    const body=rows.length?rows.map(rec=>{
+    document.getElementById('staffPersonRecordsTitle').textContent=p.name+' · 人员记录';
+    document.getElementById('staffPersonRecordsSummary').innerHTML=
+      '<div class="staff-person-record-summary initiated"><span>🔄 发起换休</span><b>'+initiated+' 次</b></div>'+
+      '<div class="staff-person-record-summary participated"><span>🤝 参与换休</span><b>'+participated+' 次</b></div>'+
+      '<div class="staff-person-record-summary moved"><span>↪️ 个人调休</span><b>'+moveCount+' 次</b></div>';
+    document.querySelectorAll('[data-person-record-filter]').forEach(b=>b.classList.toggle('active',b.dataset.personRecordFilter===filter));
+    const list=document.getElementById('staffPersonRecordsList');
+    list.innerHTML=rows.length?rows.map(rec=>{
       if(rec.kind==='moveEvent'){
         return '<div class="staff-person-record-item move-event">'+
-          '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
-          '<div class="staff-person-record-main"><b>↪️ 个人调休'+(rec.crossWeek?' · 跨周':'')+'</b>'+
-          '<small>'+esc(rec.before+' → '+rec.after)+(rec.note?' · '+esc(rec.note):'')+'</small></div>'+
+          '<div class="staff-person-record-date">'+esc(recordStamp(rec.createdAt,rec.date))+'</div>'+
+          '<div class="staff-person-record-main"><div class="staff-record-title"><b>↪️ 个人调休'+(rec.crossWeek?' · 跨周':'')+'</b></div>'+
+          '<strong class="staff-record-route">原休 '+esc(shortRecordDate(rec.before))+' → 改休 '+esc(shortRecordDate(rec.after))+'</strong>'+
+          (rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
         '</div>';
       }
       if(rec.kind==='swapEvent'){
-        return '<div class="staff-person-record-item swap-event">'+
-          '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
-          '<div class="staff-person-record-main"><b>🔄 换休'+(rec.initiated?' · 发起':' · 参与')+'</b>'+
-          '<small>'+esc(rec.before+' → '+rec.after+' · 与 '+rec.otherName)+(rec.note?' · '+esc(rec.note):'')+'</small></div>'+
+        return '<div class="staff-person-record-item swap-event '+(rec.initiated?'initiated':'participated')+'">'+
+          '<div class="staff-person-record-date">'+esc(recordStamp(rec.createdAt,rec.date))+'</div>'+
+          '<div class="staff-person-record-main"><div class="staff-record-title"><b>'+(rec.initiated?'🔄 发起换休':'🤝 参与换休')+'</b><span>与 '+esc(rec.otherName)+'</span></div>'+
+          '<strong class="staff-record-route">原休 '+esc(shortRecordDate(rec.before))+' → 改休 '+esc(shortRecordDate(rec.after))+'</strong>'+
+          (rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
         '</div>';
       }
       const meta=ATTENDANCE_STATUS[rec.status]||{icon:'·',label:rec.status||'记录'};
       const part=rec.status!=='work'?(rec.portion==='am'?'上午':rec.portion==='pm'?'下午':'全天'):'';
-      return '<div class="staff-person-record-item">'+
+      return '<div class="staff-person-record-item attendance-event status-'+esc(rec.status||'work')+'">'+
         '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
-        '<div class="staff-person-record-main"><b>'+esc(meta.icon+' '+meta.label)+(part?' · '+esc(part):'')+'</b>'+
+        '<div class="staff-person-record-main"><div class="staff-record-title"><b>'+esc(meta.icon+' '+meta.label)+(part?' · '+esc(part):'')+'</b></div>'+
         (rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
       '</div>';
-    }).join(''):'<div class="staff-settings-card"><p>这个人还没有休假 / 调休 / 缺勤记录。</p></div>';
-    list.innerHTML='<div class="staff-person-record-summary"><span>🔄 发起换休</span><b>'+swapCount+' 次</b></div><div class="staff-person-record-summary"><span>↪️ 个人调休</span><b>'+moveCount+' 次</b></div>'+body;
+    }).join(''):'<div class="staff-person-record-empty">这个筛选下还没有记录。</div>';
+  }
+  function openPersonRecords(personId){
+    const p=personById(personId);if(!p)return;
+    personRecordsView={personId,filter:'all'};
+    renderPersonRecords();
     document.getElementById('staffPersonRecordsDialog').showModal();
   }
 
@@ -1314,6 +1355,10 @@
       setAttendanceRange(attendanceEdit.personId,start,end,status,note,portion);
       document.getElementById('staffAttendanceDialog').close();
     });
+    document.querySelectorAll('[data-person-record-filter]').forEach(b=>b.addEventListener('click',()=>{
+      personRecordsView.filter=b.dataset.personRecordFilter||'all';
+      renderPersonRecords();
+    }));
     document.getElementById('staffOpenHistory').addEventListener('click',()=>showView('history'));
     document.getElementById('staffPrevDay').addEventListener('click',()=>moveDate(-1));
     document.getElementById('staffNextDay').addEventListener('click',()=>moveDate(1));
