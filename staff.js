@@ -376,6 +376,15 @@
             <button type="button" data-att-status="absent">❌ 缺勤</button>
           </div>
           <input type="hidden" id="staffAttendanceStatus" value="work">
+          <div class="staff-leave-portion hidden" id="staffLeavePortion">
+            <span>请假时段</span>
+            <div class="staff-portion-seg">
+              <button type="button" data-att-portion="full" class="active">全天</button>
+              <button type="button" data-att-portion="am">上午</button>
+              <button type="button" data-att-portion="pm">下午</button>
+            </div>
+            <input type="hidden" id="staffAttendancePortion" value="full">
+          </div>
           <div class="staff-form-grid">
             <label>开始日期<input id="staffAttendanceStart" type="date"></label>
             <label>连续到<input id="staffAttendanceEnd" type="date"></label>
@@ -385,6 +394,13 @@
             <button value="cancel" class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffSaveAttendance">保存</button>
           </div>
+        </form>
+      </dialog>
+
+      <dialog class="staff-dialog" id="staffPersonRecordsDialog">
+        <form method="dialog">
+          <div class="dialog-head"><div><div class="eyebrow">PERSON RECORDS</div><h3 id="staffPersonRecordsTitle">人员记录</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="staff-person-records" id="staffPersonRecordsList"></div>
         </form>
       </dialog>
 
@@ -447,7 +463,7 @@
   function attendanceGet(personId,date){
     return state.attendance?.[date]?.[personId]||null;
   }
-  function setAttendanceRange(personId,start,end,status,note=''){
+  function setAttendanceRange(personId,start,end,status,note='',portion='full'){
     const p=personById(personId);if(!p)return;
     let a=dateObj(start),b=dateObj(end||start);if(b<a)b=new Date(a);
     let count=0;
@@ -455,12 +471,13 @@
       const iso=localIso(d);
       if(!state.attendance[iso])state.attendance[iso]={};
       if(status==='work')delete state.attendance[iso][personId];
-      else state.attendance[iso][personId]={status,note:note.trim(),updatedAt:now()};
+      else state.attendance[iso][personId]={status,note:note.trim(),portion:status==='leave'?(portion||'full'):'full',updatedAt:now()};
       if(!Object.keys(state.attendance[iso]).length)delete state.attendance[iso];
       count++;
     }
     const meta=ATTENDANCE_STATUS[status]||ATTENDANCE_STATUS.work;
-    log('attendance',p.name+' · '+meta.label+(count>1?' × '+count+'天':''),note,start,'all');
+    const portionText=status==='leave'?(portion==='am'?' · 上午':portion==='pm'?' · 下午':' · 全天'):'';
+    log('attendance',p.name+' · '+meta.label+portionText+(count>1?' × '+count+'天':''),note,start,'all');
     save();renderWeek();renderMonth();renderHistory();
   }
   function openAttendance(personId,date){
@@ -472,7 +489,11 @@
     document.getElementById('staffAttendanceEnd').value=date;
     document.getElementById('staffAttendanceStatus').value=status;
     document.getElementById('staffAttendanceNote').value=rec?.note||'';
+    const portion=rec?.portion||'full';
+    document.getElementById('staffAttendancePortion').value=portion;
     document.querySelectorAll('[data-att-status]').forEach(b=>b.classList.toggle('active',b.dataset.attStatus===status));
+    document.querySelectorAll('[data-att-portion]').forEach(b=>b.classList.toggle('active',b.dataset.attPortion===portion));
+    document.getElementById('staffLeavePortion').classList.toggle('hidden',status!=='leave');
     document.getElementById('staffAttendanceDialog').showModal();
   }
   function renderWeek(){
@@ -507,7 +528,10 @@
     const out={rest:0,leave:0,swap:0,absent:0};
     for(const [date,map] of Object.entries(state.attendance||{})){
       if(!date.startsWith(month))continue;
-      const st=map?.[personId]?.status;if(st&&out[st]!==undefined)out[st]++;
+      const rec=map?.[personId],st=rec?.status;
+      if(st&&out[st]!==undefined){
+        out[st]+=st==='leave'&&['am','pm'].includes(rec?.portion)?0.5:1;
+      }
     }
     return out;
   }
@@ -688,10 +712,34 @@
     const arr=state.people.filter(p=>p.active!==false);
     list.innerHTML=arr.length?arr.map(p=>{
       const role=roleById(p.primaryRole)?.name||'未设主要岗位';
-      return '<div class="staff-person-row"><div class="staff-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><div class="staff-person-copy"><b>'+esc(p.name)+(p.nickname?' · '+esc(p.nickname):'')+'</b><small>'+esc(role)+(p.note?' · '+esc(p.note):'')+'</small></div><div class="staff-row-actions"><button class="staff-icon-btn" data-edit-person="'+esc(p.id)+'">✎</button></div></div>';
+      return '<div class="staff-person-row"><div class="staff-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><div class="staff-person-copy"><b>'+esc(p.name)+(p.nickname?' · '+esc(p.nickname):'')+'</b><small>'+esc(role)+(p.note?' · '+esc(p.note):'')+'</small></div><div class="staff-row-actions"><button class="staff-icon-btn" data-person-records="'+esc(p.id)+'" title="人员记录">🕘</button><button class="staff-icon-btn" data-edit-person="'+esc(p.id)+'">✎</button></div></div>';
     }).join(''):'<div class="staff-settings-card"><h3>还没有人员</h3><p>点“＋ 人员”，可以从微信头像开始组建这支臭排班军团🗿。</p></div>';
     list.querySelectorAll('[data-edit-person]').forEach(b=>b.addEventListener('click',()=>openPerson(b.dataset.editPerson)));
+    list.querySelectorAll('[data-person-records]').forEach(b=>b.addEventListener('click',()=>openPersonRecords(b.dataset.personRecords)));
     hydrateAvatars(list);
+  }
+
+  function openPersonRecords(personId){
+    const p=personById(personId);if(!p)return;
+    const rows=[];
+    for(const [date,map] of Object.entries(state.attendance||{})){
+      const rec=map?.[personId];if(!rec)continue;
+      rows.push({date,...rec});
+    }
+    rows.sort((a,b)=>b.date.localeCompare(a.date));
+    const title=document.getElementById('staffPersonRecordsTitle');
+    const list=document.getElementById('staffPersonRecordsList');
+    title.textContent=p.name+' · 人员记录';
+    list.innerHTML=rows.length?rows.map(rec=>{
+      const meta=ATTENDANCE_STATUS[rec.status]||{icon:'·',label:rec.status||'记录'};
+      const part=rec.status==='leave'?(rec.portion==='am'?'上午':rec.portion==='pm'?'下午':'全天'):'';
+      return '<div class="staff-person-record-item">'+
+        '<div class="staff-person-record-date">'+esc(rec.date)+'</div>'+
+        '<div class="staff-person-record-main"><b>'+esc(meta.icon+' '+meta.label)+(part?' · '+esc(part):'')+'</b>'+
+        (rec.note?'<small>'+esc(rec.note)+'</small>':'')+'</div>'+
+      '</div>';
+    }).join(''):'<div class="staff-settings-card"><p>这个人还没有休假 / 调休 / 缺勤记录。</p></div>';
+    document.getElementById('staffPersonRecordsDialog').showModal();
   }
 
   function fillRoleOptions(selected=''){
@@ -945,6 +993,11 @@
     document.querySelectorAll('[data-att-status]').forEach(b=>b.addEventListener('click',()=>{
       document.getElementById('staffAttendanceStatus').value=b.dataset.attStatus;
       document.querySelectorAll('[data-att-status]').forEach(x=>x.classList.toggle('active',x===b));
+      document.getElementById('staffLeavePortion').classList.toggle('hidden',b.dataset.attStatus!=='leave');
+    }));
+    document.querySelectorAll('[data-att-portion]').forEach(b=>b.addEventListener('click',()=>{
+      document.getElementById('staffAttendancePortion').value=b.dataset.attPortion;
+      document.querySelectorAll('[data-att-portion]').forEach(x=>x.classList.toggle('active',x===b));
     }));
     document.getElementById('staffAttendanceStart').addEventListener('change',e=>{
       const end=document.getElementById('staffAttendanceEnd');if(!end.value||end.value<e.target.value)end.value=e.target.value;
@@ -955,7 +1008,8 @@
       const end=document.getElementById('staffAttendanceEnd').value||start;
       const status=document.getElementById('staffAttendanceStatus').value||'work';
       const note=document.getElementById('staffAttendanceNote').value||'';
-      setAttendanceRange(attendanceEdit.personId,start,end,status,note);
+      const portion=document.getElementById('staffAttendancePortion').value||'full';
+      setAttendanceRange(attendanceEdit.personId,start,end,status,note,portion);
       document.getElementById('staffAttendanceDialog').close();
     });
     document.getElementById('staffOpenHistory').addEventListener('click',()=>showView('history'));
