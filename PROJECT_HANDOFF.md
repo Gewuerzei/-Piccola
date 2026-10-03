@@ -10,7 +10,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.3.1 · JSON Handoff**
-- Staff: **v0.2 · Weekly Rest**
+- Staff: **v0.2.1 · Weekly Rest**
 - 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -153,6 +153,10 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
   - 🔁 调休
   - ❌ 缺勤
 - 点日期格即可编辑状态和备注
+- 请假支持次级时段：全天 / 上午 / 下午
+- 周表仍只显示“请假”这个异常类型，不在小格子里挤半天细节
+- 月度统计中：全天=1天，上午/下午=0.5天
+- 人员页可打开个人记录，查看具体日期、状态、全天/上午/下午与备注
 - 支持连续日期一次录入，例如 3 天请假
 - 月度汇总：按员工统计休息 / 请假 / 调休 / 缺勤天数
 - 有缺勤的人在月度页突出显示
@@ -231,6 +235,7 @@ schedules[YYYY-MM-DD][lunch|dinner] = {
 ```js
 attendance[YYYY-MM-DD][personId] = {
   status: "rest" | "leave" | "swap" | "absent",
+  portion: "full" | "am" | "pm",
   note,
   updatedAt
 }
@@ -293,7 +298,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v042
+cassola-suite-v0421
 ```
 
 当前 CORE 必须包含：
