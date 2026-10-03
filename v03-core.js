@@ -56,9 +56,10 @@ function v4NormalizeOrder(o){
 function v3EnsureState(){
   state.placedOrders=Array.isArray(state.placedOrders)?state.placedOrders:[];
   state.hiddenSkuIds=Array.isArray(state.hiddenSkuIds)?state.hiddenSkuIds:[];
+  state.priceRecords=Array.isArray(state.priceRecords)?state.priceRecords:[];
   state.skus=(Array.isArray(state.skus)?state.skus:[]).map(v3NormalizeSku);
   state.placedOrders=state.placedOrders.map(v4NormalizeOrder);
-  state.version=4;
+  state.version=5;
 }
 v3EnsureState(); saveState();
 function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id))}
