@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.4 · Areas & Open Receiving**
+- Inventory: **v0.4.1 · Sala Starter Catalog**
 - Staff: **v0.3.2 · Published Weekly Rest**
 - 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
 - iPhone 优先 PWA，offline-first
@@ -86,6 +86,24 @@ SKU 新增 `area`：
 旧 SKU 没有 area 时默认迁移为 `sushi`，不更换历史 localStorage key。
 
 库存 / 盘货按区域切换；订货和收货仍以供应商订单为主，但订单内部按区域分小节。
+
+### Bar / Sala 初始 SKU
+
+2026-10-03 已根据 Pietro 提供的 Sala 清单加入 **69 个 Bar / Sala 初始 SKU**：
+- 甜点 31
+- 酒水 15
+- 糖浆 6
+- 饮料 11
+- Sala 调味 6
+
+这些 SKU 当前：
+- `area = "bar"`
+- 供应商先写 `待确认`
+- 未提供的规格保持空白
+- 单位只按明显商品形态给了临时计数单位
+- `待确认` 供应商默认不参与自动订货建议
+
+后续拿到真实供应商报价单 / 规格后，逐项修正 supplier、spec、unit；不要把当前临时值当成供应商正式规格。
 
 ### 收货的重要产品决定
 
@@ -376,7 +394,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v0441
+cassola-suite-v0442
 ```
 
 当前 CORE 必须包含：
