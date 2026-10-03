@@ -203,6 +203,10 @@
         for(const k of Object.keys(sh.assignments))sh.assignments[k]=(sh.assignments[k]||[]).filter(id=>id!==personId);
       }
     }
+    for(const date of Object.keys(state.attendance||{})){
+      delete state.attendance[date][personId];
+      if(!Object.keys(state.attendance[date]).length)delete state.attendance[date];
+    }
   }
 
   function buildApp(){
@@ -925,6 +929,29 @@
   function bindUi(){
     document.getElementById('staffHomeBtn').addEventListener('click',()=>window.CassolaHub?.show());
     document.querySelectorAll('.staff-nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.staffView)));
+    document.getElementById('staffPrevWeek').addEventListener('click',()=>moveWeek(-1));
+    document.getElementById('staffNextWeek').addEventListener('click',()=>moveWeek(1));
+    document.getElementById('staffThisWeek').addEventListener('click',()=>{currentDate=todayLocal();renderWeek()});
+    document.getElementById('staffWeekPdfBtn').addEventListener('click',generateWeekPdf);
+    document.getElementById('staffMonthInput').addEventListener('change',renderMonth);
+    document.getElementById('staffMonthPdfBtn').addEventListener('click',generateMonthPdf);
+    document.querySelectorAll('[data-att-status]').forEach(b=>b.addEventListener('click',()=>{
+      document.getElementById('staffAttendanceStatus').value=b.dataset.attStatus;
+      document.querySelectorAll('[data-att-status]').forEach(x=>x.classList.toggle('active',x===b));
+    }));
+    document.getElementById('staffAttendanceStart').addEventListener('change',e=>{
+      const end=document.getElementById('staffAttendanceEnd');if(!end.value||end.value<e.target.value)end.value=e.target.value;
+    });
+    document.getElementById('staffSaveAttendance').addEventListener('click',()=>{
+      if(!attendanceEdit.personId)return;
+      const start=document.getElementById('staffAttendanceStart').value||attendanceEdit.date;
+      const end=document.getElementById('staffAttendanceEnd').value||start;
+      const status=document.getElementById('staffAttendanceStatus').value||'work';
+      const note=document.getElementById('staffAttendanceNote').value||'';
+      setAttendanceRange(attendanceEdit.personId,start,end,status,note);
+      document.getElementById('staffAttendanceDialog').close();
+    });
+    document.getElementById('staffOpenHistory').addEventListener('click',()=>showView('history'));
     document.getElementById('staffPrevDay').addEventListener('click',()=>moveDate(-1));
     document.getElementById('staffNextDay').addEventListener('click',()=>moveDate(1));
     document.getElementById('staffToday').addEventListener('click',()=>{currentDate=todayLocal();renderBoard()});
@@ -961,7 +988,7 @@
     });
   }
 
-  function renderAll(){renderBoard();renderPeople();renderHistory();renderSettings();showView(currentView)}
+  function renderAll(){renderWeek();renderMonth();renderBoard();renderPeople();renderHistory();renderSettings();showView(currentView)}
   function init(){load();buildApp();renderAll()}
   function show(){if(!state)init();document.getElementById('staffApp')?.removeAttribute('aria-hidden');renderAll()}
   function hide(){document.getElementById('staffApp')?.setAttribute('aria-hidden','true')}
