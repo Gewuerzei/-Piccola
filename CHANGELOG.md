@@ -2,6 +2,21 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.2.1 · Leave Detail
+**2026-10-03**
+
+- 请假新增次级选项：全天 / 上午 / 下午。
+- 周休表保持简洁，只显示“请假”异常，不显示半天细节。
+- 月度汇总按真实请假时长统计：
+  - 全天 = 1 天
+  - 上午 = 0.5 天
+  - 下午 = 0.5 天
+- 人员页新增“个人记录”入口，可查看每条异常的日期、状态、请假时段与备注。
+- 旧数据没有 portion 时按全天处理。
+- Service Worker cache 更新为 `cassola-suite-v0421`。
+
+---
+
 ## Staff v0.2 · Weekly Rest
 **2026-10-03**
 
