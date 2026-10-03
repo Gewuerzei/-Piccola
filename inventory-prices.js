@@ -64,13 +64,14 @@ function v45PriceRecordsFor(skuId){
 function v45LatestPrice(skuId){return v45PriceRecordsFor(skuId)[0]||null}
 function v45ComparablePrevious(latest){
   if(!latest)return null;
+  const rows=v45PriceRecordsFor(latest.skuId),idx=rows.findIndex(r=>r.id===latest.id);
+  const older=idx>=0?rows.slice(idx+1):rows;
   const spec=String(latest.quoteSpec||'').trim().toLowerCase(),unit=String(latest.priceUnit||'').trim().toLowerCase();
-  return v45PriceRecordsFor(latest.skuId).find(r=>{
-    if(r.id===latest.id)return false;
-    return String(r.supplier||'')===String(latest.supplier||'')
-      && String(r.priceUnit||'').trim().toLowerCase()===unit
-      && String(r.quoteSpec||'').trim().toLowerCase()===spec;
-  })||null;
+  return older.find(r=>
+    String(r.supplier||'')===String(latest.supplier||'')
+    && String(r.priceUnit||'').trim().toLowerCase()===unit
+    && String(r.quoteSpec||'').trim().toLowerCase()===spec
+  )||null;
 }
 function v45Comparison(latest,previous){
   if(!latest||!previous)return null;
@@ -81,7 +82,7 @@ function v45Comparison(latest,previous){
     a=Number(latest.amount);b=Number(previous.amount);basis=latest.vatMode==='included'?'含税':'原报价';
   }
   if(!(a>0)||!(b>0))return null;
-  return {pct:(a-b)/b*100,delta:a-b,basis};
+  return {pct:(a-b)/b*100,delta:a-b,basis,current:a,previous:b};
 }
 function v45VatShort(r){
   if(!r)return'';
