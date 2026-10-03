@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.4.2 · Supplier Order Text**
+- Inventory: **v0.5 · Price Layer**
 - Staff: **v0.3.2 · Published Weekly Rest**
 - 当前实现基线 commit（本次维护理论刷新时）: `c0c11b74310f8ecd8f4a4d692546ec9cfc242985`
 - iPhone 优先 PWA，offline-first
@@ -146,6 +146,7 @@ cassola_inventory_v01
 - `v03-ui.js`
 - `v03.css`
 - `v031-handoff.js`
+- `inventory-prices.js`
 
 ### 核心流程
 
@@ -240,6 +241,52 @@ PWA 内部订单和发给供应商的文本是同一份数据的两个视图：
 - 已下单卡片也提供“📋 复制订单”，可随时重新发给供应商
 - 新建 placed order 时把 `spec` 快照写进 order item；旧订单没有 spec 时回退到当前 SKU spec
 
+### Price Layer
+
+价格不是 SKU 上的单一可覆盖字段，而是独立事务历史：
+
+```js
+priceRecords[] = {
+  id,
+  skuId,
+  skuName,
+  supplier,
+  recordDate,
+  createdAt,
+  source,        // manual | quote | actual
+  currency,      // 当前固定 EUR
+  amount,        // 用户看到 / 输入的报价
+  priceUnit,     // 箱 / 盒 / kg / 包 ...
+  quoteSpec,     // 本次报价写的规格
+  vatMode,       // unknown | excluded | included
+  vatRate,
+  netAmount,
+  grossAmount,
+  specMismatch,
+  note
+}
+```
+
+当前 v0.5：
+- SKU 编辑页新增胖胖的“💶 价格”卡片
+- 支持手动新增价格记录
+- 来源可选：手动 / 报价单 / 实际采购
+- IVA 是**每一条价格记录自己的属性**，不能只做成 SKU 固定值
+- IVA 模式：
+  - unknown = 未确认
+  - excluded = 报价未含 IVA
+  - included = 报价已含 IVA
+- 有税率时自动换算未税 / 含税价格
+- excluded 即使暂时不知道税率，也能确认输入价本身是未税价
+- included 若税率未知，则保留含税输入价但不伪造未税价
+- 最新价格可显示在库存 / 订货草稿 SKU tag
+- 价格历史按日期保留，不覆盖旧记录
+- 涨跌比较优先使用未税价；仅在 supplier + priceUnit + quoteSpec 可比时比较
+- 若本次 quoteSpec 与 SKU 标准 spec 不同，显示 ⚠️ 规格异常，只保存为本次价格记录，不自动修改 SKU 主档
+- 新 SKU 尚未保存时不能先挂价格记录，避免孤儿 price event
+
+后续 PDF 报价导入也必须写入同一个 `priceRecords[]` 数据模型，不另造第二套价格系统。电子 PDF 可本地解析；图片 / 扫描 PDF 可由 Piccola 辅助结构化后导入。
+
 ### Inventory JSON handoff
 
 `v031-handoff.js` 提供：
@@ -253,6 +300,7 @@ PWA 内部订单和发给供应商的文本是同一份数据的两个视图：
 - SKU area 会进入 JSON
 - 已存在订单的收货进度变化会在导入预览中计为“订单 / 收货变化”
 - 每张供应商订单可单独导出 `cassola-order-handoff-v1` JSON 快照
+- `priceRecords[]` 进入 Inventory JSON fingerprint / handoff；导入预览显示“价格记录变化”
 
 ---
 
@@ -493,7 +541,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v0443
+cassola-suite-v05
 ```
 
 当前 CORE 必须包含：
@@ -517,6 +565,8 @@ cassola-suite-v0443
 Inventory：
 - 自动订货还没有真正按“下次供应商可到货日期”计算。
 - JSON fork 只检测，不自动合并。
+- v0.5 先实现手动价格 + IVA + 历史；PDF 报价自动解析 / SKU 映射尚未实现。
+- 暂未做采购订单预计总额、实际采购总额和库存估值。
 
 Staff：
 - v0.3 的周休息表是真正主功能，需要在 iPhone 实机测试横向周表滚动、连续异常录入、周表发布和双人换休流程。
