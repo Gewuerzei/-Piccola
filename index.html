@@ -29,6 +29,12 @@
 
   <main>
     <section id="view-stock" class="view active">
+      <div class="v4-area-tabs" aria-label="库存区域">
+        <button class="active" data-v4-area="sushi">🍣 Sushi</button>
+        <button data-v4-area="cucina">🔪 Cucina</button>
+        <button data-v4-area="bar">🍸 Bar / Sala</button>
+        <button data-v4-area="common">📦 Comune</button>
+      </div>
       <div class="toolbar sticky-panel">
         <input id="searchInput" class="search" type="search" placeholder="搜索 SKU…" autocomplete="off" />
         <select id="categoryFilter" aria-label="分类筛选"></select>
@@ -39,6 +45,12 @@
     </section>
 
     <section id="view-count" class="view">
+      <div class="v4-area-tabs" aria-label="库存区域">
+        <button class="active" data-v4-area="sushi">🍣 Sushi</button>
+        <button data-v4-area="cucina">🔪 Cucina</button>
+        <button data-v4-area="bar">🍸 Bar / Sala</button>
+        <button data-v4-area="common">📦 Comune</button>
+      </div>
       <div class="section-head">
         <div>
           <h2>快速盘货</h2>
@@ -57,7 +69,7 @@
       <div class="section-head">
         <div>
           <h2>订货</h2>
-          <p>建议、草稿、已下单、实际到货分开记录。</p>
+          <p>按供应商下单；收货可分批保存，晚到 / 待他人继续挂着。</p>
         </div>
         <button id="copyOrderBtn" class="btn secondary">复制草稿</button>
       </div>
@@ -77,6 +89,7 @@
         </div>
       </div>
       <div id="v3PlacedPane" class="hidden">
+        <div id="v4ReceivingBell" class="v4-receiving-bell hidden"></div>
         <div id="v3PlacedList" class="v3-placed-list"></div>
       </div>
     </section>
@@ -123,7 +136,7 @@
         </div>
       </div>
       <div class="settings-card small-print">
-        <strong>v0.3.1 · JSON Handoff</strong>
+        <strong>v0.4 · Areas & Open Receiving</strong>
         <p>Offline-first / Single-user / Local-only</p>
       </div>
     </section>
@@ -190,6 +203,14 @@
         <label>分类<input id="v3Category" list="v3CategoryOptions" required /></label>
         <label>供应商<input id="v3Supplier" list="v3SupplierOptions" required /></label>
       </div>
+      <label>区域
+        <select id="v3Area">
+          <option value="sushi">🍣 Sushi</option>
+          <option value="cucina">🔪 Cucina</option>
+          <option value="bar">🍸 Bar / Sala</option>
+          <option value="common">📦 Comune / 共用</option>
+        </select>
+      </label>
       <datalist id="v3CategoryOptions"><option>寿司基础</option><option>干货</option><option>酱料</option><option>冷藏</option><option>蔬果</option><option>冷冻</option><option>处理库存</option><option>耗材</option></datalist>
       <datalist id="v3SupplierOptions"><option>大兴</option><option>米兰</option><option>Tosano</option><option>内部</option><option>自种</option></datalist>
       <label>当前 / 初始库存<input id="v3Qty" type="number" step="0.1" inputmode="decimal" /></label>
