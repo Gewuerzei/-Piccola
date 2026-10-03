@@ -71,6 +71,23 @@
     s.swaps=Array.isArray(s.swaps)?s.swaps:[];
     s.restMoves=Array.isArray(s.restMoves)?s.restMoves:[];
     s.weekPublications=s.weekPublications&&typeof s.weekPublications==='object'?s.weekPublications:{};
+    s.swaps=s.swaps.map(ev=>{
+      const aRec=s.attendance?.[ev.personADateAfter]?.[ev.personAId];
+      const bRec=s.attendance?.[ev.personBDateAfter]?.[ev.personBId];
+      const linked=aRec?.swapId===ev.id&&bRec?.swapId===ev.id;
+      if(!['active','revoked','superseded'].includes(ev.status)){
+        ev.status=linked?'active':'superseded';
+        if(!linked){
+          ev.lifecycleUpdatedAt=ev.lifecycleUpdatedAt||ev.createdAt||now();
+          ev.lifecycleReason=ev.lifecycleReason||'旧记录：当前周表已被后续修改';
+        }
+      }
+      if(ev.status!=='active'){
+        if(aRec?.swapId===ev.id)delete aRec.swapId;
+        if(bRec?.swapId===ev.id)delete bRec.swapId;
+      }
+      return ev;
+    });
     s.history=Array.isArray(s.history)?s.history:[];
     s.syncMeta={...base.syncMeta,...(s.syncMeta||{})};
     s.syncMeta.revision=Math.max(1,num(s.syncMeta.revision)||1);
@@ -523,8 +540,33 @@
     return state.attendance?.[date]?.[personId]||null;
   }
   function isRestLike(rec){return rec?.status==='rest'||rec?.status==='swap'}
+  function swapById(id){return (state.swaps||[]).find(x=>x.id===id)||null}
+  function swapIsActive(ev){return !!ev&&(!ev.status||ev.status==='active')}
+  function activeSwapForRecord(rec){
+    const ev=rec?.swapId?swapById(rec.swapId):null;
+    return swapIsActive(ev)?ev:null;
+  }
+  function swapLifecycleLabel(ev){
+    if(ev?.status==='revoked')return '已撤销';
+    if(ev?.status==='superseded')return '后续修改';
+    return '有效';
+  }
+  function activeSwapIdsInRange(personId,start,end){
+    let a=dateObj(start),b=dateObj(end||start);if(b<a)b=new Date(a);
+    const ids=new Set();
+    for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1)){
+      const rec=attendanceGet(personId,localIso(d)),ev=activeSwapForRecord(rec);
+      if(ev)ids.add(ev.id);
+    }
+    return [...ids];
+  }
   function setAttendanceRange(personId,start,end,status,note='',portion='full'){
-    const p=personById(personId);if(!p)return;
+    const p=personById(personId);if(!p)return false;
+    const linkedSwaps=activeSwapIdsInRange(personId,start,end);
+    if(linkedSwaps.length){
+      toast('这段日期里有有效换休，先点“处理换休”再修改');
+      return false;
+    }
     let a=dateObj(start),b=dateObj(end||start);if(b<a)b=new Date(a);
     let count=0;
     for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1)){
@@ -539,6 +581,7 @@
     const portionText=status!=='work'?(portion==='am'?' · 上午':portion==='pm'?' · 下午':' · 全天'):'';
     log('attendance',p.name+' · '+meta.label+portionText+(count>1?' × '+count+'天':''),note,start,'all');
     save();renderWeek();renderMonth();renderHistory();
+    return true;
   }
   function openAttendance(personId,date){
     const p=personById(personId);if(!p)return;
@@ -554,9 +597,10 @@
     document.querySelectorAll('[data-att-status]').forEach(b=>b.classList.toggle('active',b.dataset.attStatus===status));
     document.querySelectorAll('[data-att-portion]').forEach(b=>b.classList.toggle('active',b.dataset.attPortion===portion));
     document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',status==='work');
-    const canMove=isRestLike(rec);
+    const activeSwap=activeSwapForRecord(rec),canMove=isRestLike(rec)&&!activeSwap;
     document.getElementById('staffSwapRestBtn').classList.toggle('hidden',!canMove);
     document.getElementById('staffMoveRestBtn').classList.toggle('hidden',!canMove);
+    document.getElementById('staffManageSwapBtn').classList.toggle('hidden',!activeSwap);
     document.getElementById('staffAttendanceDialog').showModal();
   }
   function cloneJson(v){return JSON.parse(JSON.stringify(v))}
