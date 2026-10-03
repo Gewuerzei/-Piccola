@@ -119,6 +119,7 @@ function v4ReceiveRow(o,item){
   const status=`${st.icon} ${st.label}${item.dirty?' · 待保存':''}`;
   return `<div class="v3-receive-row ${rowCls}" data-v3-order="${o.id}" data-v3-item="${item.skuId}">
     <div class="v3-receive-title"><span class="count-mini-icon">${v3Icon(s)}</span><div><strong>${escapeHtml(s?.name||item.skuName)}</strong><small>${v4QtyText(item)} · ${a.icon} ${escapeHtml(a.label)}</small></div><span class="v4-line-pill">${escapeHtml(status)}</span></div>
+    <div class="v4-qty-caption"><span>累计实到</span><b>${q>(Number(item.creditedQty)||0)?('本次新增 +'+fmt(q-(Number(item.creditedQty)||0))+' '+escapeHtml(item.unit||s?.unit||'')):'本次新增 0'}</b></div>
     <div class="v3-stepper"><button ${closed?'disabled':''} data-v3-step="-1">−</button><input ${closed?'disabled':''} class="v3-receive-qty" type="number" step="0.1" inputmode="decimal" min="${fmt(item.creditedQty||0)}" value="${fmt(q)}"><button ${closed?'disabled':''} data-v3-step="1">＋</button></div>
     ${closed?`<div class="v4-closed-note">${st.icon} ${escapeHtml(st.label)} · 累计实到 ${fmt(item.creditedQty||0)} ${escapeHtml(item.unit||s?.unit||'')}</div>`:`
     <div class="v4-receive-actions">
@@ -135,8 +136,8 @@ function v4OrderAreaSections(o){
   return v4Areas.map(a=>{
     const items=(o.items||[]).filter(i=>(i.area||v4AreaOf(sku(i.skuId)))===a.id);
     if(!items.length)return'';
-    const open=items.filter(i=>!v4LineClosed(i)).length;
-    return `<section class="v4-receive-area"><div class="v4-area-head"><span>${a.icon} ${escapeHtml(a.label)}</span><b>${open?('🔔 '+open+' 未结束'):'✓ 已处理'}</b></div><div class="v3-receive-list">${items.map(i=>v4ReceiveRow(o,i)).join('')}</div></section>`;
+    const outstanding=items.filter(i=>!v4LineClosed(i)||i.dirty).length;
+    return `<section class="v4-receive-area"><div class="v4-area-head"><span>${a.icon} ${escapeHtml(a.label)}</span><b>${outstanding?('🔔 '+outstanding+' 待处理'):'✓ 已处理'}</b></div><div class="v3-receive-list">${items.map(i=>v4ReceiveRow(o,i)).join('')}</div></section>`;
   }).join('');
 }
 function v4RenderReceivingBell(){
@@ -157,7 +158,8 @@ function v3RenderPlaced(){
   document.getElementById('v3PlacedList').innerHTML=orders.length?orders.map(o=>{
     v4NormalizeOrder(o);
     const open=v4OrderOpenItems(o),dirty=v4OrderDirty(o),done=o.status==='received'||(open.length===0&&dirty.length===0);
-    const status=done?'✅ 已结案':`🔔 ${open.length} 项未结束`;
+    const dirtyClosed=dirty.filter(i=>v4LineClosed(i)).length;
+    const status=done?'✅ 已结案':(open.length?`🔔 ${open.length} 项未结束`:`💾 ${dirtyClosed} 项待保存`);
     const batches=(o.receiptBatches||[]).length;
     return `<article class="v3-placed-card ${done?'done':''}">
       <div class="v3-placed-head"><div><div class="eyebrow">${escapeHtml(o.supplier||'订单')}</div><h3>${new Date(o.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</h3><small class="v4-batch-count">${batches?('已保存 '+batches+' 次收货'):'尚未入库'}</small></div><span>${status}</span></div>
