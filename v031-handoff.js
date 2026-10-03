@@ -74,13 +74,16 @@ function v31Diff(incoming){
     const a=localMap.get(id),b=inMap.get(id);
     if(!a||!b){skuChanges++;return}
     if(Number(a.qty)!==Number(b.qty))stock++;
-    if([a.name,a.spec,a.unit,a.category,a.supplier,a.icon,a.warningMode,a.targetQty,a.targetWeeks,a.autoOrder].join('|')!==[b.name,b.spec,b.unit,b.category,b.supplier,b.icon,b.warningMode,b.targetQty,b.targetWeeks,b.autoOrder].join('|'))skuChanges++;
+    if([a.name,a.spec,a.unit,a.category,a.supplier,a.area,a.icon,a.warningMode,a.targetQty,a.targetWeeks,a.autoOrder].join('|')!==[b.name,b.spec,b.unit,b.category,b.supplier,b.area,b.icon,b.warningMode,b.targetQty,b.targetWeeks,b.autoOrder].join('|'))skuChanges++;
   });
   const localHist=new Set((state.history||[]).map(h=>h.id));
   const newHistory=(incoming.history||[]).filter(h=>!localHist.has(h.id)).length;
-  const localOrders=new Set((state.placedOrders||[]).map(o=>o.id));
-  const newOrders=(incoming.placedOrders||[]).filter(o=>!localOrders.has(o.id)).length;
-  return {stock,skuChanges,newHistory,newOrders};
+  const localOrders=new Map((state.placedOrders||[]).map(o=>[o.id,o]));
+  const orderChanges=(incoming.placedOrders||[]).filter(o=>{
+    const local=localOrders.get(o.id);
+    return !local||JSON.stringify(local)!==JSON.stringify(o);
+  }).length;
+  return {stock,skuChanges,newHistory,orderChanges};
 }
 function v31InjectUi(){
   const settings=document.getElementById('view-settings');
@@ -186,7 +189,7 @@ function v31PreviewImport(data){
       <div><span>库存变化</span><b>${diff.stock}</b></div>
       <div><span>SKU资料变化</span><b>${diff.skuChanges}</b></div>
       <div><span>新增历史</span><b>${diff.newHistory}</b></div>
-      <div><span>新增订单</span><b>${diff.newOrders}</b></div>
+      <div><span>订单 / 收货变化</span><b>${diff.orderChanges}</b></div>
     </div>
     <div class="v31-file-time">导出时间：${escapeHtml(v31FmtTime(data.exportedAt||incomingMeta.updatedAt))}</div>
   `;
