@@ -2,6 +2,50 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.2 · Weekly Rest
+**2026-10-03**
+
+### Main workflow
+- Staff 默认首页从“岗位排班”改为 **周休息表**。
+- 空白日期默认视为正常上班，不需要每天逐个确认。
+- 每个人每天可记录：
+  - 💤 休息
+  - 📝 请假
+  - 🔁 调休
+  - ❌ 缺勤
+- 点周表格子即可编辑。
+- 支持连续日期一次录入，例如连续 3 天请假。
+- 可写备注，例如“已批准”“与 Luca 对调”。
+
+### Monthly summary
+- 新增月度汇总页。
+- 按人员统计：
+  - 休息天数
+  - 请假天数
+  - 调休天数
+  - 缺勤天数
+- 有缺勤的人员高亮。
+- 适合月底快速查看“谁缺勤”。
+
+### PDF
+- 新增周休息表 PDF。
+- 新增月度汇总 PDF。
+- 两种 PDF 都在浏览器本地生成并可通过 iOS 分享。
+
+### Existing board
+- 原来的头像拖拽岗位排班保留。
+- 现在位于“排岗”页，作为二级可选功能。
+
+### Data
+- Staff state 新增 `attendance`。
+- attendance 会进入 Staff JSON，所以请假/休息数据可通过群聊 JSON 直接交接。
+- Inventory JSON 与 Staff JSON 继续完全独立。
+
+### PWA
+- Service Worker cache 更新为 `cassola-suite-v042`。
+
+---
+
 ## Staff Board v0.1.1 · Split JSON Backup
 **2026-10-03**
 
