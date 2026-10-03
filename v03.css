@@ -79,3 +79,5 @@
 .v45-history-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.v45-history-tags span{font-size:8.5px;padding:4px 6px;border-radius:999px;background:rgba(255,255,255,.035);color:var(--muted)}
 .v45-history-item p{margin:7px 0 0;font-size:9.5px;line-height:1.4;color:var(--muted)}.v45-history-item p.note{color:var(--text)}
 @media(max-width:420px){.v45-price-entry{grid-template-columns:1fr 1fr}.v45-price-copy strong{font-size:16px}.v45-vat-title{align-items:flex-start;flex-direction:column;gap:2px}}
+
+.v45-spec-warning{padding:10px 11px;border-radius:15px;background:rgba(243,207,122,.065);border:1px solid rgba(243,207,122,.16);color:var(--warn);font-size:9.5px;line-height:1.45}
