@@ -91,10 +91,14 @@ function v45VatShort(r){
   return r.vatMode==='included'?('IVA incl.'+rate):('IVA escl.'+rate);
 }
 function v45SourceLabel(source){return V45_PRICE_SOURCES[source]||source||'手动'}
+function v45SpecMismatch(r,s){
+  const a=String(r?.quoteSpec||'').trim().toLowerCase(),b=String(s?.spec||'').trim().toLowerCase();
+  return !!(a&&b&&a!==b);
+}
 function v45PricePill(s){
   const r=v45LatestPrice(s?.id);
   if(!r)return'';
-  return `<span class="meta-pill v45-price-pill">💶 ${escapeHtml(v45Money(r.amount))}/${escapeHtml(r.priceUnit||s?.unit||'')} · ${escapeHtml(v45VatShort(r))}</span>`;
+  return `<span class="meta-pill v45-price-pill">💶 ${escapeHtml(v45Money(r.amount))}/${escapeHtml(r.priceUnit||s?.unit||'')} · ${escapeHtml(v45VatShort(r))}${v45SpecMismatch(r,s)?' · ⚠️规格':''}</span>`;
 }
 function v45TrendText(latest){
   const prev=v45ComparablePrevious(latest),cmp=v45Comparison(latest,prev);
@@ -130,7 +134,7 @@ function v45RenderSkuPriceCard(skuId){
   const calc=[];
   if(r.netAmount!=null)calc.push('未税 '+v45Money(r.netAmount));
   if(r.grossAmount!=null)calc.push('含税 '+v45Money(r.grossAmount));
-  meta.textContent=[r.supplier||'供应商未填',v45SourceLabel(r.source),v45VatShort(r),...calc].filter(Boolean).join(' · ');
+  meta.textContent=[r.supplier||'供应商未填',v45SourceLabel(r.source),v45VatShort(r),v45SpecMismatch(r,sku(skuId))?'⚠️ 规格异常':'',...calc].filter(Boolean).join(' · ');
   const t=v45TrendText(r);
   trend.textContent=t.text;trend.className='v45-price-trend '+t.cls;
 }
@@ -155,6 +159,9 @@ function v45RefreshPreview(){
   const a=Number(document.getElementById('v45Amount')?.value),mode=document.getElementById('v45VatMode')?.value||'unknown';
   const rateEl=document.getElementById('v45VatRate'),rate=rateEl?.value===''?null:Number(rateEl?.value);
   if(rateEl)rateEl.disabled=mode==='unknown';
+  const skuId=document.getElementById('v45PriceSkuId')?.value,s=sku(skuId),spec=String(document.getElementById('v45QuoteSpec')?.value||'').trim();
+  const warn=document.getElementById('v45SpecWarning');
+  if(warn)warn.classList.toggle('hidden',!(spec&&s?.spec&&spec.trim().toLowerCase()!==String(s.spec).trim().toLowerCase()));
   const box=document.getElementById('v45PricePreview');if(!box)return;
   if(!(a>0)){box.innerHTML='<span>输入价格后，这里自动算 IVA。</span>';return}
   const c=v45CalcAmounts(a,mode,rate);
@@ -182,7 +189,7 @@ function v45SavePrice(){
     id:crypto.randomUUID?.()||('price_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)),
     skuId,skuName:s.name,supplier,recordDate,createdAt:stamp(),source,currency:'EUR',
     amount:v45RoundMoney(amount),priceUnit,quoteSpec,vatMode,vatRate,
-    netAmount:calc.net,grossAmount:calc.gross,note
+    netAmount:calc.net,grossAmount:calc.gross,specMismatch:v45SpecMismatch({quoteSpec},s),note
   };
   state.priceRecords.push(rec);
   saveState();
@@ -219,7 +226,7 @@ function v45BindPriceUi(){
   document.getElementById('v45PriceHistoryBtn')?.addEventListener('click',()=>{
     const id=document.getElementById('v3SkuId').value;v45OpenPriceHistory(id);
   });
-  ['v45Amount','v45VatMode','v45VatRate'].forEach(id=>document.getElementById(id)?.addEventListener('input',v45RefreshPreview));
+  ['v45Amount','v45VatMode','v45VatRate','v45QuoteSpec'].forEach(id=>document.getElementById(id)?.addEventListener('input',v45RefreshPreview));
   document.getElementById('v45VatMode')?.addEventListener('change',v45RefreshPreview);
   document.getElementById('v45SavePrice')?.addEventListener('click',e=>{e.preventDefault();v45SavePrice()});
 }
