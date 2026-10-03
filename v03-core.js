@@ -17,7 +17,7 @@ function v3NormalizeSku(s){
   if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto'; if(!s.area)s.area='sushi';
   ['blueAt','yellowAt','redAt','targetQty','manualWeeklyUse'].forEach(k=>{s[k]=v3Num(s[k])});
   s.targetWeeks=v3Num(s.targetWeeks)??v3DefaultWeeks(s.category);
-  if(s.autoOrder==null)s.autoOrder=!v3NoAuto.has(s.id)&&!['内部','自种'].includes(s.supplier)&&s.category!=='处理库存';
+  if(s.autoOrder==null)s.autoOrder=!v3NoAuto.has(s.id)&&!['内部','自种','待确认'].includes(s.supplier)&&s.category!=='处理库存';
   return s;
 }
 state.placedOrders=Array.isArray(state.placedOrders)?state.placedOrders:[];
