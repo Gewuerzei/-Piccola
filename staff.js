@@ -544,13 +544,14 @@
     }
     return {weekStart:dates[0],people,cells};
   }
-  function weekPublications(iso=currentDate){
-    const ws=weekStartIso(iso);
-    if(!Array.isArray(state.weekPublications[ws]))state.weekPublications[ws]=[];
-    return state.weekPublications[ws];
+  function weekPublications(iso=currentDate,create=false){
+    const ws=weekStartIso(iso),list=state.weekPublications[ws];
+    if(Array.isArray(list))return list;
+    if(create){state.weekPublications[ws]=[];return state.weekPublications[ws]}
+    return [];
   }
   function latestWeekPublication(iso=currentDate){
-    const list=weekPublications(iso);
+    const list=weekPublications(iso,false);
     return list.length?list[list.length-1]:null;
   }
   function weekSnapshotDiff(a,b){
@@ -579,7 +580,7 @@
   function publishWeek(){
     const snap=weekSnapshot(currentDate);
     if(!snap.people.length){toast('还没有人员');return}
-    const list=weekPublications(currentDate),latest=list.length?list[list.length-1]:null;
+    const list=weekPublications(currentDate,true),latest=list.length?list[list.length-1]:null;
     const changes=latest?weekSnapshotDiff(latest.snapshot,snap):0;
     if(latest&&!changes){toast('当前周表和 v'+latest.version+' 一样');return}
     const version=(latest?.version||0)+1;
@@ -593,7 +594,7 @@
     toast(version===1?'周休表 v1 已发布':'修改版 v'+version+' 已发布');
   }
   function openWeekVersions(){
-    const ws=weekStartIso(currentDate),list=weekPublications(currentDate).slice().reverse();
+    const ws=weekStartIso(currentDate),list=weekPublications(currentDate,false).slice().reverse();
     document.getElementById('staffWeekVersionsTitle').textContent=weekLabel(currentDate)+' · 版本记录';
     const box=document.getElementById('staffWeekVersionList');
     box.innerHTML=list.length?list.map(pub=>{
@@ -663,7 +664,11 @@
     toast('换休已记录，记得重新发布修改版');
   }
   function monthlySwapInitiated(personId,month=monthKey()){
-    return (state.swaps||[]).filter(x=>x.initiatorId===personId&&(x.personADateBefore||x.weekStart||'').startsWith(month)).length;
+    return (state.swaps||[]).filter(x=>{
+      if(x.initiatorId!==personId)return false;
+      const d=x.initiatorId===x.personBId?x.personBDateBefore:x.personADateBefore;
+      return (d||x.weekStart||'').startsWith(month);
+    }).length;
   }
   function renderWeek(){
     const box=document.getElementById('staffWeekTable');if(!box)return;
