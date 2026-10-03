@@ -405,6 +405,8 @@
     currentView=name;
     document.querySelectorAll('.staff-view').forEach(v=>v.classList.toggle('active',v.id==='staff-view-'+name));
     document.querySelectorAll('.staff-nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.staffView===name));
+    if(name==='week')renderWeek();
+    if(name==='month')renderMonth();
     if(name==='board')renderBoard();
     if(name==='people')renderPeople();
     if(name==='history')renderHistory();
@@ -416,6 +418,154 @@
     el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),1800);
   }
 
+  const ATTENDANCE_STATUS={
+    work:{icon:'·',label:'上班',short:'班'},
+    rest:{icon:'💤',label:'休息',short:'休'},
+    leave:{icon:'📝',label:'请假',short:'假'},
+    swap:{icon:'🔁',label:'调休',short:'调'},
+    absent:{icon:'❌',label:'缺勤',short:'缺'}
+  };
+  function localIso(d){
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+day;
+  }
+  function dateObj(iso){return new Date(iso+'T12:00:00')}
+  function weekStartIso(iso=currentDate){
+    const d=dateObj(iso),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return localIso(d);
+  }
+  function weekDates(iso=currentDate){
+    const d=dateObj(weekStartIso(iso));return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()+i);return localIso(x)});
+  }
+  function weekLabel(iso=currentDate){
+    const ds=weekDates(iso),a=dateObj(ds[0]),b=dateObj(ds[6]);
+    return a.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'})+' – '+b.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'});
+  }
+  function attendanceGet(personId,date){
+    return state.attendance?.[date]?.[personId]||null;
+  }
+  function setAttendanceRange(personId,start,end,status,note=''){
+    const p=personById(personId);if(!p)return;
+    let a=dateObj(start),b=dateObj(end||start);if(b<a)b=new Date(a);
+    let count=0;
+    for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1)){
+      const iso=localIso(d);
+      if(!state.attendance[iso])state.attendance[iso]={};
+      if(status==='work')delete state.attendance[iso][personId];
+      else state.attendance[iso][personId]={status,note:note.trim(),updatedAt:now()};
+      if(!Object.keys(state.attendance[iso]).length)delete state.attendance[iso];
+      count++;
+    }
+    const meta=ATTENDANCE_STATUS[status]||ATTENDANCE_STATUS.work;
+    log('attendance',p.name+' · '+meta.label+(count>1?' × '+count+'天':''),note,start,'all');
+    save();renderWeek();renderMonth();renderHistory();
+  }
+  function openAttendance(personId,date){
+    const p=personById(personId);if(!p)return;
+    attendanceEdit={personId,date};
+    const rec=attendanceGet(personId,date),status=rec?.status||'work';
+    document.getElementById('staffAttendanceTitle').textContent=p.name+' · '+dateLabel(date);
+    document.getElementById('staffAttendanceStart').value=date;
+    document.getElementById('staffAttendanceEnd').value=date;
+    document.getElementById('staffAttendanceStatus').value=status;
+    document.getElementById('staffAttendanceNote').value=rec?.note||'';
+    document.querySelectorAll('[data-att-status]').forEach(b=>b.classList.toggle('active',b.dataset.attStatus===status));
+    document.getElementById('staffAttendanceDialog').showModal();
+  }
+  function renderWeek(){
+    const box=document.getElementById('staffWeekTable');if(!box)return;
+    const dates=weekDates(currentDate),days=['一','二','三','四','五','六','日'];
+    document.getElementById('staffWeekLabel').textContent=weekLabel(currentDate);
+    const people=state.people.filter(p=>p.active!==false);
+    if(!people.length){
+      box.innerHTML='<div class="staff-settings-card"><h3>还没有人员</h3><p>先去“人员”添加员工，再回来排周休。</p></div>';
+      return;
+    }
+    let html='<div class="staff-week-grid staff-week-header"><div class="staff-week-person-head">人员</div>';
+    dates.forEach((d,i)=>{html+='<div class="staff-week-day-head"><b>'+days[i]+'</b><small>'+d.slice(8)+'</small></div>'});
+    html+='</div>';
+    for(const p of people){
+      html+='<div class="staff-week-grid staff-week-row"><div class="staff-week-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><span>'+esc(p.name)+'</span></div>';
+      dates.forEach(d=>{
+        const rec=attendanceGet(p.id,d),status=rec?.status||'work',m=ATTENDANCE_STATUS[status]||ATTENDANCE_STATUS.work;
+        html+='<button type="button" class="staff-week-cell status-'+esc(status)+'" data-att-person="'+esc(p.id)+'" data-att-date="'+d+'" title="'+esc(rec?.note||m.label)+'"><span>'+m.icon+'</span><small>'+m.label+'</small></button>';
+      });
+      html+='</div>';
+    }
+    box.innerHTML=html;
+    box.querySelectorAll('[data-att-person]').forEach(b=>b.addEventListener('click',()=>openAttendance(b.dataset.attPerson,b.dataset.attDate)));
+    hydrateAvatars(box);
+  }
+  function moveWeek(delta){
+    const d=dateObj(currentDate);d.setDate(d.getDate()+delta*7);currentDate=localIso(d);renderWeek();
+  }
+  function monthKey(){return (document.getElementById('staffMonthInput')?.value||currentDate.slice(0,7))}
+  function monthlyCounts(personId,month=monthKey()){
+    const out={rest:0,leave:0,swap:0,absent:0};
+    for(const [date,map] of Object.entries(state.attendance||{})){
+      if(!date.startsWith(month))continue;
+      const st=map?.[personId]?.status;if(st&&out[st]!==undefined)out[st]++;
+    }
+    return out;
+  }
+  function renderMonth(){
+    const input=document.getElementById('staffMonthInput'),box=document.getElementById('staffMonthSummary');if(!input||!box)return;
+    if(!input.value)input.value=currentDate.slice(0,7);
+    const month=input.value,people=state.people.filter(p=>p.active!==false);
+    const total={rest:0,leave:0,swap:0,absent:0};
+    const rows=people.map(p=>{const c=monthlyCounts(p.id,month);Object.keys(total).forEach(k=>total[k]+=c[k]);return {p,c}});
+    box.innerHTML=
+      '<div class="staff-month-total"><div><span>休息</span><b>'+total.rest+'</b></div><div><span>请假</span><b>'+total.leave+'</b></div><div><span>调休</span><b>'+total.swap+'</b></div><div class="'+(total.absent?'danger':'')+'"><span>缺勤</span><b>'+total.absent+'</b></div></div>'+
+      (rows.length?rows.map(({p,c})=>'<div class="staff-month-row '+(c.absent?'has-absence':'')+'"><div class="staff-month-person"><div class="staff-week-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><b>'+esc(p.name)+'</b></div><div class="staff-month-stat"><span>💤</span><b>'+c.rest+'</b></div><div class="staff-month-stat"><span>📝</span><b>'+c.leave+'</b></div><div class="staff-month-stat"><span>🔁</span><b>'+c.swap+'</b></div><div class="staff-month-stat absent"><span>❌</span><b>'+c.absent+'</b></div></div>').join(''):'<div class="staff-settings-card"><p>还没有人员。</p></div>');
+    hydrateAvatars(box);
+  }
+  async function shareCanvasPdf(canvas,name){
+    const jpg=canvas.toDataURL('image/jpeg',.92);
+    const pdf=jpegCanvasToPdf(jpg,canvas.width,canvas.height);
+    const file=new File([pdf],name,{type:'application/pdf'});
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name.replace('.pdf','')});toast('PDF 已生成')}
+      else downloadBlob(file,file.name);
+    }catch(e){if(e.name!=='AbortError')downloadBlob(file,file.name)}
+  }
+  async function generateWeekPdf(){
+    const people=state.people.filter(p=>p.active!==false);if(!people.length){toast('还没有人员');return}
+    toast('正在生成周表 PDF…');
+    const dates=weekDates(currentDate),W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 周休息表',70,82);
+    ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(weekLabel(currentDate)+' · version #'+state.syncMeta.revision,72,128);
+    const left=70,top=180,nameW=300,colW=(W-left*2-nameW)/7;
+    const rowH=Math.min(68,(H-top-75)/(people.length+1));
+    const days=['一','二','三','四','五','六','日'];
+    ctx.font='700 22px system-ui,sans-serif';
+    ctx.fillStyle='#f0f2f5';ctx.fillRect(left,top,W-left*2,rowH);
+    ctx.fillStyle='#242a35';ctx.fillText('人员',left+16,top+rowH*.65);
+    dates.forEach((d,i)=>{ctx.fillText('周'+days[i]+' '+d.slice(5).replace('-','/'),left+nameW+i*colW+12,top+rowH*.65)});
+    people.forEach((p,ri)=>{
+      const y=top+rowH*(ri+1);ctx.fillStyle=ri%2?'#fafafa':'#f5f6f8';ctx.fillRect(left,y,W-left*2,rowH);
+      ctx.fillStyle='#222833';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.34))+'px system-ui,sans-serif';ctx.fillText(p.name,left+16,y+rowH*.63);
+      dates.forEach((d,i)=>{
+        const st=attendanceGet(p.id,d)?.status||'work',m=ATTENDANCE_STATUS[st]||ATTENDANCE_STATUS.work;
+        ctx.fillStyle=st==='absent'?'#b4232c':'#343b48';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.34))+'px system-ui,sans-serif';
+        ctx.fillText(m.short,left+nameW+i*colW+colW*.42,y+rowH*.63);
+      });
+    });
+    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('班=上班  休=休息  假=请假  调=调休  缺=缺勤',70,H-34);
+    await shareCanvasPdf(canvas,'Cassola-Week-'+dates[0]+'-v'+state.syncMeta.revision+'.pdf');
+  }
+  async function generateMonthPdf(){
+    const people=state.people.filter(p=>p.active!==false);if(!people.length){toast('还没有人员');return}
+    const month=monthKey();toast('正在生成月报 PDF…');
+    const W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 月度缺勤汇总',70,82);
+    ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(month+' · version #'+state.syncMeta.revision,72,128);
+    const cols=[70,650,900,1150,1400],heads=['人员','休息','请假','调休','缺勤'],top=180,rowH=Math.min(62,(H-top-70)/(people.length+1));
+    ctx.fillStyle='#f0f2f5';ctx.fillRect(70,top,W-140,rowH);ctx.fillStyle='#242a35';ctx.font='700 23px system-ui,sans-serif';
+    heads.forEach((h,i)=>ctx.fillText(h,cols[i]+10,top+rowH*.64));
+    people.forEach((p,i)=>{const y=top+rowH*(i+1),c=monthlyCounts(p.id,month);ctx.fillStyle=i%2?'#fafafa':'#f5f6f8';ctx.fillRect(70,y,W-140,rowH);ctx.fillStyle='#222833';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';ctx.fillText(p.name,cols[0]+10,y+rowH*.64);ctx.font='600 '+Math.max(16,Math.min(22,rowH*.35))+'px system-ui,sans-serif';ctx.fillText(String(c.rest),cols[1]+20,y+rowH*.64);ctx.fillText(String(c.leave),cols[2]+20,y+rowH*.64);ctx.fillText(String(c.swap),cols[3]+20,y+rowH*.64);ctx.fillStyle=c.absent?'#b4232c':'#222833';ctx.fillText(String(c.absent),cols[4]+20,y+rowH*.64)});
+    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('空白日期默认视为上班；本表只汇总已记录的非正常状态。',70,H-34);
+    await shareCanvasPdf(canvas,'Cassola-Month-'+month+'-v'+state.syncMeta.revision+'.pdf');
+  }
   function dateLabel(date){
     const d=new Date(date+'T12:00:00');
     return d.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'short'});
