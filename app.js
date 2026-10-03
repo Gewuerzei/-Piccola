@@ -16,13 +16,93 @@ const seedSkus = [
   // 处理库存
   ['nigiri_shrimp','Nigiri虾','','包','处理库存','内部'],['maki_shrimp','Maki虾','','包','处理库存','内部'],['nigiri_amaebi','Nigiri Amaebi','','包','处理库存','内部'],['amaebi碎','碎Amaebi','','包','处理库存','内部'],['polipo_processed','Polipo','2根腿/包','包','处理库存','内部'],['maki_amaebi','Maki Amaebi','','包','处理库存','内部'],['lobster','龙虾','','包','处理库存','内部'],
   // 耗材
-  ['zongye','粽叶','','箱','耗材','米兰'],['glove_m','白M手套','','盒','耗材','米兰'],['glove_l','白L手套','','盒','耗材','米兰']
-].map(([id,name,spec,unit,category,supplier])=>({id,name,spec,unit,category,supplier,qty:0}));
+  ['zongye','粽叶','','箱','耗材','米兰'],['glove_m','白M手套','','盒','耗材','米兰'],['glove_l','白L手套','','盒','耗材','米兰'],
 
-const categories = ['寿司基础','干货','酱料','冷藏','蔬果','冷冻','处理库存','耗材'];
-const suppliers = ['全部','大兴','米兰','Tosano','内部','自种'];
+  // Bar / Sala · 甜点
+  ['sala_mochi_mango','Mochi mango','','个','甜点','待确认','bar'],
+  ['sala_mochi_fragola','Mochi fragola','','个','甜点','待确认','bar'],
+  ['sala_mochi_coco','Mochi coco','','个','甜点','待确认','bar'],
+  ['sala_mochi_cioccolato','Mochi cioccolato','','个','甜点','待确认','bar'],
+  ['sala_mochi_matcha','Mochi matcha','','个','甜点','待确认','bar'],
+  ['sala_mochi_tropical','Mochi tropical','','个','甜点','待确认','bar'],
+  ['sala_tartufo_pistacchio','Tartufo pistacchio','','个','甜点','待确认','bar'],
+  ['sala_tartufo_bianco','Tartufo bianco','','个','甜点','待确认','bar'],
+  ['sala_croccante_arachide','Croccante arachide','','个','甜点','待确认','bar'],
+  ['sala_croccante_fragola','Croccante fragola','','个','甜点','待确认','bar'],
+  ['sala_croccante_mango','Croccante mango','','个','甜点','待确认','bar'],
+  ['sala_croccante_pesca','Croccante pesca','','个','甜点','待确认','bar'],
+  ['sala_bacio_bianco','Bacio bianco','','个','甜点','待确认','bar'],
+  ['sala_esotica','Esotica','','个','甜点','待确认','bar'],
+  ['sala_glosa','Glosa','','个','甜点','待确认','bar'],
+  ['sala_passion','Passion','','个','甜点','待确认','bar'],
+  ['sala_segreta_caffe','Segreta al caffe','','个','甜点','待确认','bar'],
+  ['sala_tiramisu','Tiramisu','','个','甜点','待确认','bar'],
+  ['sala_black_biscuits','Black biscuits','','个','甜点','待确认','bar'],
+  ['sala_catalana_coccio','Catalana in coccio','','个','甜点','待确认','bar'],
+  ['sala_cremoso_frutti','Cremoso ai frutti','','个','甜点','待确认','bar'],
+  ['sala_ricotta_cioccolato','Ricotta e cioccolato monoporzione','','个','甜点','待确认','bar'],
+  ['sala_coppa_mascarpone_fragola','Coppa mascarpone fragola','','个','甜点','待确认','bar'],
+  ['sala_coppa_mascarpone','Coppa mascarpone','','个','甜点','待确认','bar'],
+  ['sala_coppa_profiterol','Coppa profiterol','','个','甜点','待确认','bar'],
+  ['sala_croccante_pistacchio','Croccante pistacchio','','个','甜点','待确认','bar'],
+  ['sala_croccante_amarena','Croccante amarena','','个','甜点','待确认','bar'],
+  ['sala_souffle_cioccolato','Souffle cioccolato','','个','甜点','待确认','bar'],
+  ['sala_souffle_pistacchio','Souffle pistacchio','','个','甜点','待确认','bar'],
+  ['sala_hip_pop_fragola','Hip pop fragola','','个','甜点','待确认','bar'],
+  ['sala_twitty_fior_latte','Twitty fior di latte','','个','甜点','待确认','bar'],
+
+  // Bar / Sala · 酒水
+  ['sala_limoncello','Limoncello','','瓶','酒水','待确认','bar'],
+  ['sala_baileys','Baileys','','瓶','酒水','待确认','bar'],
+  ['sala_liquirizia','Liquirizia','','瓶','酒水','待确认','bar'],
+  ['sala_melonne','Melonne','','瓶','酒水','待确认','bar'],
+  ['sala_prugne_ciemme','Prugne Ciemme','','瓶','酒水','待确认','bar'],
+  ['sala_amaro_del_capo','Amaro del Capo','','瓶','酒水','待确认','bar'],
+  ['sala_montenegro','Montenegro','','瓶','酒水','待确认','bar'],
+  ['sala_branca_menta','Branca Menta','','瓶','酒水','待确认','bar'],
+  ['sala_branca_fernet','Branca Fernet','','瓶','酒水','待确认','bar'],
+  ['sala_jager','Jager','','瓶','酒水','待确认','bar'],
+  ['sala_sambuca','Sambuca','','瓶','酒水','待确认','bar'],
+  ['sala_piave','Piave','','瓶','酒水','待确认','bar'],
+  ['sala_uvaviva','Uvaviva','','瓶','酒水','待确认','bar'],
+  ['sala_brandy','Brandy','','瓶','酒水','待确认','bar'],
+  ['sala_prugne_poli','Prugne Poli','','瓶','酒水','待确认','bar'],
+
+  // Bar / Sala · 糖浆
+  ['sala_sciroppo_zuccheri','Sciroppo zuccheri','','瓶','糖浆','待确认','bar'],
+  ['sala_sciroppo_menta','Sciroppo menta','','瓶','糖浆','待确认','bar'],
+  ['sala_sciroppo_fragola','Sciroppo fragola','','瓶','糖浆','待确认','bar'],
+  ['sala_sciroppo_passion','Sciroppo passion fruit','','瓶','糖浆','待确认','bar'],
+  ['sala_sciroppo_violetta','Sciroppo violetta','','瓶','糖浆','待确认','bar'],
+  ['sala_sciroppo_sambuca','Sciroppo sambuca','','瓶','糖浆','待确认','bar'],
+
+  // Bar / Sala · 饮料
+  ['sala_gingerino','Gingerino','','瓶/罐','饮料','待确认','bar'],
+  ['sala_crodini','Crodini','','瓶/罐','饮料','待确认','bar'],
+  ['sala_acqua_tonica','Acqua tonica','','瓶/罐','饮料','待确认','bar'],
+  ['sala_acqua_tonica_pompelmo','Acqua tonica pompelmo','','瓶/罐','饮料','待确认','bar'],
+  ['sala_limon_soda','Limon soda','','瓶/罐','饮料','待确认','bar'],
+  ['sala_fanta','Fanta','','瓶/罐','饮料','待确认','bar'],
+  ['sala_coca','Coca','','瓶/罐','饮料','待确认','bar'],
+  ['sala_coca_zero','Coca Zero','','瓶/罐','饮料','待确认','bar'],
+  ['sala_te_pesca','Te pesca','','瓶/罐','饮料','待确认','bar'],
+  ['sala_te_limone','Te limone','','瓶/罐','饮料','待确认','bar'],
+  ['sala_latte','Latte','','瓶/盒','饮料','待确认','bar'],
+
+  // Bar / Sala · 调味 / 餐桌
+  ['sala_soia_senza_glutine','Salsa soia senza glutine','','瓶','Sala调味','待确认','bar'],
+  ['sala_soia_meno_sale','Salsa soia meno sale','','瓶','Sala调味','待确认','bar'],
+  ['sala_sale_bustina','Sale in bustina','','包','Sala调味','待确认','bar'],
+  ['sala_olio_oliva_bustina','Olio oliva in bustina','','包','Sala调味','待确认','bar'],
+  ['sala_zenzeri_rossi','Zenzeri rossi','','包','Sala调味','待确认','bar'],
+  ['sala_panna','Panna','','盒','Sala调味','待确认','bar']
+].map(([id,name,spec,unit,category,supplier,area='sushi'])=>({id,name,spec,unit,category,supplier,area,qty:0}));
+
+const categories = ['寿司基础','干货','酱料','冷藏','蔬果','冷冻','处理库存','耗材','甜点','酒水','糖浆','饮料','Sala调味'];
+const suppliers = ['全部','大兴','米兰','Tosano','内部','自种','待确认'];
 const categoryIcons = {
-  '寿司基础':'🍣','干货':'🌾','酱料':'🫙','冷藏':'🧊','蔬果':'🥬','冷冻':'❄️','处理库存':'🔪','耗材':'🧤'
+  '寿司基础':'🍣','干货':'🌾','酱料':'🫙','冷藏':'🧊','蔬果':'🥬','冷冻':'❄️','处理库存':'🔪','耗材':'🧤',
+  '甜点':'🍰','酒水':'🥃','糖浆':'🍹','饮料':'🥤','Sala调味':'🧂'
 };
 const skuIcons = {
   rice20:'🍚', blackrice1:'🍚', soy20:'🫙', mirin18:'🍶', sake18:'🍶', shiragiku20:'🍶', nori:'🌿', ginger10:'🫚', wasabi:'🌱',
