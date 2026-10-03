@@ -2,6 +2,28 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.3.3 · Swap Lifecycle
+**2026-10-03**
+
+- 双人换休新增生命周期：
+  - active = 当前有效
+  - revoked = 手滑撤销
+  - superseded = 临时反悔 / 请求未通过 / 后续重新安排
+- active 换休格新增 **↩️ 处理这次换休**。
+- “撤销（手滑）”与“后续修改”都会恢复双方换休前的原休息日，但历史语义不同。
+- 新换休会保存双方换休前 attendance 快照，便于安全恢复。
+- 有 active 换休的格子禁止直接叠加第二笔换休 / 个人调休，也禁止普通状态编辑绕过事务。
+- 月度“换休发起”与人物顶部换休统计只计算 active 事件。
+- 已撤销 / 后续修改的换休仍保留在人物历史，并显示对应状态徽标。
+- 旧版没有 lifecycle 的 swap 自动迁移：
+  - 双方 swapId 仍完整 → active
+  - 链接已经被后续手工修改打散 → superseded
+- 这会修复“周表里已经没有换休，但月度还多算一次”的幽灵记录。
+- Staff JSON 导入预览从“新增换休”改成“换休变化”，能看到同一 swap 的生命周期修改。
+- Service Worker cache 更新为 `cassola-suite-v051`。
+
+---
+
 ## Inventory v0.5 · Price Layer
 **2026-10-03**
 
