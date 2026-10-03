@@ -1,4 +1,4 @@
-const CACHE='cassola-suite-v042';
+const CACHE='cassola-suite-v0421';
 const CORE=[
   './','./index.html','./styles.css','./v03.css','./hub.css','./staff.css',
   './app.js','./v03-core.js','./v03-orders.js','./v03-ui.js','./v031-handoff.js',
