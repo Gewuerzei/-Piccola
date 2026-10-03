@@ -2,6 +2,46 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.4 · Areas & Open Receiving
+**2026-10-03**
+
+### Areas
+- SKU 新增区域字段：
+  - 🍣 Sushi
+  - 🔪 Cucina
+  - 🍸 Bar / Sala
+  - 📦 Comune
+- 旧 SKU 自动归入 Sushi，保留 `cassola_inventory_v01`。
+- 库存页和盘货页新增胖胖区域切换。
+- 订货草稿与供应商收货单内部按区域分小节。
+
+### Open / partial receiving
+- 供应商订单不再要求所有行一次性结束。
+- 一张订单可以多次“保存本次收货”。
+- 每行新增明确状态：
+  - ✅ 收齐
+  - 🕒 晚到 / 待补
+  - 👥 待他人核对
+  - ❌ 缺货
+  - ⬇️ 少到
+  - ⬆️ 多到
+- 晚到、待他人、待核对继续挂 🔔。
+- 缺货、少到、多到属于“有差异但已结案”，不会继续占待办。
+- 使用 `creditedQty` 记录已经入库的累计数量，后续批次只把新增差额入库，避免重复加库存。
+- 每次保存生成独立 `receiptBatches[]` 收货批次和 receipt id。
+- 收货页顶部新增总铃铛，汇总待核对 / 晚到 / 待他人的未结束数量。
+- 每张供应商订单可单独导出 JSON 快照。
+- Inventory JSON 导入预览现在会显示已存在订单的收货进度变化，而不只统计新增订单。
+
+### UI
+- 保持深色、软圆、iPhone 优先的“胖胖 UI”。
+- 收货按钮做成 3×2 大触控块，避免手机端密集小按钮。
+
+### PWA
+- Service Worker cache 更新为 `cassola-suite-v044`。
+
+---
+
 ## Staff v0.3.2 · Clearer Person Swap History
 **2026-10-03**
 
