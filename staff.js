@@ -239,9 +239,14 @@
             <button id="staffThisWeek" class="btn secondary">本周</button>
           </div>
           <div class="staff-section-head">
-            <div><h2>周休息表</h2><p>空白默认视为上班，不需要每天逐个打勾。</p></div>
-            <div class="staff-section-actions"><button class="btn primary" id="staffWeekPdfBtn">📄 周表 PDF</button></div>
+            <div><h2>周休息表</h2><p>空白默认视为上班；改完可以发布新版再发群。</p></div>
+            <div class="staff-section-actions">
+              <button class="btn secondary" id="staffWeekVersionsBtn">🕘 版本</button>
+              <button class="btn primary" id="staffPublishWeekBtn">📣 发布</button>
+              <button class="btn secondary" id="staffWeekPdfBtn">📄 PDF</button>
+            </div>
           </div>
+          <div class="staff-week-release" id="staffWeekRelease"></div>
           <div class="staff-week-wrap" id="staffWeekTable"></div>
           <div class="staff-status-legend">
             <span>· 上班</span><span>💤 休息</span><span>📝 请假</span><span>🔁 调休</span><span>❌ 缺勤</span>
@@ -396,10 +401,33 @@
             <label>连续到<input id="staffAttendanceEnd" type="date"></label>
           </div>
           <label>备注<textarea id="staffAttendanceNote" placeholder="例如：已批准 / 与 Luca 对调 / 临时缺勤"></textarea></label>
-          <div class="staff-dialog-actions">
+          <div class="staff-dialog-actions staff-attendance-actions">
+            <button type="button" class="btn secondary hidden" id="staffSwapRestBtn">🔄 与他人换休</button>
             <button value="cancel" class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffSaveAttendance">保存</button>
           </div>
+        </form>
+      </dialog>
+
+      <dialog class="staff-dialog" id="staffSwapDialog">
+        <form method="dialog">
+          <div class="dialog-head"><div><div class="eyebrow">REST SWAP</div><h3 id="staffSwapTitle">交换休息日</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="staff-swap-source" id="staffSwapSource"></div>
+          <label>与谁换<select id="staffSwapPartner"></select></label>
+          <label>对方的休息日<select id="staffSwapTargetDate"></select></label>
+          <label>谁发起这次换休<select id="staffSwapInitiator"></select></label>
+          <label>备注<textarea id="staffSwapNote" placeholder="例如：临时有事 / 双方同意"></textarea></label>
+          <div class="staff-dialog-actions">
+            <button value="cancel" class="btn secondary">取消</button>
+            <button type="button" class="btn primary" id="staffConfirmSwap">确认交换</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog class="staff-dialog" id="staffWeekVersionsDialog">
+        <form method="dialog">
+          <div class="dialog-head"><div><div class="eyebrow">WEEK VERSIONS</div><h3 id="staffWeekVersionsTitle">周表版本</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="staff-week-version-list" id="staffWeekVersionList"></div>
         </form>
       </dialog>
 
