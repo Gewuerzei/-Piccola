@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.3.1 · JSON Handoff**
+- Inventory: **v0.4 · Areas & Open Receiving**
 - Staff: **v0.3.2 · Published Weekly Rest**
 - 当前实现基线 commit（文档更新前）: `609f61456a4bdb3f7f1bd63460aa3a95374efca1`
 - iPhone 优先 PWA，offline-first
@@ -66,24 +66,42 @@ cassola_inventory_v01
 系统建议
 → 订货草稿
 → 人工确认已下单
-→ 已下单
-→ 收货逐项核对
-→ 实际到货
-→ 库存增加
+→ 供应商订单
+→ 可多次保存收货
+→ 每次只把新增实到数量入库
+→ 未结束行继续挂起
+→ 全部行结案后订单关闭
 ```
 
 **计划订单绝不能直接算作实际到货。**
+
+### Inventory 区域
+
+SKU 新增 `area`：
+- `sushi` = 🍣 Sushi
+- `cucina` = 🔪 Cucina
+- `bar` = 🍸 Bar / Sala
+- `common` = 📦 Comune / 共用
+
+旧 SKU 没有 area 时默认迁移为 `sushi`，不更换历史 localStorage key。
+
+库存 / 盘货按区域切换；订货和收货仍以供应商订单为主，但订单内部按区域分小节。
 
 ### 收货的重要产品决定
 
 没有“一键全部到货”。
 
-每一行必须明确：
-- 修改实际数量，或
-- “✕ 未到”，或
-- “✓ 核对”
+一张供应商订单允许多次保存收货。每个订单行必须明确业务结果：
+- ✅ 收齐：结案
+- 🕒 晚到 / 待补：保持开放并挂 🔔
+- 👥 待他人核对：保持开放并挂 🔔
+- ❌ 缺货：结案，不再挂
+- ⬇️ 少到：按实际数量入库后结案
+- ⬆️ 多到：按实际数量入库后结案
 
-所有行审核完毕后才能完成收货。原因是避免漏送商品被偷懒式整单确认。
+`creditedQty` 表示已经真正计入库存的累计数量；再次收货只入库 `actualQty - creditedQty`，禁止重复加库存。
+
+每次“保存本次收货”会产生独立 `receiptBatches[]` 批次，并带唯一 receipt id。只要还有 pending / later / other 行，供应商订单继续显示 🔔 未结束。
 
 ### 库存预警 / 自动订货
 
@@ -115,6 +133,9 @@ SKU 可使用手动阈值或历史周耗。
 - 旧版本拦截
 - 同 revision 不同 hash 的 fork 检测
 - 强制采用需再次确认
+- SKU area 会进入 JSON
+- 已存在订单的收货进度变化会在导入预览中计为“订单 / 收货变化”
+- 每张供应商订单可单独导出 `cassola-order-handoff-v1` JSON 快照
 
 ---
 
@@ -355,7 +376,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v0432
+cassola-suite-v044
 ```
 
 当前 CORE 必须包含：
