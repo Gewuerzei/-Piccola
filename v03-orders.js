@@ -77,7 +77,7 @@ function v3Place(){
       id:crypto.randomUUID?.()||String(Date.now()+Math.random()),
       supplier,createdAt:stamp(),status:'open',partial:false,receiptBatches:[],
       items:rows.map(({s,v})=>({
-        skuId:s.id,skuName:s.name,unit:s.unit,area:v4AreaOf(s),orderedQty:v,
+        skuId:s.id,skuName:s.name,spec:s.spec||'',unit:s.unit,area:v4AreaOf(s),orderedQty:v,
         actualQty:0,creditedQty:0,lineStatus:'pending',dirty:false
       }))
     };
@@ -230,6 +230,16 @@ function v3Finish(id){
   o.partial=(o.items||[]).some(i=>['short','over','out'].includes(i.lineStatus));
   saveState();renderAll();
   showToast(open.length?`本次已入库，🔔 还有 ${open.length} 项挂着`:(o.partial?'订单已结案（有差异）':'收货完成'));
+}
+function v4CopyPlacedOrder(id){
+  const o=state.placedOrders.find(x=>x.id===id);if(!o)return;
+  const rows=(o.items||[]).map(i=>{
+    const s=sku(i.skuId),name=i.skuName||s?.name||'SKU',spec=i.spec||s?.spec||'',unit=i.unit||s?.unit||'';
+    return `${name}${spec?' '+spec:''} x${fmt(i.orderedQty)}${unit}`;
+  });
+  if(!rows.length){showToast('这张订单没有商品');return}
+  const txt=rows.join('\n'),supplier=o.supplier||'供应商';
+  navigator.clipboard?.writeText(txt).then(()=>showToast(`${supplier} 订单已复制`)).catch(()=>{prompt(`复制给 ${supplier}：`,txt)});
 }
 function v4ExportOrder(id){
   const o=state.placedOrders.find(x=>x.id===id);if(!o)return;
