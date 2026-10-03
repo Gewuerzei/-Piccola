@@ -53,3 +53,15 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
   .staff-month-row{grid-template-columns:minmax(105px,1.35fr) repeat(4,42px);padding:8px 7px}.staff-month-stat span{font-size:12px}.staff-month-stat b{font-size:13px}
   .staff-bottom-nav.staff-bottom-nav-five .staff-nav-btn span{font-size:19px}.staff-bottom-nav.staff-bottom-nav-five .staff-nav-btn small{font-size:8.5px}
 }
+
+/* Staff v0.2.1 · leave portion + person records */
+.staff-leave-portion{display:flex;flex-direction:column;gap:7px;padding:10px;border-radius:17px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.staff-leave-portion>span{font-size:10px;color:var(--muted)}
+.staff-portion-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.staff-portion-seg button{border:1px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--text);padding:10px 7px;font-weight:780}
+.staff-portion-seg button.active{background:var(--accent);color:var(--accentText);border-color:transparent}
+.staff-person-records{display:flex;flex-direction:column;gap:8px;max-height:58vh;overflow:auto}
+.staff-person-record-item{display:grid;grid-template-columns:96px 1fr;gap:9px;align-items:start;padding:11px 12px;border-radius:17px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.staff-person-record-date{font-size:10px;color:var(--muted);padding-top:2px}
+.staff-person-record-main b{display:block;font-size:12px}
+.staff-person-record-main small{display:block;margin-top:4px;color:var(--muted);font-size:10.5px;line-height:1.4}
