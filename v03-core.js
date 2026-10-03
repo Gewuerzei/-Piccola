@@ -14,7 +14,7 @@ function v3NormalizeSku(s){
 state.placedOrders=Array.isArray(state.placedOrders)?state.placedOrders:[];
 state.hiddenSkuIds=Array.isArray(state.hiddenSkuIds)?state.hiddenSkuIds:[];
 state.skus.forEach(v3NormalizeSku); state.version=3; saveState();
-function v3Skus(){return state.skus.filter(s=>!state.hiddenSkuIds.includes(s.id))}
+function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id))}
 function v3Cats(){return [...new Set([...categories,...v3Skus().map(s=>s.category).filter(Boolean)])]}
 function v3Suppliers(){return ['全部',...new Set([...suppliers.filter(s=>s!=='全部'),...v3Skus().map(s=>s.supplier).filter(Boolean)])]}
 function v3Icon(s){return s?.icon||skuIcons[s?.id]||categoryIcons[s?.category]||'📦'}
