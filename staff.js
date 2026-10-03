@@ -1320,8 +1320,12 @@
       const ids=new Set([...Object.keys(a),...Object.keys(b)]);
       ids.forEach(id=>{if(JSON.stringify(a[id]||null)!==JSON.stringify(b[id]||null))attendance++});
     });
-    const localSwapIds=new Set((state.swaps||[]).map(x=>x.id));
-    const swaps=(data.swaps||[]).filter(x=>!localSwapIds.has(x.id)).length;
+    const localSwapMap=new Map((state.swaps||[]).map(x=>[x.id,x]));
+    const incomingSwapMap=new Map((data.swaps||[]).map(x=>[x.id,x]));
+    let swaps=0;
+    new Set([...localSwapMap.keys(),...incomingSwapMap.keys()]).forEach(id=>{
+      if(JSON.stringify(localSwapMap.get(id)||null)!==JSON.stringify(incomingSwapMap.get(id)||null))swaps++;
+    });
     const localMoveIds=new Set((state.restMoves||[]).map(x=>x.id));
     const moves=(data.restMoves||[]).filter(x=>!localMoveIds.has(x.id)).length;
     const localPubIds=new Set(Object.values(state.weekPublications||{}).flat().map(x=>x.id));
@@ -1341,7 +1345,7 @@
     document.getElementById('staffImportSummary').innerHTML=
       '<div class="staff-import-banner '+cls+'"><strong>'+esc(title)+'</strong><span>'+esc(detail)+'</span></div>'+
       '<div class="staff-import-compare" style="margin-top:10px"><div><span>本机</span><b>#'+localRev+'</b></div><div class="arrow">→</div><div><span>文件</span><b>#'+(inRev||'?')+'</b></div></div>'+
-      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>休假/缺勤变化</span><b>'+d.attendance+'</b></div><div class="staff-sync-stat"><span>新增换休</span><b>'+d.swaps+'</b></div><div class="staff-sync-stat"><span>新增个人调休</span><b>'+d.moves+'</b></div><div class="staff-sync-stat"><span>新增周表版本</span><b>'+d.publications+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
+      '<div class="staff-sync-grid"><div class="staff-sync-stat"><span>人员变化</span><b>'+d.people+'</b></div><div class="staff-sync-stat"><span>休假/缺勤变化</span><b>'+d.attendance+'</b></div><div class="staff-sync-stat"><span>换休变化</span><b>'+d.swaps+'</b></div><div class="staff-sync-stat"><span>新增个人调休</span><b>'+d.moves+'</b></div><div class="staff-sync-stat"><span>新增周表版本</span><b>'+d.publications+'</b></div><div class="staff-sync-stat"><span>新增历史</span><b>'+d.hist+'</b></div><div class="staff-sync-stat"><span>头像</span><b>'+Object.keys(data.avatars||{}).length+'</b></div></div>';
     document.getElementById('staffAcceptImport').style.display=mode==='newer'?'inline-block':'none';
     document.getElementById('staffForceImport').style.display=['older','legacy','fork'].includes(mode)?'inline-block':'none';
     document.getElementById('staffImportDialog').showModal();
