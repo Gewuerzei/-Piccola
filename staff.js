@@ -4,7 +4,8 @@
   const DB_NAME='cassola_staff_assets_v01';
   const DB_STORE='avatars';
   let state=null;
-  let currentDate=new Date().toISOString().slice(0,10);
+  const todayLocal=()=>{const d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day};
+  let currentDate=todayLocal();
   let currentShift='dinner';
   let currentView='board';
   let pendingAvatarBlob=null;
@@ -571,7 +572,7 @@
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     const dev=(state.syncMeta.deviceName||'device').replace(/[^\w\u4e00-\u9fff-]+/g,'-').slice(0,20);
-    a.download='cassola-staff-v'+state.syncMeta.revision+'-'+dev+'-'+new Date().toISOString().slice(0,10)+'.json';
+    a.download='cassola-staff-v'+state.syncMeta.revision+'-'+dev+'-'+todayLocal()+'.json';
     a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('已导出 Staff #'+state.syncMeta.revision);
   }
   function importDiff(data){
@@ -611,7 +612,6 @@
     state.syncMeta.updatedAt=force?now():(incoming.syncMeta.updatedAt||raw.exportedAt||now());
     state.syncMeta.contentHash=fingerprint(state);
     for(const [id,url] of Object.entries(raw.avatars||{})){try{await avatarPut(id,dataUrlToBlob(url))}catch(_){}}
-    log('import','导入 Staff 数据 #'+(incoming.syncMeta.revision||'?'),force?'强制采用':'正常导入');
     state.syncMeta.contentHash=fingerprint(state);
     localStorage.setItem(KEY,JSON.stringify(state));
     document.getElementById('staffImportDialog').close();importCandidate=null;
@@ -707,7 +707,7 @@
     document.querySelectorAll('.staff-nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.staffView)));
     document.getElementById('staffPrevDay').addEventListener('click',()=>moveDate(-1));
     document.getElementById('staffNextDay').addEventListener('click',()=>moveDate(1));
-    document.getElementById('staffToday').addEventListener('click',()=>{currentDate=new Date().toISOString().slice(0,10);renderBoard()});
+    document.getElementById('staffToday').addEventListener('click',()=>{currentDate=todayLocal();renderBoard()});
     document.getElementById('staffDate').addEventListener('change',e=>{currentDate=e.target.value||currentDate;renderBoard()});
     document.querySelectorAll('[data-staff-shift]').forEach(b=>b.addEventListener('click',()=>{currentShift=b.dataset.staffShift;renderBoard()}));
     document.getElementById('staffAddPerson').addEventListener('click',()=>openPerson());
