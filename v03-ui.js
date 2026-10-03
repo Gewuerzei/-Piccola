@@ -22,6 +22,7 @@ document.addEventListener('click',e=>{
   const step=e.target.closest('[data-v3-step]');if(step){const r=step.closest('[data-v3-order]');v3Step(r.dataset.v3Order,r.dataset.v3Item,Number(step.dataset.v3Step));return}
   const line=e.target.closest('[data-v4-line-status]');if(line){const r=line.closest('[data-v3-order]');v4SetLineStatus(r.dataset.v3Order,r.dataset.v3Item,line.dataset.v4LineStatus);return}
   const fin=e.target.closest('[data-v3-finish]');if(fin){v3Finish(fin.dataset.v3Finish);return}
+  const copyPlaced=e.target.closest('[data-v4-copy-order]');if(copyPlaced){v4CopyPlacedOrder(copyPlaced.dataset.v4CopyOrder);return}
   const exp=e.target.closest('[data-v4-export-order]');if(exp){v4ExportOrder(exp.dataset.v4ExportOrder);return}
   const area=e.target.closest('[data-v4-area]');if(area){v4AreaFilter=area.dataset.v4Area;v4RenderAreaTabs();renderStock();renderCount();return}
 });
