@@ -530,6 +530,140 @@
     document.getElementById('staffAttendancePortionWrap').classList.toggle('hidden',status==='work');
     document.getElementById('staffAttendanceDialog').showModal();
   }
+  function cloneJson(v){return JSON.parse(JSON.stringify(v))}
+  function weekSnapshot(iso=currentDate){
+    const dates=weekDates(iso),people=state.people.filter(p=>p.active!==false).map(p=>({id:p.id,name:p.name}));
+    const cells={};
+    for(const p of people){
+      for(const date of dates){
+        const rec=attendanceGet(p.id,date);
+        if(!rec)continue;
+        cells[p.id+'|'+date]={status:rec.status||'work',portion:rec.portion||'full',note:rec.note||''};
+      }
+    }
+    return {weekStart:dates[0],people,cells};
+  }
+  function weekPublications(iso=currentDate){
+    const ws=weekStartIso(iso);
+    if(!Array.isArray(state.weekPublications[ws]))state.weekPublications[ws]=[];
+    return state.weekPublications[ws];
+  }
+  function latestWeekPublication(iso=currentDate){
+    const list=weekPublications(iso);
+    return list.length?list[list.length-1]:null;
+  }
+  function weekSnapshotDiff(a,b){
+    if(!a||!b)return 0;
+    let count=0;
+    const ap=(a.people||[]).map(x=>x.id+':'+x.name).sort(),bp=(b.people||[]).map(x=>x.id+':'+x.name).sort();
+    const peopleKeys=new Set([...ap,...bp]);
+    peopleKeys.forEach(k=>{if(!ap.includes(k)||!bp.includes(k))count++});
+    const keys=new Set([...Object.keys(a.cells||{}),...Object.keys(b.cells||{})]);
+    keys.forEach(k=>{if(JSON.stringify(a.cells?.[k]||null)!==JSON.stringify(b.cells?.[k]||null))count++});
+    return count;
+  }
+  function renderWeekRelease(){
+    const box=document.getElementById('staffWeekRelease'),btn=document.getElementById('staffPublishWeekBtn');if(!box||!btn)return;
+    const latest=latestWeekPublication(currentDate),snap=weekSnapshot(currentDate),pending=latest?weekSnapshotDiff(latest.snapshot,snap):null;
+    if(!latest){
+      box.innerHTML='<div><b>尚未发布</b><small>排好本周休息后，发布 v1 再发群。</small></div><span class="staff-release-draft">草稿</span>';
+      btn.textContent='📣 发布 v1';
+      return;
+    }
+    const when=new Date(latest.publishedAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    box.innerHTML='<div><b>已发布 v'+latest.version+'</b><small>'+esc(when)+' · '+esc(latest.publishedBy||'本设备')+'</small></div>'+
+      (pending?'<span class="staff-release-pending">有 '+pending+' 处未发布修改</span>':'<span class="staff-release-ok">与发布版一致</span>');
+    btn.textContent=pending?'📣 发布修改 v'+(latest.version+1):'✓ 已发布 v'+latest.version;
+  }
+  function publishWeek(){
+    const snap=weekSnapshot(currentDate);
+    if(!snap.people.length){toast('还没有人员');return}
+    const list=weekPublications(currentDate),latest=list.length?list[list.length-1]:null;
+    const changes=latest?weekSnapshotDiff(latest.snapshot,snap):0;
+    if(latest&&!changes){toast('当前周表和 v'+latest.version+' 一样');return}
+    const version=(latest?.version||0)+1;
+    const note=version===1?'初次发布':('修改版 · '+changes+' 处变化');
+    list.push({
+      id:uid('pub'),weekStart:snap.weekStart,version,publishedAt:now(),
+      publishedBy:state.syncMeta.deviceName||'本设备',changes,note,snapshot:cloneJson(snap)
+    });
+    log('publish','发布周休表 v'+version,note,snap.weekStart,'all');
+    save();renderWeek();renderHistory();
+    toast(version===1?'周休表 v1 已发布':'修改版 v'+version+' 已发布');
+  }
+  function openWeekVersions(){
+    const ws=weekStartIso(currentDate),list=weekPublications(currentDate).slice().reverse();
+    document.getElementById('staffWeekVersionsTitle').textContent=weekLabel(currentDate)+' · 版本记录';
+    const box=document.getElementById('staffWeekVersionList');
+    box.innerHTML=list.length?list.map(pub=>{
+      const t=new Date(pub.publishedAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return '<div class="staff-week-version-item"><div><b>v'+pub.version+'</b><small>'+esc(pub.note||'发布')+'</small></div><div class="staff-week-version-meta">'+esc(t)+'<br>'+esc(pub.publishedBy||'本设备')+'</div></div>';
+    }).join(''):'<div class="staff-settings-card"><p>'+esc(ws)+' 还没有发布记录。</p></div>';
+    document.getElementById('staffWeekVersionsDialog').showModal();
+  }
+  function restDatesFor(personId,iso=currentDate){
+    return weekDates(iso).filter(date=>attendanceGet(personId,date)?.status==='rest');
+  }
+  function refreshSwapDialog(){
+    const partnerSel=document.getElementById('staffSwapPartner'),dateSel=document.getElementById('staffSwapTargetDate'),initSel=document.getElementById('staffSwapInitiator');
+    if(!partnerSel||!dateSel||!initSel)return;
+    const sourceId=attendanceEdit.personId,partnerId=partnerSel.value;
+    const partner=personById(partnerId),source=personById(sourceId);
+    const dates=partnerId?restDatesFor(partnerId,attendanceEdit.date).filter(d=>d!==attendanceEdit.date):[];
+    dateSel.innerHTML=dates.length?dates.map(d=>'<option value="'+d+'">'+esc(dateLabel(d))+'</option>').join(''):'<option value="">对方本周没有其他休息日</option>';
+    initSel.innerHTML='<option value="'+esc(sourceId)+'">'+esc(source?.name||'当前人员')+'</option>'+
+      (partner?'<option value="'+esc(partner.id)+'">'+esc(partner.name)+'</option>':'');
+  }
+  function openSwapDialog(){
+    const source=personById(attendanceEdit.personId),rec=attendanceGet(attendanceEdit.personId,attendanceEdit.date);
+    if(!source||rec?.status!=='rest'){toast('先把这一天设为休息');return}
+    const partners=state.people.filter(p=>p.active!==false&&p.id!==source.id&&restDatesFor(p.id,attendanceEdit.date).some(d=>d!==attendanceEdit.date));
+    if(!partners.length){toast('这周没有可交换休息日的人');return}
+    document.getElementById('staffSwapTitle').textContent=source.name+' · 换休';
+    document.getElementById('staffSwapSource').innerHTML='<b>'+esc(source.name)+'</b><span>'+esc(dateLabel(attendanceEdit.date))+' 的休息日</span>';
+    const sel=document.getElementById('staffSwapPartner');
+    sel.innerHTML=partners.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+    document.getElementById('staffSwapNote').value='';
+    refreshSwapDialog();
+    document.getElementById('staffAttendanceDialog').close();
+    document.getElementById('staffSwapDialog').showModal();
+  }
+  function confirmSwap(){
+    const aId=attendanceEdit.personId,aDate=attendanceEdit.date;
+    const bId=document.getElementById('staffSwapPartner').value,bDate=document.getElementById('staffSwapTargetDate').value;
+    const initiatorId=document.getElementById('staffSwapInitiator').value||aId,note=document.getElementById('staffSwapNote').value.trim();
+    const a=personById(aId),b=personById(bId),aRec=attendanceGet(aId,aDate),bRec=attendanceGet(bId,bDate);
+    if(!a||!b||!bDate){toast('没有可交换的休息日');return}
+    if(aRec?.status!=='rest'||bRec?.status!=='rest'){toast('休息表刚刚变了，请重新打开');document.getElementById('staffSwapDialog').close();renderWeek();return}
+    if(aDate===bDate){toast('不能和同一天交换');return}
+    const id=uid('swap'),stamp=now(),weekStart=weekStartIso(aDate),latest=latestWeekPublication(aDate);
+    const aNew={...cloneJson(aRec),swapId:id,updatedAt:stamp};
+    const bNew={...cloneJson(bRec),swapId:id,updatedAt:stamp};
+    delete state.attendance[aDate][aId];
+    delete state.attendance[bDate][bId];
+    if(!Object.keys(state.attendance[aDate]).length)delete state.attendance[aDate];
+    if(!Object.keys(state.attendance[bDate]).length)delete state.attendance[bDate];
+    if(!state.attendance[bDate])state.attendance[bDate]={};
+    if(!state.attendance[aDate])state.attendance[aDate]={};
+    state.attendance[bDate][aId]=aNew;
+    state.attendance[aDate][bId]=bNew;
+    const initiator=personById(initiatorId)||a;
+    state.swaps.push({
+      id,createdAt:stamp,weekStart,
+      personAId:a.id,personAName:a.name,personADateBefore:aDate,personADateAfter:bDate,
+      personBId:b.id,personBName:b.name,personBDateBefore:bDate,personBDateAfter:aDate,
+      initiatorId:initiator.id,initiatorName:initiator.name,note,
+      publishedVersionBefore:latest?.version||0
+    });
+    log('swap',initiator.name+' 发起换休：'+a.name+' '+aDate+' ↔ '+b.name+' '+bDate,note,aDate,'all');
+    save();
+    document.getElementById('staffSwapDialog').close();
+    renderWeek();renderMonth();renderHistory();
+    toast('换休已记录，记得重新发布修改版');
+  }
+  function monthlySwapInitiated(personId,month=monthKey()){
+    return (state.swaps||[]).filter(x=>x.initiatorId===personId&&(x.personADateBefore||x.weekStart||'').startsWith(month)).length;
+  }
   function renderWeek(){
     const box=document.getElementById('staffWeekTable');if(!box)return;
     const dates=weekDates(currentDate),days=['一','二','三','四','五','六','日'];
