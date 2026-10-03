@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.4.1 · Sala Starter Catalog**
+- Inventory: **v0.4.2 · Supplier Order Text**
 - Staff: **v0.3.2 · Published Weekly Rest**
 - 当前实现基线 commit（本次维护理论刷新时）: `c0c11b74310f8ecd8f4a4d692546ec9cfc242985`
 - iPhone 优先 PWA，offline-first
@@ -227,6 +227,18 @@ SKU 可使用手动阈值或历史周耗。
 - 内部转换
 
 报损不是正常消耗，内部转换不能伪装成消耗。
+
+### Supplier outbound order text
+
+PWA 内部订单和发给供应商的文本是同一份数据的两个视图：
+- 内部：保留 SKU、area、supplier、收货状态等结构化数据
+- 外发：只生成供应商需要看的“商品 + 规格（有则显示） + 数量 + 单位”纯文本
+
+规则：
+- 草稿页按钮叫“📋 复制订货单”
+- 若“全部供应商”下同时存在多家供应商草稿，必须先点具体 supplier tag，禁止把多家订单混在一份文本里
+- 已下单卡片也提供“📋 复制订单”，可随时重新发给供应商
+- 新建 placed order 时把 `spec` 快照写进 order item；旧订单没有 spec 时回退到当前 SKU spec
 
 ### Inventory JSON handoff
 
@@ -481,7 +493,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v0442
+cassola-suite-v0443
 ```
 
 当前 CORE 必须包含：
