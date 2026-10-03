@@ -2,6 +2,17 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## PWA Update Reliability
+**2026-10-03**
+
+- Service Worker 注册改为 `updateViaCache:'none'`。
+- 每次 PWA 启动会主动检查 `sw.js` 更新。
+- PWA 从后台回到前台时也会主动检查更新。
+- Service Worker cache 更新为 `cassola-suite-v0423`。
+- 目的：减少 Safari 网页已更新、主屏 PWA 仍停留旧版本的情况。
+
+---
+
 ## Staff v0.2.2 · Generic Half-Day Periods
 **2026-10-03**
 
