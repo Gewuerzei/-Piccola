@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff Board v0.1.1 · Split JSON Backup
+**2026-10-03**
+
+- 日常“导出 Staff JSON”不再携带头像图片。
+- 新增“完整备份（含头像）”。
+- 普通 Staff JSON 适合群聊日常交接。
+- 完整备份用于换手机、灾备和头像迁移。
+- 导入器同时兼容普通 Staff JSON 与完整备份。
+- Service Worker cache 更新为 `cassola-suite-v041`。
+
+---
+
 ## Cassola Hub + Staff Board v0.1
 **2026-10-03**
 
