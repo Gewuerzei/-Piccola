@@ -38,7 +38,7 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 收货按钮做成 3×2 大触控块，避免手机端密集小按钮。
 
 ### PWA
-- Service Worker cache 更新为 `cassola-suite-v044`。
+- Service Worker cache 更新为 `cassola-suite-v0441`。
 
 ---
 
