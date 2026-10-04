@@ -17,9 +17,18 @@ function v3NormalizeSku(s){
   if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto'; if(!s.area)s.area='sushi';
   ['blueAt','yellowAt','redAt','targetQty','manualWeeklyUse'].forEach(k=>{s[k]=v3Num(s[k])});
   s.targetWeeks=v3Num(s.targetWeeks)??v3DefaultWeeks(s.category);
+  s.orderUnit=String(s.orderUnit||s.unit||'').trim()||s.unit||'';
+  s.unitsPerOrder=v3Num(s.unitsPerOrder);
+  if(!(s.unitsPerOrder>0))s.unitsPerOrder=1;
   if(s.autoOrder==null)s.autoOrder=!v3NoAuto.has(s.id)&&!['内部','自种','待确认'].includes(s.supplier)&&s.category!=='处理库存';
   return s;
 }
+function v5OrderUnit(s){return String(s?.orderUnit||s?.unit||'')}
+function v5UnitsPerOrder(s){const n=v3Num(s?.unitsPerOrder);return n>0?n:1}
+function v5OrderToStockQty(s,qty){const n=v3Num(qty);return n==null?null:n*v5UnitsPerOrder(s)}
+function v5StockToOrderQty(s,qty){const n=v3Num(qty);return n==null?null:n/v5UnitsPerOrder(s)}
+function v5UsesPurchasePack(s){return v5UnitsPerOrder(s)!==1||v5OrderUnit(s)!==String(s?.unit||'')}
+function v5PackLabel(s){return v5UsesPurchasePack(s)?`1${v5OrderUnit(s)} = ${fmt(v5UnitsPerOrder(s))}${s?.unit||''}`:''}
 state.placedOrders=Array.isArray(state.placedOrders)?state.placedOrders:[];
 state.hiddenSkuIds=Array.isArray(state.hiddenSkuIds)?state.hiddenSkuIds:[];
 function v4NormalizeOrder(o){
@@ -28,6 +37,9 @@ function v4NormalizeOrder(o){
   o.items.forEach(i=>{
     const s=(state.skus||[]).find(x=>x.id===i.skuId);
     if(!i.area)i.area=v4AreaOf(s);
+    if(!i.orderUnit)i.orderUnit=i.unit||s?.unit||'';
+    if(!(Number(i.unitsPerOrder)>0))i.unitsPerOrder=1;
+    if(i.orderQty==null)i.orderQty=(Number(i.orderedQty)||0)/Number(i.unitsPerOrder||1);
     const ordered=Math.max(0,Number(i.orderedQty)||0);
     const oldActual=Math.max(0,Number(i.actualQty)||0);
     if(i.creditedQty==null){
@@ -59,7 +71,7 @@ function v3EnsureState(){
   state.priceRecords=Array.isArray(state.priceRecords)?state.priceRecords:[];
   state.skus=(Array.isArray(state.skus)?state.skus:[]).map(v3NormalizeSku);
   state.placedOrders=state.placedOrders.map(v4NormalizeOrder);
-  state.version=5;
+  state.version=6;
 }
 v3EnsureState(); saveState();
 function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id))}
@@ -90,4 +102,6 @@ function v3Level(s){
   const target=v3Num(s.targetQty);if(target>0){if(q<=0)return'zero';const r=q/target;if(r<=.2)return'red';if(r<=.5)return'yellow';if(r<=.8)return'blue'}return'ok';
 }
 function v3Suggestion(s){if(!s.autoOrder)return 0;let target=v3Num(s.targetQty);if(target==null){const w=v3WeeklyUse(s),weeks=v3Num(s.targetWeeks);if(!(w>0)||!(weeks>0))return 0;target=w*weeks}return Math.max(0,Math.ceil((target-Number(s.qty))*10)/10)}
-function v3Hint(s){const level=v3Level(s),cov=v3Coverage(s),sug=v3Suggestion(s),manual=[s.redAt,s.yellowAt,s.blueAt].some(v=>v3Num(v)!=null),configured=s.warningMode==='manual'?manual:(cov!=null||v3Num(s.targetQty)!=null),names={zero:'❌ 0库存',red:'🔴 见底',yellow:'🟡 偏低',blue:'🔵 留意',ok:configured?'库存正常':'未设置预警'},parts=[names[level]];if(cov!=null)parts.push(`约 ${fmt(cov)} 周`);if(sug>0)parts.push(`建议 +${fmt(sug)}${s.unit}`);return parts.join(' · ')}
+function v5SuggestedOrderQty(s){const need=v3Suggestion(s);if(!(need>0))return 0;const factor=v5UnitsPerOrder(s);return v5UsesPurchasePack(s)?Math.ceil(need/factor):need}
+function v5SuggestedStockQty(s){const q=v5SuggestedOrderQty(s);return q>0?q*v5UnitsPerOrder(s):0}
+function v3Hint(s){const level=v3Level(s),cov=v3Coverage(s),sug=v3Suggestion(s),manual=[s.redAt,s.yellowAt,s.blueAt].some(v=>v3Num(v)!=null),configured=s.warningMode==='manual'?manual:(cov!=null||v3Num(s.targetQty)!=null),names={zero:'❌ 0库存',red:'🔴 见底',yellow:'🟡 偏低',blue:'🔵 留意',ok:configured?'库存正常':'未设置预警'},parts=[names[level]];if(cov!=null)parts.push(`约 ${fmt(cov)} 周`);if(sug>0){const oq=v5SuggestedOrderQty(s),sq=v5SuggestedStockQty(s);parts.push(v5UsesPurchasePack(s)?`建议 +${fmt(oq)}${v5OrderUnit(s)}（${fmt(sq)}${s.unit}）`:`建议 +${fmt(sug)}${s.unit}`)}return parts.join(' · ')}
