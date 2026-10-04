@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.5.1 · iOS Decimal Input
+**2026-10-04**
+
+- 修复意大利语 iPhone 数字键盘使用逗号小数时，无法可靠输入 `1,8` / `0,5` 的问题。
+- Inventory 可编辑数字框改为 iPhone 友好的 `type="text" + inputmode="decimal"`。
+- 新增统一小数解析：`1,8` 与 `1.8` 都接受，保存 / 计算前统一转成标准数字。
+- 覆盖快速盘货、手动到货 / 报损 / 调整、订货数量、分批收货数量、SKU 库存与预警参数、价格与 IVA 税率。
+- 不改变 `cassola_inventory_v01`，不迁库，不修改已有数字数据结构。
+- Service Worker cache 更新为 `cassola-suite-v052`。
+
+---
+
 ## Staff v0.3.3 · Swap Lifecycle
 **2026-10-03**
 
