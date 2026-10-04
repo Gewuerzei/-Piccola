@@ -300,15 +300,15 @@ function saveBulkCount(){
   saveState();renderAll();showToast(`已保存 ${changed} 个 SKU`); switchView('stock');
 }
 function fillCurrent(){document.querySelectorAll('.count-input').forEach(inp=>{inp.value=sku(inp.dataset.id)?.qty??0});showToast('已带入当前库存');}
-function setOrder(id, value){const n=parseLocaleDecimal(value); if(!Number.isFinite(n)||n<=0) delete state.order[id]; else state.order[id]=n; saveState();renderOrder();renderStock();}
-function addOrderPrompt(id){const s=sku(id);const cur=state.order[id]||'';const ans=prompt(`${s.name} 订多少 ${s.unit}？`,cur);if(ans===null)return;setOrder(id,ans);showToast('已加入订货草稿');}
+function setOrder(id, value){const n=parseLocaleDecimal(value),s=sku(id);if(!Number.isFinite(n)||n<=0||!s)delete state.order[id];else{const stock=typeof v5OrderToStockQty==='function'?v5OrderToStockQty(s,n):n;state.order[id]=stock}saveState();renderOrder();renderStock();}
+function addOrderPrompt(id){const s=sku(id);if(!s)return;const cur=state.order[id]?((typeof v5StockToOrderQty==='function'?v5StockToOrderQty(s,state.order[id]):state.order[id])):'';const orderUnit=typeof v5OrderUnit==='function'?v5OrderUnit(s):s.unit;const ans=prompt(`${s.name} 订多少 ${orderUnit}？`,cur===''?'':fmt(cur));if(ans===null)return;setOrder(id,ans);showToast('已加入订货草稿');}
 function copyOrder(){
   const rows=Object.entries(state.order).filter(([,v])=>Number(v)>0).map(([id,v])=>({s:sku(id),v:Number(v)})).filter(x=>x.s).filter(x=>activeSupplier==='全部'||x.s.supplier===activeSupplier);
   if(!rows.length){showToast('当前没有订货草稿');return;}
   const supplierSet=new Set(rows.map(x=>x.s.supplier));
   if(activeSupplier==='全部'&&supplierSet.size>1){showToast('先点一个供应商，再复制给供应商');return;}
   const supplier=activeSupplier==='全部'?[...supplierSet][0]:activeSupplier;
-  const txt=rows.map(({s,v})=>`${s.name}${s.spec?' '+s.spec:''} x${fmt(v)}${s.unit}`).join('\n');
+  const txt=rows.map(({s,v})=>{const q=typeof v5StockToOrderQty==='function'?v5StockToOrderQty(s,v):v,u=typeof v5OrderUnit==='function'?v5OrderUnit(s):s.unit;return `${s.name} x${fmt(q)}${u}`}).join('\n');
   navigator.clipboard?.writeText(txt).then(()=>showToast(`${supplier} 订货单已复制`)).catch(()=>{prompt(`复制给 ${supplier}：`,txt)});
 }
 
