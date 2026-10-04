@@ -156,8 +156,8 @@ function v45OpenPriceDialog(skuId){
   document.getElementById('v45PriceDialog').showModal();
 }
 function v45RefreshPreview(){
-  const a=Number(document.getElementById('v45Amount')?.value),mode=document.getElementById('v45VatMode')?.value||'unknown';
-  const rateEl=document.getElementById('v45VatRate'),rate=rateEl?.value===''?null:Number(rateEl?.value);
+  const a=parseLocaleDecimal(document.getElementById('v45Amount')?.value),mode=document.getElementById('v45VatMode')?.value||'unknown';
+  const rateEl=document.getElementById('v45VatRate'),rate=rateEl?.value===''?null:parseLocaleDecimal(rateEl?.value);
   if(rateEl)rateEl.disabled=mode==='unknown';
   const skuId=document.getElementById('v45PriceSkuId')?.value,s=sku(skuId),spec=String(document.getElementById('v45QuoteSpec')?.value||'').trim();
   const warn=document.getElementById('v45SpecWarning');
@@ -175,11 +175,11 @@ function v45RefreshPreview(){
 function v45SavePrice(){
   const skuId=document.getElementById('v45PriceSkuId').value,s=sku(skuId);
   if(!s)return;
-  const amount=Number(document.getElementById('v45Amount').value),priceUnit=document.getElementById('v45PriceUnit').value.trim();
+  const amount=parseLocaleDecimal(document.getElementById('v45Amount').value),priceUnit=document.getElementById('v45PriceUnit').value.trim();
   const supplier=document.getElementById('v45PriceSupplier').value.trim(),source=document.getElementById('v45PriceSource').value;
   const recordDate=document.getElementById('v45PriceDate').value||v45LocalDate(),quoteSpec=document.getElementById('v45QuoteSpec').value.trim();
   const vatMode=document.getElementById('v45VatMode').value,rateRaw=document.getElementById('v45VatRate').value;
-  const vatRate=vatMode==='unknown'||rateRaw===''?null:Number(rateRaw),note=document.getElementById('v45PriceNote').value.trim();
+  const vatRate=vatMode==='unknown'||rateRaw===''?null:parseLocaleDecimal(rateRaw),note=document.getElementById('v45PriceNote').value.trim();
   if(!(amount>0)){showToast('价格要大于 0');return}
   if(!priceUnit){showToast('报价单位要填');return}
   if(!supplier){showToast('供应商要填');return}
