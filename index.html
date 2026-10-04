@@ -197,7 +197,14 @@
       </div>
       <div class="v3-form-grid two">
         <label>规格<input id="v3Spec" placeholder="900g / 20kg" /></label>
-        <label>单位<input id="v3Unit" placeholder="箱 / 盒 / 包" required /></label>
+        <label>库存单位（最小包装）<input id="v3Unit" placeholder="包 / 盒 / 瓶" required /></label>
+      </div>
+      <div class="v3-subcard">
+        <div class="v3-form-grid two">
+          <label>订货单位（大包装）<input id="v3OrderUnit" placeholder="箱 / 件 / 托" /></label>
+          <label>1 大包装 = 几个最小包装<input id="v3UnitsPerOrder" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 10" /></label>
+        </div>
+        <small>例如：库存按“包”，订货按“箱”，填写 1 箱 = 10 包。无需换算时保持 1。</small>
       </div>
       <div class="v3-form-grid two">
         <label>分类<input id="v3Category" list="v3CategoryOptions" required /></label>
