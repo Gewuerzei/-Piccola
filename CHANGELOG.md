@@ -2,6 +2,25 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.6 · Purchase Unit Layer
+**2026-10-04**
+
+- SKU 新增采购包装字段：
+  - `unit` = 库存 / 最小包装单位
+  - `orderUnit` = 订货 / 大包装单位
+  - `unitsPerOrder` = 1 个大包装包含多少最小包装
+- 旧 SKU 自动兼容为 `orderUnit = unit`、`unitsPerOrder = 1`，不清库、不改 `cassola_inventory_v01`。
+- `state.order` 继续内部保存“库存单位数量”，避免已有草稿在新增箱规后被错误重解释；UI 输入 / 显示按订货单位换算。
+- 自动订货先按库存需求计算，再在存在大包装换算时向上取整到完整订货包装。
+- 新 placed order 快照保存 `orderQty / orderUnit / unitsPerOrder`；旧订单按原单位、倍率 1 保持历史语义。
+- 收货界面按订货大包装输入，真正入库时换算回最小包装；`creditedQty` 继续以库存单位保存，幂等逻辑不变。
+- 外发供应商订货文本简化为“商品名 + 数量 + 订货单位”，不再附带 SKU 的 g/kg/L 规格。
+- 已下单卡片补回“📋 复制订单”按钮。
+- Price Layer 新价格记录默认优先使用订货单位，仍可手动修改。
+- Service Worker cache 更新为 `cassola-suite-v053`。
+
+---
+
 ## Inventory v0.5.1 · iOS Decimal Input
 **2026-10-04**
 
