@@ -54,8 +54,8 @@ function v3RenderOrder(){
 renderOrder=v3RenderOrder;
 
 function v4DraftRow(x){
-  const a=v4AreaMeta(v4AreaOf(x));
-  return `<article class="sku-card order-row"><div class="order-left"><span class="count-mini-icon">${v3Icon(x)}</span><div><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta"><span class="meta-pill spec">${escapeHtml(x.spec||'无规格')}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span><span class="meta-pill">${a.icon} ${escapeHtml(a.label)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}${v3Suggestion(x)>0?`<span class="meta-pill v3-suggest">建议 ${fmt(v3Suggestion(x))}</span>`:''}</div></div></div><div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(state.order[x.id])}" type="text" inputmode="decimal" autocomplete="off"><span>${escapeHtml(x.unit)}</span></div><button class="icon-btn" data-remove-order="${x.id}">✕</button></article>`;
+  const a=v4AreaMeta(v4AreaOf(x)),orderQty=v5StockToOrderQty(x,state.order[x.id])??0,pack=v5PackLabel(x),suggested=v5SuggestedOrderQty(x);
+  return `<article class="sku-card order-row"><div class="order-left"><span class="count-mini-icon">${v3Icon(x)}</span><div><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta"><span class="meta-pill spec">${escapeHtml(x.spec||'无规格')}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span><span class="meta-pill">${a.icon} ${escapeHtml(a.label)}</span>${pack?`<span class="meta-pill">📦 ${escapeHtml(pack)}</span>`:''}${typeof v45PricePill==='function'?v45PricePill(x):''}${suggested>0?`<span class="meta-pill v3-suggest">建议 ${fmt(suggested)}${escapeHtml(v5OrderUnit(x))}</span>`:''}</div></div></div><div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(orderQty)}" type="text" inputmode="decimal" autocomplete="off"><span>${escapeHtml(v5OrderUnit(x))}</span></div><button class="icon-btn" data-remove-order="${x.id}">✕</button></article>`;
 }
 function v3RenderDraft(){
   const ids=Object.keys(state.order).filter(id=>Number(state.order[id])>0);
@@ -64,7 +64,7 @@ function v3RenderDraft(){
 }
 function v3Generate(){
   let n=0;
-  v3Skus().forEach(s=>{const q=v3Suggestion(s);if(q>0&&!state.order[s.id]){state.order[s.id]=q;n++}});
+  v3Skus().forEach(s=>{const q=v5SuggestedStockQty(s);if(q>0&&!state.order[s.id]){state.order[s.id]=q;n++}});
   saveState();renderAll();showToast(n?`已加入 ${n} 个建议`:'目前没有可计算的新建议');
 }
 function v3Place(){
@@ -77,7 +77,8 @@ function v3Place(){
       id:crypto.randomUUID?.()||String(Date.now()+Math.random()),
       supplier,createdAt:stamp(),status:'open',partial:false,receiptBatches:[],
       items:rows.map(({s,v})=>({
-        skuId:s.id,skuName:s.name,spec:s.spec||'',unit:s.unit,area:v4AreaOf(s),orderedQty:v,
+        skuId:s.id,skuName:s.name,spec:s.spec||'',unit:s.unit,orderUnit:v5OrderUnit(s),unitsPerOrder:v5UnitsPerOrder(s),
+        orderQty:v5StockToOrderQty(s,v),area:v4AreaOf(s),orderedQty:v,
         actualQty:0,creditedQty:0,lineStatus:'pending',dirty:false
       }))
     };
@@ -91,6 +92,10 @@ function v3OrderItem(orderId,skuId){
   const o=state.placedOrders.find(x=>x.id===orderId);
   return{o,item:o?.items.find(i=>i.skuId===skuId)};
 }
+function v5ItemFactor(item){const n=Number(item?.unitsPerOrder);return n>0?n:1}
+function v5ItemOrderUnit(item){return String(item?.orderUnit||item?.unit||'')}
+function v5ItemStockUnit(item){return String(item?.unit||'')}
+function v5ItemOrderQty(item,stockQty){return (Number(stockQty)||0)/v5ItemFactor(item)}
 
 const v4LineStates={
   pending:{icon:'·',label:'待核对',open:true},
@@ -106,22 +111,24 @@ function v4LineClosed(i){return !v4StateMeta(i.lineStatus).open}
 function v4OrderOpenItems(o){return (o.items||[]).filter(i=>!v4LineClosed(i))}
 function v4OrderDirty(o){return (o.items||[]).filter(i=>i.dirty)}
 function v4QtyText(item){
-  const unit=escapeHtml(item.unit||sku(item.skuId)?.unit||'');
-  const credited=Number(item.creditedQty)||0;
-  if(credited>0)return `已入库 ${fmt(credited)} ${unit} · 订 ${fmt(item.orderedQty)}`;
-  return `订 ${fmt(item.orderedQty)} ${unit}`;
+  const stockUnit=escapeHtml(v5ItemStockUnit(item)),orderUnit=escapeHtml(v5ItemOrderUnit(item)),factor=v5ItemFactor(item);
+  const ordered=Number(item.orderedQty)||0,orderedOrder=v5ItemOrderQty(item,ordered),credited=Number(item.creditedQty)||0,creditedOrder=v5ItemOrderQty(item,credited);
+  const pack=factor!==1||orderUnit!==stockUnit;
+  if(credited>0)return `已入库 ${fmt(creditedOrder)} ${orderUnit}${pack?` · ${fmt(credited)} ${stockUnit}`:''} · 订 ${fmt(orderedOrder)} ${orderUnit}`;
+  return `订 ${fmt(orderedOrder)} ${orderUnit}${pack?` · ${fmt(ordered)} ${stockUnit}`:''}`;
 }
 function v4ReceiveRow(o,item){
   const s=sku(item.skuId),st=v4StateMeta(item.lineStatus),closed=v4LineClosed(item)&&!item.dirty;
-  const q=Math.max(Number(item.creditedQty)||0,Number(item.actualQty)||0);
-  const a=v4AreaMeta(item.area||v4AreaOf(s));
+  const q=Math.max(Number(item.creditedQty)||0,Number(item.actualQty)||0),credited=Number(item.creditedQty)||0;
+  const orderUnit=v5ItemOrderUnit(item),stockUnit=v5ItemStockUnit(item),factor=v5ItemFactor(item),qOrder=v5ItemOrderQty(item,q),delta=q-credited,deltaOrder=v5ItemOrderQty(item,delta);
+  const pack=factor!==1||orderUnit!==stockUnit,a=v4AreaMeta(item.area||v4AreaOf(s));
   const rowCls=`v4-state-${item.lineStatus}${item.dirty?' is-dirty':''}${closed?' is-closed':''}`;
   const status=`${st.icon} ${st.label}${item.dirty?' · 待保存':''}`;
   return `<div class="v3-receive-row ${rowCls}" data-v3-order="${o.id}" data-v3-item="${item.skuId}">
     <div class="v3-receive-title"><span class="count-mini-icon">${v3Icon(s)}</span><div><strong>${escapeHtml(s?.name||item.skuName)}</strong><small>${v4QtyText(item)} · ${a.icon} ${escapeHtml(a.label)}</small></div><span class="v4-line-pill">${escapeHtml(status)}</span></div>
-    <div class="v4-qty-caption"><span>累计实到</span><b>${q>(Number(item.creditedQty)||0)?('本次新增 +'+fmt(q-(Number(item.creditedQty)||0))+' '+escapeHtml(item.unit||s?.unit||'')):'本次新增 0'}</b></div>
-    <div class="v3-stepper"><button ${closed?'disabled':''} data-v3-step="-1">−</button><input ${closed?'disabled':''} class="v3-receive-qty" type="text" inputmode="decimal" autocomplete="off" value="${fmt(q)}"><button ${closed?'disabled':''} data-v3-step="1">＋</button></div>
-    ${closed?`<div class="v4-closed-note">${st.icon} ${escapeHtml(st.label)} · 累计实到 ${fmt(item.creditedQty||0)} ${escapeHtml(item.unit||s?.unit||'')}</div>`:`
+    <div class="v4-qty-caption"><span>累计实到（${escapeHtml(orderUnit)}）</span><b>${delta>0?('本次新增 +'+fmt(deltaOrder)+' '+escapeHtml(orderUnit)+(pack?' · '+fmt(delta)+' '+escapeHtml(stockUnit):'')):'本次新增 0'}</b></div>
+    <div class="v3-stepper"><button ${closed?'disabled':''} data-v3-step="-1">−</button><input ${closed?'disabled':''} class="v3-receive-qty" type="text" inputmode="decimal" autocomplete="off" value="${fmt(qOrder)}"><button ${closed?'disabled':''} data-v3-step="1">＋</button></div>
+    ${closed?`<div class="v4-closed-note">${st.icon} ${escapeHtml(st.label)} · 累计实到 ${fmt(v5ItemOrderQty(item,item.creditedQty||0))} ${escapeHtml(orderUnit)}${pack?` · ${fmt(item.creditedQty||0)} ${escapeHtml(stockUnit)}`:''}</div>`:`
     <div class="v4-receive-actions">
       <button data-v4-line-status="received">✅ 收齐</button>
       <button data-v4-line-status="later">🕒 晚到</button>
@@ -165,6 +172,7 @@ function v3RenderPlaced(){
       <div class="v3-placed-head"><div><div class="eyebrow">${escapeHtml(o.supplier||'订单')}</div><h3>${new Date(o.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</h3><small class="v4-batch-count">${batches?('已保存 '+batches+' 次收货'):'尚未入库'}</small></div><span>${status}</span></div>
       ${v4OrderAreaSections(o)}
       <div class="v4-order-footer">
+        <button class="btn secondary" data-v4-copy-order="${o.id}">📋 复制订单</button>
         <button class="btn secondary" data-v4-export-order="${o.id}">📤 本单 JSON</button>
         ${done?`<div class="v3-finished">这张供应商单已经结案，历史差异仍保留。</div>`:`<button class="btn primary large" data-v3-finish="${o.id}" ${dirty.length?'':'disabled'}>📥 保存本次收货${dirty.length?' · '+dirty.length+'项':''}</button>`}
       </div>
@@ -173,14 +181,14 @@ function v3RenderPlaced(){
 }
 function v3Step(orderId,skuId,d){
   const {o,item}=v3OrderItem(orderId,skuId);if(!o||!item||o.status==='received'||(v4LineClosed(item)&&!item.dirty))return;
-  const min=Number(item.creditedQty)||0;
-  item.actualQty=Math.max(min,Math.round(((Number(item.actualQty)||0)+d)*10)/10);
+  const min=Number(item.creditedQty)||0,step=v5ItemFactor(item);
+  item.actualQty=Math.max(min,Math.round(((Number(item.actualQty)||0)+d*step)*1000)/1000);
   item.lineStatus='pending';item.dirty=true;
   saveState();v3RenderPlaced();
 }
 function v3Qty(orderId,skuId,v){
   const {o,item}=v3OrderItem(orderId,skuId);if(!o||!item||o.status==='received'||(v4LineClosed(item)&&!item.dirty))return;
-  const min=Number(item.creditedQty)||0,parsed=v3Num(v),n=Math.max(min,parsed??0);
+  const min=Number(item.creditedQty)||0,parsed=v3Num(v),stock=parsed==null?null:parsed*v5ItemFactor(item),n=Math.max(min,stock??0);
   item.actualQty=n;item.lineStatus='pending';item.dirty=true;
   saveState();v3RenderPlaced();
 }
@@ -234,8 +242,8 @@ function v3Finish(id){
 function v4CopyPlacedOrder(id){
   const o=state.placedOrders.find(x=>x.id===id);if(!o)return;
   const rows=(o.items||[]).map(i=>{
-    const s=sku(i.skuId),name=i.skuName||s?.name||'SKU',spec=i.spec||s?.spec||'',unit=i.unit||s?.unit||'';
-    return `${name}${spec?' '+spec:''} x${fmt(i.orderedQty)}${unit}`;
+    const s=sku(i.skuId),name=i.skuName||s?.name||'SKU',unit=v5ItemOrderUnit(i),qty=i.orderQty==null?v5ItemOrderQty(i,i.orderedQty):Number(i.orderQty);
+    return `${name} x${fmt(qty)}${unit}`;
   });
   if(!rows.length){showToast('这张订单没有商品');return}
   const txt=rows.join('\n'),supplier=o.supplier||'供应商';
@@ -247,7 +255,7 @@ function v4ExportOrder(id){
   const payload={
     format:'cassola-order-handoff-v1',exportedAt:stamp(),exportDevice:state.syncMeta?.deviceName||'本设备',
     order:JSON.parse(JSON.stringify(o)),
-    skus:v3Skus().filter(s=>skuIds.has(s.id)).map(s=>({id:s.id,name:s.name,spec:s.spec,unit:s.unit,area:v4AreaOf(s),supplier:s.supplier}))
+    skus:v3Skus().filter(s=>skuIds.has(s.id)).map(s=>({id:s.id,name:s.name,spec:s.spec,unit:s.unit,orderUnit:v5OrderUnit(s),unitsPerOrder:v5UnitsPerOrder(s),area:v4AreaOf(s),supplier:s.supplier}))
   };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
