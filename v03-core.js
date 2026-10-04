@@ -11,7 +11,7 @@ function v4AreaMeta(id){return v4Areas.find(x=>x.id===id)||v4Areas[0]}
 function v4AreaOf(s){return s?.area||'sushi'}
 const v3Builtins=new Set(seedSkus.map(s=>s.id));
 const v3NoAuto=new Set(['redapple','daikon','mango_hard','basil','avocado_half','avocado_soft']);
-function v3Num(v){if(v===''||v==null)return null;const n=Number(v);return Number.isFinite(n)?n:null}
+function v3Num(v){if(v===''||v==null)return null;const n=typeof parseLocaleDecimal==='function'?parseLocaleDecimal(v):Number(v);return Number.isFinite(n)?n:null}
 function v3DefaultWeeks(cat){if(cat==='蔬果')return .6;if(cat==='冷藏')return 1;if(cat==='处理库存')return 0;return 2}
 function v3NormalizeSku(s){
   if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto'; if(!s.area)s.area='sushi';
