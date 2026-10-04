@@ -9,9 +9,9 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.5 · Price Layer**
+- Inventory: **v0.5.1 · iOS Decimal Input**
 - Staff: **v0.3.3 · Swap Lifecycle**
-- 当前实现基线 commit（本次维护理论刷新时）: `c0c11b74310f8ecd8f4a4d692546ec9cfc242985`
+- 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
 - 多设备协作目前使用 **群聊 JSON 数据包交接**
@@ -241,6 +241,15 @@ PWA 内部订单和发给供应商的文本是同一份数据的两个视图：
 - 若“全部供应商”下同时存在多家供应商草稿，必须先点具体 supplier tag，禁止把多家订单混在一份文本里
 - 已下单卡片也提供“📋 复制订单”，可随时重新发给供应商
 - 新建 placed order 时把 `spec` 快照写进 order item；旧订单没有 spec 时回退到当前 SKU spec
+
+### iPhone / locale 小数输入
+
+Inventory 的可编辑数字框必须兼容意大利语 iPhone 的逗号小数键盘：
+- 用户输入 `1,8` 或 `1.8` 都应得到数值 `1.8`
+- UI 数字输入使用 `type="text" + inputmode="decimal"`，避免 iOS / locale 对 `type="number"` 的字符限制
+- 保存或计算前统一走 locale decimal parser
+- 内部数据继续保存为 JS number，不把逗号字符串写进 localStorage
+- 不改变 `cassola_inventory_v01`
 
 ### Price Layer
 
@@ -505,10 +514,12 @@ weekPublications[weekStart] = [
 
 ### Staff JSON handoff
 
-普通“导出 Staff JSON”只包含：
-- 人员
-- 岗位
+普通“导出 Staff JSON”包含业务数据：
+- 人员 / 岗位
 - 排班
+- attendance 周休 / 请假 / 缺勤
+- swaps / restMoves
+- weekPublications
 - 历史
 - revision/hash/deviceName
 
