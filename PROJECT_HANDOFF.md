@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.5.1 · iOS Decimal Input**
+- Inventory: **v0.6 · Purchase Unit Layer**
 - Staff: **v0.3.3 · Swap Lifecycle**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
@@ -64,6 +64,8 @@ UI 可以重做，数据契约不能悄悄变。
 ### C. 新字段必须可向后迁移
 新增字段采用“旧数据无此字段也能跑”的方式：
 - SKU 无 `area` → 默认 `sushi`
+- SKU 无 `orderUnit / unitsPerOrder` → 默认 `orderUnit = unit`、`unitsPerOrder = 1`
+- 旧订单无采购包装快照 → 保持原 `unit`、倍率 1，不拿当前 SKU 新箱规重解释历史订单
 - 旧订单无 `creditedQty` / `lineStatus` → 按旧状态推断
 - Staff 旧 attendance 无 `portion` → 默认全天
 - Staff 旧 swap 无生命周期 → 根据当前 swapId 链接迁移为 active / superseded
@@ -230,17 +232,39 @@ SKU 可使用手动阈值或历史周耗。
 
 报损不是正常消耗，内部转换不能伪装成消耗。
 
+### Purchase Unit Layer
+
+库存单位和采购单位是两个不同维度，不能再共用一个 `unit`：
+
+```js
+sku.unit           // 库存 / 最小包装，例如 包、盒、瓶
+sku.orderUnit      // 采购 / 大包装，例如 箱、件
+sku.unitsPerOrder  // 1 个采购包装 = 几个库存包装
+```
+
+规则：
+- 例如 `unit = "包"`、`orderUnit = "箱"`、`unitsPerOrder = 10` → 1箱 = 10包
+- 旧 SKU 自动兼容为 `orderUnit = unit`、`unitsPerOrder = 1`
+- `state.order` 内部继续保存**库存单位数量**，避免已有草稿在后来补箱规后被错误重解释
+- 草稿 UI / 手动订货输入显示采购单位；输入后先换算成库存单位再写入 `state.order`
+- 自动订货先算需要补多少库存单位；有大包装时向上取整到完整采购包装
+- 新 placed order 快照必须保存 `orderQty / orderUnit / unitsPerOrder`
+- placed order 的 `orderedQty / actualQty / creditedQty` 继续以库存单位保存，保持收货幂等逻辑
+- 收货 UI 按采购单位输入，保存时换算回库存单位入库
+- 历史订单若没有采购包装快照，按倍率 1 保留当时语义，不能套用后来修改的 SKU 箱规
+- 不改变 `cassola_inventory_v01`
+
 ### Supplier outbound order text
 
 PWA 内部订单和发给供应商的文本是同一份数据的两个视图：
 - 内部：保留 SKU、area、supplier、收货状态等结构化数据
-- 外发：只生成供应商需要看的“商品 + 规格（有则显示） + 数量 + 单位”纯文本
+- 外发：只生成供应商需要看的“商品名 + 数量 + 采购单位”纯文本；**不带 g/kg/L 等 SKU 规格**
 
 规则：
 - 草稿页按钮叫“📋 复制订货单”
 - 若“全部供应商”下同时存在多家供应商草稿，必须先点具体 supplier tag，禁止把多家订单混在一份文本里
 - 已下单卡片也提供“📋 复制订单”，可随时重新发给供应商
-- 新建 placed order 时把 `spec` 快照写进 order item；旧订单没有 spec 时回退到当前 SKU spec
+- 新建 placed order 仍保留 `spec` 作为内部快照，同时写入采购包装快照 `orderQty / orderUnit / unitsPerOrder`；外发文本不显示 spec
 
 ### iPhone / locale 小数输入
 
