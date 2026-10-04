@@ -169,7 +169,7 @@
         </select>
       </label>
       <label id="qtyWrap">数量
-        <div class="input-unit"><input id="actionQty" type="number" step="0.1" inputmode="decimal" /><span id="actionUnit"></span></div>
+        <div class="input-unit"><input id="actionQty" type="text" inputmode="decimal" autocomplete="off" /><span id="actionUnit"></span></div>
       </label>
       <label id="targetWrap" class="hidden">转入 SKU
         <select id="transferTarget"></select>
@@ -213,7 +213,7 @@
       </label>
       <datalist id="v3CategoryOptions"><option>寿司基础</option><option>干货</option><option>酱料</option><option>冷藏</option><option>蔬果</option><option>冷冻</option><option>处理库存</option><option>耗材</option><option>甜点</option><option>酒水</option><option>糖浆</option><option>饮料</option><option>Sala调味</option></datalist>
       <datalist id="v3SupplierOptions"><option>大兴</option><option>米兰</option><option>Tosano</option><option>内部</option><option>自种</option><option>待确认</option></datalist>
-      <label>当前 / 初始库存<input id="v3Qty" type="number" step="0.1" inputmode="decimal" /></label>
+      <label>当前 / 初始库存<input id="v3Qty" type="text" inputmode="decimal" autocomplete="off" /></label>
       <section class="v45-price-card" id="v45PriceCard">
         <div class="v45-price-card-head">
           <div class="v45-price-icon">💶</div>
@@ -234,15 +234,15 @@
           <select id="v3WarningMode"><option value="auto">按周耗自动判断</option><option value="manual">手动阈值</option></select>
         </label>
         <div id="v3ManualThresholds" class="v3-form-grid three hidden">
-          <label>🔵 ≤<input id="v3Blue" type="number" step="0.1" /></label>
-          <label>🟡 ≤<input id="v3Yellow" type="number" step="0.1" /></label>
-          <label>🔴 ≤<input id="v3Red" type="number" step="0.1" /></label>
+          <label>🔵 ≤<input id="v3Blue" type="text" inputmode="decimal" autocomplete="off" /></label>
+          <label>🟡 ≤<input id="v3Yellow" type="text" inputmode="decimal" autocomplete="off" /></label>
+          <label>🔴 ≤<input id="v3Red" type="text" inputmode="decimal" autocomplete="off" /></label>
         </div>
         <div class="v3-form-grid two">
-          <label>手动周耗（可空）<input id="v3Weekly" type="number" step="0.1" placeholder="自动算不到时可填" /></label>
-          <label>目标覆盖周数<input id="v3Weeks" type="number" step="0.1" /></label>
+          <label>手动周耗（可空）<input id="v3Weekly" type="text" inputmode="decimal" autocomplete="off" placeholder="自动算不到时可填" /></label>
+          <label>目标覆盖周数<input id="v3Weeks" type="text" inputmode="decimal" autocomplete="off" /></label>
         </div>
-        <label>目标库存（可空）<input id="v3Target" type="number" step="0.1" placeholder="填写后优先按目标库存计算" /></label>
+        <label>目标库存（可空）<input id="v3Target" type="text" inputmode="decimal" autocomplete="off" placeholder="填写后优先按目标库存计算" /></label>
         <label class="v3-check"><input id="v3AutoOrder" type="checkbox" /> 参与自动订货建议</label>
       </div>
       <div class="v3-dialog-actions">
@@ -263,7 +263,7 @@
       <input type="hidden" id="v45PriceSkuId" />
       <div class="v45-price-entry">
         <label>报价
-          <div class="v45-money-input"><span>€</span><input id="v45Amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" /></div>
+          <div class="v45-money-input"><span>€</span><input id="v45Amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00 / 0.00" /></div>
         </label>
         <label>报价单位<input id="v45PriceUnit" placeholder="箱 / 盒 / kg / 包" /></label>
       </div>
@@ -292,7 +292,7 @@
               <option value="included">✓ IVA · 报价已含</option>
             </select>
           </label>
-          <label>IVA 税率 %<input id="v45VatRate" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="例如 22" /></label>
+          <label>IVA 税率 %<input id="v45VatRate" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 22" /></label>
         </div>
         <div id="v45PricePreview" class="v45-price-preview"><span>输入价格后，这里自动算 IVA。</span></div>
       </section>
