@@ -144,7 +144,7 @@ function v45OpenPriceDialog(skuId){
   document.getElementById('v45PriceSkuId').value=skuId;
   document.getElementById('v45PriceTitle').textContent=s.name+' · 记录价格';
   document.getElementById('v45Amount').value='';
-  document.getElementById('v45PriceUnit').value=latest?.priceUnit||s.unit||'';
+  document.getElementById('v45PriceUnit').value=latest?.priceUnit||(typeof v5OrderUnit==='function'?v5OrderUnit(s):s.unit)||'';
   document.getElementById('v45PriceSupplier').value=latest?.supplier||s.supplier||'';
   document.getElementById('v45PriceSource').value='manual';
   document.getElementById('v45PriceDate').value=v45LocalDate();
