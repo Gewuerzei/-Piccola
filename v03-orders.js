@@ -40,7 +40,7 @@ renderCount=function(){
   const html=v3Cats().map(cat=>{
     const rows=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter&&x.category===cat);
     if(!rows.length)return'';
-    return `<section class="count-group"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${escapeHtml(cat)}</div>${rows.map(x=>`<div class="count-row"><div class="count-label"><span class="count-mini-icon">${v3Icon(x)}</span><div class="count-label-text"><strong>${escapeHtml(x.name)}</strong><small>${escapeHtml(x.spec||'无规格')} · 当前 ${fmt(x.qty)} ${escapeHtml(x.unit)}</small></div></div><div class="input-unit"><input class="count-input" data-id="${x.id}" type="number" step="0.1" inputmode="decimal" placeholder="—"><span>${escapeHtml(x.unit)}</span></div></div>`).join('')}</section>`;
+    return `<section class="count-group"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${escapeHtml(cat)}</div>${rows.map(x=>`<div class="count-row"><div class="count-label"><span class="count-mini-icon">${v3Icon(x)}</span><div class="count-label-text"><strong>${escapeHtml(x.name)}</strong><small>${escapeHtml(x.spec||'无规格')} · 当前 ${fmt(x.qty)} ${escapeHtml(x.unit)}</small></div></div><div class="input-unit"><input class="count-input" data-id="${x.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="—"><span>${escapeHtml(x.unit)}</span></div></div>`).join('')}</section>`;
   }).join('');
   document.getElementById('countList').innerHTML=html||`<div class="empty">${area.icon} ${escapeHtml(area.label)} 还没有 SKU</div>`;
 };
@@ -55,7 +55,7 @@ renderOrder=v3RenderOrder;
 
 function v4DraftRow(x){
   const a=v4AreaMeta(v4AreaOf(x));
-  return `<article class="sku-card order-row"><div class="order-left"><span class="count-mini-icon">${v3Icon(x)}</span><div><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta"><span class="meta-pill spec">${escapeHtml(x.spec||'无规格')}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span><span class="meta-pill">${a.icon} ${escapeHtml(a.label)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}${v3Suggestion(x)>0?`<span class="meta-pill v3-suggest">建议 ${fmt(v3Suggestion(x))}</span>`:''}</div></div></div><div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(state.order[x.id])}" type="number" step="0.1" inputmode="decimal"><span>${escapeHtml(x.unit)}</span></div><button class="icon-btn" data-remove-order="${x.id}">✕</button></article>`;
+  return `<article class="sku-card order-row"><div class="order-left"><span class="count-mini-icon">${v3Icon(x)}</span><div><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta"><span class="meta-pill spec">${escapeHtml(x.spec||'无规格')}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span><span class="meta-pill">${a.icon} ${escapeHtml(a.label)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}${v3Suggestion(x)>0?`<span class="meta-pill v3-suggest">建议 ${fmt(v3Suggestion(x))}</span>`:''}</div></div></div><div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(state.order[x.id])}" type="text" inputmode="decimal" autocomplete="off"><span>${escapeHtml(x.unit)}</span></div><button class="icon-btn" data-remove-order="${x.id}">✕</button></article>`;
 }
 function v3RenderDraft(){
   const ids=Object.keys(state.order).filter(id=>Number(state.order[id])>0);
@@ -120,7 +120,7 @@ function v4ReceiveRow(o,item){
   return `<div class="v3-receive-row ${rowCls}" data-v3-order="${o.id}" data-v3-item="${item.skuId}">
     <div class="v3-receive-title"><span class="count-mini-icon">${v3Icon(s)}</span><div><strong>${escapeHtml(s?.name||item.skuName)}</strong><small>${v4QtyText(item)} · ${a.icon} ${escapeHtml(a.label)}</small></div><span class="v4-line-pill">${escapeHtml(status)}</span></div>
     <div class="v4-qty-caption"><span>累计实到</span><b>${q>(Number(item.creditedQty)||0)?('本次新增 +'+fmt(q-(Number(item.creditedQty)||0))+' '+escapeHtml(item.unit||s?.unit||'')):'本次新增 0'}</b></div>
-    <div class="v3-stepper"><button ${closed?'disabled':''} data-v3-step="-1">−</button><input ${closed?'disabled':''} class="v3-receive-qty" type="number" step="0.1" inputmode="decimal" min="${fmt(item.creditedQty||0)}" value="${fmt(q)}"><button ${closed?'disabled':''} data-v3-step="1">＋</button></div>
+    <div class="v3-stepper"><button ${closed?'disabled':''} data-v3-step="-1">−</button><input ${closed?'disabled':''} class="v3-receive-qty" type="text" inputmode="decimal" autocomplete="off" value="${fmt(q)}"><button ${closed?'disabled':''} data-v3-step="1">＋</button></div>
     ${closed?`<div class="v4-closed-note">${st.icon} ${escapeHtml(st.label)} · 累计实到 ${fmt(item.creditedQty||0)} ${escapeHtml(item.unit||s?.unit||'')}</div>`:`
     <div class="v4-receive-actions">
       <button data-v4-line-status="received">✅ 收齐</button>
@@ -180,7 +180,7 @@ function v3Step(orderId,skuId,d){
 }
 function v3Qty(orderId,skuId,v){
   const {o,item}=v3OrderItem(orderId,skuId);if(!o||!item||o.status==='received'||(v4LineClosed(item)&&!item.dirty))return;
-  const min=Number(item.creditedQty)||0,n=Math.max(min,Number(v)||0);
+  const min=Number(item.creditedQty)||0,parsed=v3Num(v),n=Math.max(min,parsed??0);
   item.actualQty=n;item.lineStatus='pending';item.dirty=true;
   saveState();v3RenderPlaced();
 }
