@@ -1,5 +1,12 @@
 const APP_KEY = 'cassola_inventory_v01';
 
+function parseLocaleDecimal(value){
+  if(typeof value==='number')return Number.isFinite(value)?value:NaN;
+  const raw=String(value??'').trim().replace(/\s+/g,'').replace(/,/g,'.');
+  if(!raw)return NaN;
+  return Number(raw);
+}
+
 const seedSkus = [
   // 寿司基础
   ['rice20','寿司米','20kg','袋','寿司基础','米兰'],['soy20','寿司酱油','20L','箱','寿司基础','米兰'],['mirin18','寿司美林','18L','箱','寿司基础','米兰'],['sake18','寿司清酒','18L','箱','寿司基础','米兰'],['shiragiku20','寿司白菊','20L','箱','寿司基础','米兰'],['nori','寿司紫菜','','包','寿司基础','米兰'],['ginger10','寿司生姜','10kg净含量','箱','寿司基础','米兰'],['wasabi','Wasabi','','份','寿司基础','米兰'],
@@ -209,7 +216,7 @@ function renderCount(){
     return `<section class="count-group"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${cat}</div>${rows.map(x=>`
       <div class="count-row">
         <div class="count-label"><span class="count-mini-icon">${iconFor(x)}</span><div class="count-label-text"><strong>${escapeHtml(x.name)}</strong><small>${escapeHtml(x.spec||'无规格')} · 当前 ${fmt(x.qty)} ${escapeHtml(x.unit)}</small></div></div>
-        <div class="input-unit"><input class="count-input" data-id="${x.id}" type="number" step="0.1" inputmode="decimal" placeholder="—"><span>${escapeHtml(x.unit)}</span></div>
+        <div class="input-unit"><input class="count-input" data-id="${x.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="—"><span>${escapeHtml(x.unit)}</span></div>
       </div>`).join('')}</section>`;
   }).join('');
 }
@@ -223,7 +230,7 @@ function renderOrder(){
   root.innerHTML=rows.length?rows.map(x=>`
     <article class="sku-card order-row">
       <div class="order-left"><span class="count-mini-icon">${iconFor(x)}</span><div><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta"><span class="meta-pill spec">${escapeHtml(x.spec||'无规格')}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span></div></div></div>
-      <div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(state.order[x.id])}" type="number" step="0.1" inputmode="decimal"><span>${escapeHtml(x.unit)}</span></div>
+      <div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(state.order[x.id])}" type="text" inputmode="decimal" autocomplete="off"><span>${escapeHtml(x.unit)}</span></div>
       <button class="icon-btn" data-remove-order="${x.id}" aria-label="删除">✕</button>
     </article>`).join(''):'<div class="empty">还没有订货草稿 🗿</div>';
 }
@@ -265,7 +272,7 @@ function syncActionForm(){
 function confirmAction(e){
   e.preventDefault();
   const id=document.getElementById('dialogSkuId').value; const s=sku(id); if(!s)return;
-  const type=document.getElementById('actionType').value; const qty=Number(document.getElementById('actionQty').value); const note=document.getElementById('actionNote').value.trim();
+  const type=document.getElementById('actionType').value; const qty=parseLocaleDecimal(document.getElementById('actionQty').value); const note=document.getElementById('actionNote').value.trim();
   if(!Number.isFinite(qty)||qty<=0){showToast('数量要大于 0');return;}
   if(type==='arrival'){
     s.qty=Number(s.qty)+qty; addHistory('arrival',id,`+${fmt(qty)} ${s.unit} → ${fmt(s.qty)} ${s.unit}`,note);
@@ -286,14 +293,14 @@ function saveBulkCount(){
   const batch=stamp();
   inputs.forEach(inp=>{
     if(inp.value==='')return;
-    const s=sku(inp.dataset.id); const next=Number(inp.value); if(!s||!Number.isFinite(next)||next<0)return;
+    const s=sku(inp.dataset.id); const next=parseLocaleDecimal(inp.value); if(!s||!Number.isFinite(next)||next<0)return;
     const old=Number(s.qty); s.qty=next; addHistory('count',s.id,`${fmt(old)} → ${fmt(next)} ${s.unit}`,'',{batch}); changed++;
   });
   if(!changed){showToast('还没填盘货数量');return;}
   saveState();renderAll();showToast(`已保存 ${changed} 个 SKU`); switchView('stock');
 }
 function fillCurrent(){document.querySelectorAll('.count-input').forEach(inp=>{inp.value=sku(inp.dataset.id)?.qty??0});showToast('已带入当前库存');}
-function setOrder(id, value){const n=Number(value); if(!Number.isFinite(n)||n<=0) delete state.order[id]; else state.order[id]=n; saveState();renderOrder();renderStock();}
+function setOrder(id, value){const n=parseLocaleDecimal(value); if(!Number.isFinite(n)||n<=0) delete state.order[id]; else state.order[id]=n; saveState();renderOrder();renderStock();}
 function addOrderPrompt(id){const s=sku(id);const cur=state.order[id]||'';const ans=prompt(`${s.name} 订多少 ${s.unit}？`,cur);if(ans===null)return;setOrder(id,ans);showToast('已加入订货草稿');}
 function copyOrder(){
   const rows=Object.entries(state.order).filter(([,v])=>Number(v)>0).map(([id,v])=>({s:sku(id),v:Number(v)})).filter(x=>x.s).filter(x=>activeSupplier==='全部'||x.s.supplier===activeSupplier);
