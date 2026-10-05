@@ -193,3 +193,71 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
   .staff-avatar{width:54px;height:54px}
   .staff-bottom-nav{left:7px;right:7px}
 }
+
+/* Cassola Theme Coverage v0.1 · Staff light mode */
+:root[data-theme="light"] #staffApp{
+  background:radial-gradient(circle at 9% -8%,rgba(120,145,190,.10),transparent 33%),radial-gradient(circle at 96% 8%,rgba(155,117,37,.06),transparent 28%),var(--bg);
+}
+:root[data-theme="light"] .staff-topbar,
+:root[data-theme="light"] .staff-bottom-nav{
+  background:rgba(250,248,243,.94);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .staff-brand-mark,
+:root[data-theme="light"] .staff-lane,
+:root[data-theme="light"] .staff-lane.special,
+:root[data-theme="light"] .staff-person-row,
+:root[data-theme="light"] .staff-history-item,
+:root[data-theme="light"] .staff-settings-card,
+:root[data-theme="light"] .staff-week-wrap,
+:root[data-theme="light"] .staff-month-row{
+  background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(246,243,237,.98));
+  border-color:var(--line);
+  box-shadow:0 10px 28px rgba(54,48,38,.08);
+}
+:root[data-theme="light"] .staff-person-card,
+:root[data-theme="light"] .staff-role-icon,
+:root[data-theme="light"] .staff-lane-count,
+:root[data-theme="light"] .staff-icon-btn,
+:root[data-theme="light"] .staff-shift-seg,
+:root[data-theme="light"] .staff-sync-stat,
+:root[data-theme="light"] .staff-month-total>div,
+:root[data-theme="light"] .staff-attendance-grid button,
+:root[data-theme="light"] .staff-portion-seg button,
+:root[data-theme="light"] .staff-person-record-item,
+:root[data-theme="light"] .staff-week-release,
+:root[data-theme="light"] .staff-week-version-item,
+:root[data-theme="light"] .staff-person-record-summary{
+  background:rgba(31,37,48,.045);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .staff-avatar{
+  background:linear-gradient(145deg,#ebe7df,#ded9cf);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .staff-board-tools{
+  background:linear-gradient(var(--bg) 76%,transparent);
+}
+:root[data-theme="light"] .staff-dialog{
+  background:linear-gradient(145deg,#ffffff,#f6f3ed);
+  border-color:var(--line);
+  color:var(--text);
+}
+:root[data-theme="light"] .staff-dialog textarea{
+  background:rgba(255,255,255,.92);
+  border-color:var(--line);
+  color:var(--text);
+}
+:root[data-theme="light"] .staff-photo-preview{
+  background:rgba(31,37,48,.04);
+  border-color:rgba(31,37,48,.12);
+}
+:root[data-theme="light"] .staff-move-grid button,
+:root[data-theme="light"] .staff-week-tools>button:not(.btn){
+  background:rgba(31,37,48,.045);
+  border-color:var(--line);
+  color:var(--text);
+}
+:root[data-theme="light"] .staff-swap-source{
+  background:rgba(79,139,96,.07);
+}
