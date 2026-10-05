@@ -11,7 +11,7 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
-- Access: **v0.2 · Pre-registered Roles**
+- Access: **v0.3 · Pre-registered Roles + Employee Import**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -49,7 +49,25 @@ Employee Mode 当前：
 - 包内使用匿名 `credentialId` 记录提交槽位，不暴露员工姓名
 - 同责任区同一天共享 `effectiveKey = scopeId:date`
 - 多人同日提交时，未来 Supervisor 导入器以 `submittedAt` 最新的一份作为 active；旧提交保留为 superseded 历史
-- 当前员工端已能生成 scoped JSON，**Supervisor 侧的员工盘货包导入 / 差异审核仍待实现**
+- Supervisor 已支持导入 scoped JSON、差异预览和人工采用；同责任区同一天只允许一个 active submission
+
+### Employee submission import invariant
+
+Supervisor 导入员工盘货包时必须遵守：
+- 格式固定为 `cassola-employee-count-v1`
+- credential 必须能在 `access-registry.js` 找到且 role = employee
+- 包内 scope 必须与 registry 中该 credential 的 scope 完全一致
+- 每个 counts SKU 都必须属于该 scope；出现越权 SKU 时整包拒绝，不能只忽略越权项
+- 重复 `submissionId` 不能重复应用
+- 员工端导出完整责任区快照，并携带 `scopeSkuIds`
+- `effectiveKey = scopeId:date` 定义“同责任区同一天”
+- 同一个 effectiveKey 只允许一个 `status = active`
+- 新包只有 `submittedAt` 晚于当前 active 时才可覆盖
+- 采用新版时旧 active 改为 `superseded`，保留历史
+- 只有 Supervisor 明确点击“采用最新版”才修改正式库存
+- 应用库存变化时继续写标准 `history`，并附 employee submission / scope / credential 元数据
+- 审计数组：`employeeSubmissions[]`
+- `employeeSubmissions[]` 必须进入 Inventory handoff snapshot / fingerprint，避免换 Supervisor 设备后丢失 active / superseded 语义
 
 ## 2. 顶层架构
 
