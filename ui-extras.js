@@ -105,9 +105,12 @@
     window.CassolaHub?.openInventory?.();
     setTimeout(()=>window.CassolaEmployeeTools?.openReview?.(),80);
   }
-  function openSettings(){
+  function openSettings(targetId){
     window.CassolaHub?.openInventory?.();
-    setTimeout(()=>document.querySelector('[data-view="settings"]')?.click(),50);
+    setTimeout(()=>{
+      document.querySelector('[data-view="settings"]')?.click();
+      if(targetId)setTimeout(()=>document.getElementById(targetId)?.scrollIntoView({behavior:'smooth',block:'center'}),80);
+    },50);
     document.getElementById('globalSearchDialog')?.close();
   }
 
@@ -166,6 +169,12 @@
     }
     if(!q||['提议','sku提议','规格','单位'].some(x=>x.includes(q)||q.includes(x))){
       rows.push({kind:'command',rank:q?1:9,icon:'🧪',title:'员工 SKU 提议',sub:'规格 / 单位 / 新 SKU 待审核',action:'skuProposals'});
+    }
+    if(!q||['供应商','战绩','supplier'].some(x=>x.includes(q)||q.includes(x))){
+      rows.push({kind:'command',rank:q?2:10,icon:'🚚',title:'供应商战绩',sub:'结案准确率 · 少到/缺货 · 挂起',action:'analytics',value:'supplierPerformanceCard'});
+    }
+    if(!q||['检察院','staff','异常','换休'].some(x=>x.includes(q)||q.includes(x))){
+      rows.push({kind:'command',rank:q?2:10,icon:'🕵️',title:'Staff 检察院',sub:'只读扫描换休 / 调休 / 人员引用',action:'analytics',value:'staffProsecutorCard'});
     }
     if(!q||['设置','主题','日间','夜间','theme'].some(x=>x.includes(q)||q.includes(x))){
       rows.push({kind:'command',rank:q?2:10,icon:'🌗',title:'外观设置',sub:'日间 / 夜间 / Accent',action:'settings'});
@@ -230,7 +239,8 @@
     else if(action==='orders')openOrders();
     else if(action==='employeePending')openCloudPending();
     else if(action==='skuProposals')openCloudProposals();
-    else if(action==='settings')openSettings();
+    else if(action==='analytics')openSettings(value);
+    else if(action==='settings')openSettings('uiThemeCard');
   });
 
   document.addEventListener('DOMContentLoaded',()=>{
