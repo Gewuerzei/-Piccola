@@ -1,0 +1,10 @@
+/* Cassola Insights v0.1 */
+.count-diff-dialog{width:min(94vw,600px);max-height:88vh;padding:0;border:1px solid rgba(255,255,255,.11);border-radius:28px;background:linear-gradient(155deg,#202531,#191d27);color:var(--text);box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.count-diff-dialog::backdrop{background:rgba(0,0,0,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.count-diff-dialog>form{padding:17px;display:flex;flex-direction:column;gap:12px}
+.count-diff-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.count-diff-stats>div{padding:11px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid var(--line)}.count-diff-stats span{display:block;color:var(--muted);font-size:8.5px}.count-diff-stats b{display:block;margin-top:4px;font-size:19px}.count-diff-stats .warn{border-color:rgba(243,207,122,.20);background:rgba(243,207,122,.04)}
+.count-diff-note{margin:0;color:var(--muted);font-size:9px;line-height:1.45}
+.count-diff-list{display:flex;flex-direction:column;gap:7px;max-height:50vh;overflow:auto}.count-diff-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px;border-radius:15px;background:rgba(255,255,255,.02);border:1px solid var(--line)}.count-diff-row.large{border-color:rgba(243,207,122,.18);background:rgba(243,207,122,.035)}.count-diff-row strong{display:block;font-size:10.5px}.count-diff-row small{display:block;margin-top:3px;color:var(--muted);font-size:8.5px}.count-diff-row>b{font-size:10px;white-space:nowrap;color:var(--warn)}
+.count-diff-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.count-review-row{outline:2px solid rgba(243,207,122,.55);box-shadow:0 0 0 5px rgba(243,207,122,.07)}
+:root[data-theme="light"] .count-diff-dialog{background:linear-gradient(145deg,#fff,#f6f3ed);border-color:var(--line)}
+@media(max-width:460px){.count-diff-stats{grid-template-columns:1fr 1fr 1fr}.count-diff-actions{grid-template-columns:1fr}}
