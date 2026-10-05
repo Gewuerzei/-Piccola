@@ -274,6 +274,8 @@
       return{changed:!!changed.length,message:changed.length?'已采用规格 / 单位提议':'本机已经是这个规格'};
     }
     if(p.proposal_type==='new_sku'){
+      const already=(state.skus||[]).find(s=>String(s.employeeSkuProposalId||'')===String(p.proposal_id||''));
+      if(already)return{changed:false,message:'这份新 SKU 提议已写入本机'};
       const duplicate=(state.skus||[]).find(s=>String(s.name||'').trim().toLowerCase()===String(proposed.name||'').trim().toLowerCase()&&String(s.spec||'')===String(proposed.spec||''));
       if(duplicate&&!confirm('本机已经有同名同规格 SKU：'+duplicate.name+'\n仍然新建？'))throw new Error('cancelled');
       const id='employee-'+(crypto.randomUUID?.()||String(Date.now()+Math.random()));
@@ -281,7 +283,8 @@
         id,name:String(proposed.name||'新 SKU'),icon:'📦',spec:String(proposed.spec||''),unit:String(proposed.unit||'个'),
         orderUnit:String(proposed.orderUnit||proposed.unit||'个'),unitsPerOrder:Number(proposed.unitsPerOrder)>0?Number(proposed.unitsPerOrder):1,
         category:String(proposed.category||p.scope_definition?.value||'待确认'),supplier:'待确认',area:String(proposed.area||'sushi'),
-        qty:Number(p.qty)||0,warningMode:'auto',manualWeeklyUse:null,targetWeeks:2,targetQty:null,autoOrder:false
+        qty:Number(p.qty)||0,warningMode:'auto',manualWeeklyUse:null,targetWeeks:2,targetQty:null,autoOrder:false,
+        employeeSkuProposalId:p.proposal_id||''
       };
       if(typeof v3NormalizeSku==='function')s=v3NormalizeSku(s);
       state.skus.push(s);
