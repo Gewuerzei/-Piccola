@@ -5,6 +5,7 @@
   const DEVICE_KEY='cassola_cloud_device_v01';
   const IDENTITY_KEY='cassola_cloud_identity_v01';
   const OUTBOX_KEY='cassola_cloud_outbox_v01';
+  const EMPLOYEE_CATALOG_KEY='cassola_employee_catalog_v01';
   const SCOPES=[
     {id:'sushi',label:'🍣 Sushi'},
     {id:'cucina',label:'🔪 Cucina'},
@@ -36,6 +37,18 @@
     all[row.id]={id:row.id,displayName:row.displayName||null,label:row.label||'',role:row.role||'',updatedAt:new Date().toISOString()};
     localStorage.setItem(IDENTITY_KEY,JSON.stringify(all));
   }
+  function readCatalogCache(){
+    try{return JSON.parse(localStorage.getItem(EMPLOYEE_CATALOG_KEY)||'{}')||{}}catch(_){return{}}
+  }
+  function cacheEmployeeCatalog(credentialId,rows){
+    const id=String(credentialId||'');if(!id||!Array.isArray(rows))return;
+    const all=readCatalogCache();all[id]={updatedAt:new Date().toISOString(),rows:clone(rows)};
+    localStorage.setItem(EMPLOYEE_CATALOG_KEY,JSON.stringify(all));
+  }
+  function cachedEmployeeCatalog(credentialId){
+    const row=readCatalogCache()[String(credentialId||'')];
+    return Array.isArray(row?.rows)?clone(row.rows):null;
+  }
   function readOutbox(){
     try{const x=JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');return Array.isArray(x)?x:[]}catch(_){return[]}
   }
@@ -60,7 +73,10 @@
     return rows[rows.length-1];
   }
   function queueEmployeeSubmission(payload){return queueOutbox('employee_submission',payload,payload?.credentialId)}
-  function queueSkuProposal(payload){return queueOutbox('sku_proposal',payload,credential?.id)}
+  function queueSkuProposal(payload,credentialId){
+    const id=credentialId||credential?.id||window.CassolaHub?.session?.()?.id;
+    return queueOutbox('sku_proposal',payload,id);
+  }
 
   function readMeta(){
     try{
@@ -272,7 +288,10 @@
     if(!token)return null;
     const data=await api('status',{localBases:bases()},6500);
     lastStatus=data;
-    if(role()==='employee')employeeCatalog=data.catalogReady?(Array.isArray(data.scopeCatalog)?clone(data.scopeCatalog):[]):null;
+    if(role()==='employee'){
+      employeeCatalog=data.catalogReady?(Array.isArray(data.scopeCatalog)?clone(data.scopeCatalog):[]):null;
+      if(employeeCatalog!==null&&credential?.id)cacheEmployeeCatalog(credential.id,employeeCatalog);
+    }
     renderCloudUi();
     if(!silent)maybeNotice(data);
     return data;
@@ -585,7 +604,11 @@
     rememberAccessCode,reconnect,cachedIdentity,
     captureScope,mergeScope,meta:readMeta,deviceId,
     session:()=>credential?clone(credential):null,
-    employeeCatalog:()=>employeeCatalog===null?null:clone(employeeCatalog),
+    employeeCatalog:(credentialId)=>{
+      if(employeeCatalog!==null)return clone(employeeCatalog);
+      return cachedEmployeeCatalog(credentialId||credential?.id);
+    },
+    cachedEmployeeCatalog,
     injectUi
   };
 })();
