@@ -332,6 +332,14 @@ Supervisor：
 - 主题读取会校验 mode / accent 白名单；异常主题值只回退主题默认值，**不得清空任何 Inventory / Staff localStorage**。
 - 主题是**设备个人偏好**，不进入 Inventory Cloud snapshot。
 
+### Fat UI visual contract
+- 2026-10-06 起 Inventory / Orders / Cloud / Employee / Staff 采用更圆润、更厚、更软的统一视觉层。
+- 这是 **CSS-only visual pass**：只调整 radius / padding / control height / shadow / active state / bottom navigation，不改变 Inventory / Staff / Cloud 数据契约。
+- 共享圆角变量当前提高到 `--radius-xl: 34px`、`--radius-lg: 29px`、`--radius-md: 22px`；主要触控按钮目标高度约 46–56px。
+- Inventory / Staff 底部导航改为带外边距的浮动胖胶囊，并对 light theme 单独提供浅色背景。
+- 维护时如果重写旧 CSS，必须保留各文件末尾的 `Cassola Fat UI v0.1` override，除非明确做完整视觉迁移。
+- 不得为了视觉更新重置任何 localStorage / IndexedDB 数据。
+
 ### Global Search
 Supervisor Hub / Inventory 顶部提供全局搜索。当前索引：
 - SKU 名称 / 规格 / 供应商 / category / area
