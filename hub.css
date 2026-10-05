@@ -69,3 +69,29 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 .cassola-employee-actions{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:auto 1fr;gap:9px;margin-top:14px;padding:10px;border-radius:21px;background:rgba(20,23,31,.92);border:1px solid rgba(255,255,255,.07);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .cassola-employee-actions .btn{min-height:48px;border-radius:16px}.cassola-employee-foot{padding:11px 5px 0;color:var(--muted);font-size:9px;text-align:center;line-height:1.4}
 @media(max-width:460px){.cassola-employee-row{align-items:flex-start}.cassola-employee-input{grid-template-columns:minmax(66px,82px) auto}.cassola-employee-actions{grid-template-columns:1fr}}
+
+/* Cassola Fat UI v0.1 · hub / access / employee */
+.cassola-hub-mark{width:74px;height:74px;border-radius:28px;font-size:36px;box-shadow:0 20px 48px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.09)}
+.cassola-module-grid{gap:16px}
+.cassola-module-card{border-radius:34px;padding:23px;min-height:218px;box-shadow:0 18px 42px rgba(0,0,0,.17)}
+.cassola-module-icon{width:64px;height:64px;border-radius:24px;font-size:32px}
+.cassola-home-btn{width:44px;height:44px;border-radius:17px}
+.cassola-access-state{border-radius:27px;padding:15px 16px}
+.cassola-access-dot{width:42px;height:42px;border-radius:16px}
+.cassola-access-state button{min-height:42px;border-radius:17px;padding:10px 13px}
+.cassola-access-dialog{border-radius:34px}
+.cassola-access-form{padding:23px;gap:16px}
+.cassola-access-lock{width:60px;height:60px;border-radius:22px;font-size:29px}
+#cassolaAccessFields input{min-height:56px;border-radius:21px}
+.cassola-access-actions{gap:10px}.cassola-access-actions .btn{min-height:50px;border-radius:19px}
+.cassola-gate-card{padding:22px;border-radius:34px;gap:15px;box-shadow:0 18px 42px rgba(0,0,0,.17)}
+.cassola-gate-card input{min-height:62px;border-radius:22px}
+.cassola-employee-summary{gap:11px}
+.cassola-employee-summary>div{padding:15px;border-radius:24px}
+.cassola-employee-note{padding:13px 14px;border-radius:21px}
+.cassola-employee-counts{gap:11px}
+.cassola-employee-row{padding:14px 15px;border-radius:25px}
+.cassola-employee-input input{min-height:50px;border-radius:19px}
+.cassola-employee-actions{padding:12px;border-radius:26px;gap:10px}
+.cassola-employee-actions .btn{min-height:52px;border-radius:20px}
+@media(max-width:620px){.cassola-module-card{min-height:184px}}
