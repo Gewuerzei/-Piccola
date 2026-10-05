@@ -21,3 +21,23 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 .cassola-hub-foot{margin-top:18px;padding:14px 4px;color:var(--muted);font-size:11px;text-align:center}
 .cassola-home-btn{width:40px;height:40px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--text);font-size:18px;display:grid;place-items:center;flex:0 0 auto}
 @media(max-width:620px){.cassola-module-grid{grid-template-columns:1fr}.cassola-module-card{min-height:170px}.cassola-hub-head h1{font-size:30px}}
+
+
+/* Cassola Access v0.1 · local admin PIN */
+.cassola-access-state{margin:0 0 14px;padding:13px 14px;border:1px solid rgba(255,255,255,.075);border-radius:22px;background:linear-gradient(145deg,rgba(31,36,48,.9),rgba(23,27,36,.9));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cassola-access-state>div:first-child{display:flex;align-items:center;gap:10px;min-width:0}.cassola-access-dot{width:38px;height:38px;display:grid;place-items:center;border-radius:14px;background:rgba(255,255,255,.055);font-size:18px;flex:0 0 auto}
+.cassola-access-state b{display:block;font-size:12.5px}.cassola-access-state small{display:block;margin-top:3px;color:var(--muted);font-size:9.5px;line-height:1.35}
+.cassola-access-state button{border:1px solid var(--line);border-radius:14px;padding:9px 11px;background:rgba(255,255,255,.045);color:var(--text);font-size:9.5px;font-weight:850;white-space:nowrap}
+.cassola-access-inline{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+
+.cassola-access-dialog{width:min(90vw,420px);padding:0;border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(155deg,#202531,#191d27);color:var(--text);box-shadow:0 24px 70px rgba(0,0,0,.42)}
+.cassola-access-dialog::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.cassola-access-form{padding:20px;display:flex;flex-direction:column;gap:14px}
+.cassola-access-lock{width:54px;height:54px;display:grid;place-items:center;border-radius:19px;background:rgba(255,255,255,.06);font-size:27px}
+.cassola-access-copy h2{margin:4px 0 0;font-size:22px;letter-spacing:-.025em}.cassola-access-copy p{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+#cassolaAccessFields{display:flex;flex-direction:column;gap:10px}
+#cassolaAccessFields label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:10.5px;font-weight:750}
+#cassolaAccessFields input{min-height:50px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.035);color:var(--text);padding:0 14px;font-size:21px;font-weight:900;letter-spacing:.12em}
+.cassola-access-error{padding:10px 11px;border-radius:14px;background:rgba(255,141,145,.07);border:1px solid rgba(255,141,145,.16);color:var(--danger);font-size:10px;font-weight:750}
+.cassola-access-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cassola-access-actions .btn{min-height:47px;border-radius:16px}
+@media(max-width:460px){.cassola-access-state{align-items:flex-start}.cassola-access-state{flex-direction:column}.cassola-access-state>button,.cassola-access-inline{width:100%}.cassola-access-inline button{flex:1}}
