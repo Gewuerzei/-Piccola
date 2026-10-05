@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Polish · Employee dock safe-area
+**2026-10-06**
+
+- 调整四格员工 Dock 的垂直位置：Dock 从“悬在 Home Indicator 上方”改为 `bottom: 0`，由 Dock 自己吸收 iPhone `safe-area-inset-bottom`。
+- 去掉 Employee 全屏容器额外的底部 safe-area padding，避免安全区被视觉上重复计算形成大片空白。
+- 四个小胖按钮高度从约 58px 压到 50px（窄屏 48px），Dock 外框 padding 同步缩小；保留四格结构和胖圆角。
+- Employee shell 的底部留白改为只匹配 Dock 实际占用高度，最后一个 SKU 仍可完整滚到 Dock 上方。
+- 不修改 Employee draft / Inventory / Cloud schema，也不清空任何本地数据。
+- Service Worker cache 更新为 `cassola-suite-v074`。
+
+---
+
 ## UI Polish · Four-up employee dock
 **2026-10-06**
 
