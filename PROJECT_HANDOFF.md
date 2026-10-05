@@ -198,7 +198,10 @@ cassola_inventory_v01
 - `v03-ui.js`
 - `v03.css`
 - `v031-handoff.js`
+- `employee-import.js`
 - `inventory-prices.js`
+- `access-registry.js`
+- `hub.js`
 
 ### 核心流程
 
