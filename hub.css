@@ -216,3 +216,67 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
   }
 }
 
+/* Employee Four-Up Dock v0.3 · four compact fat actions */
+.cassola-employee-upload-dock{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+  padding:7px;
+  border-radius:27px;
+}
+.cassola-employee-upload-dock .employee-dock-btn{
+  width:100%;
+  min-width:0;
+  min-height:58px;
+  padding:7px 4px;
+  border-radius:20px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  line-height:1;
+  white-space:nowrap;
+}
+.employee-dock-btn>span{
+  font-size:18px;
+  line-height:1;
+}
+.employee-dock-btn>small{
+  font-size:9px;
+  font-weight:850;
+  line-height:1.1;
+}
+.cassola-employee-dock-cell{
+  position:relative;
+  min-width:0;
+}
+.cassola-employee-dock-cell>.employee-dock-btn{
+  height:100%;
+}
+.employee-outbox-badge{
+  position:absolute;
+  top:-5px;
+  right:-4px;
+  z-index:2;
+  min-width:30px;
+  height:22px;
+  padding:0 7px;
+  border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+  border-radius:999px;
+  background:var(--warn);
+  color:#17140d;
+  font-size:8px;
+  font-weight:900;
+  box-shadow:0 5px 14px rgba(0,0,0,.18);
+}
+:root[data-theme="light"] .employee-outbox-badge{
+  color:#fff;
+}
+@media(max-width:380px){
+  .cassola-employee-upload-dock{gap:5px;padding:6px}
+  .cassola-employee-upload-dock .employee-dock-btn{min-height:55px;border-radius:18px}
+  .employee-dock-btn>span{font-size:17px}
+  .employee-dock-btn>small{font-size:8.5px}
+}
+
