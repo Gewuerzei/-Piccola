@@ -8,3 +8,12 @@
 .count-diff-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.count-review-row{outline:2px solid rgba(243,207,122,.55);box-shadow:0 0 0 5px rgba(243,207,122,.07)}
 :root[data-theme="light"] .count-diff-dialog{background:linear-gradient(145deg,#fff,#f6f3ed);border-color:var(--line)}
 @media(max-width:460px){.count-diff-stats{grid-template-columns:1fr 1fr 1fr}.count-diff-actions{grid-template-columns:1fr}}
+
+/* Cassola Fat UI v0.1 · count review */
+.count-diff-dialog{border-radius:34px}
+.count-diff-dialog>form{padding:21px;gap:14px}
+.count-diff-stats{gap:9px}
+.count-diff-stats>div{padding:13px;border-radius:20px}
+.count-diff-list{gap:9px}
+.count-diff-row{min-height:56px;padding:12px 13px;border-radius:19px}
+.count-diff-actions{gap:9px}
