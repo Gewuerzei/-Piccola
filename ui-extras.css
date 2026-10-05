@@ -95,3 +95,10 @@
 .staff-settings-card.ui-theme-card{gap:16px}
 .staff-settings-card.ui-theme-card h3{margin:0}
 .staff-settings-card.ui-theme-card p{margin:0}
+
+/* Cassola Hub Theme Coverage v0.1 */
+:root[data-theme="light"] .global-search-hub{
+  background:rgba(255,255,255,.74);
+  border-color:var(--line);
+  box-shadow:0 8px 22px rgba(73,65,52,.07);
+}
