@@ -1,12 +1,20 @@
 /* Cassola Hub · module launcher */
-#cassolaHub{position:fixed;inset:0;z-index:250;display:none;overflow:auto;padding:calc(34px + env(safe-area-inset-top)) 18px calc(34px + env(safe-area-inset-bottom));background:
+#cassolaHub,#cassolaGate,#cassolaEmployee{position:fixed;inset:0;z-index:250;display:none;overflow:auto;padding:calc(34px + env(safe-area-inset-top)) 18px calc(34px + env(safe-area-inset-bottom));background:
 radial-gradient(circle at 10% -5%,rgba(185,201,255,.14),transparent 34%),
 radial-gradient(circle at 100% 18%,rgba(155,231,173,.08),transparent 30%),
 #101218;color:var(--text)}
 body[data-cassola-mode="hub"] #cassolaHub{display:block}
+body[data-cassola-mode="gate"] #cassolaGate{display:block}
+body[data-cassola-mode="employee"] #cassolaEmployee{display:block}
 body[data-cassola-mode="hub"]>.topbar,
 body[data-cassola-mode="hub"]>main,
 body[data-cassola-mode="hub"]>nav.bottom-nav,
+body[data-cassola-mode="gate"]>.topbar,
+body[data-cassola-mode="gate"]>main,
+body[data-cassola-mode="gate"]>nav.bottom-nav,
+body[data-cassola-mode="employee"]>.topbar,
+body[data-cassola-mode="employee"]>main,
+body[data-cassola-mode="employee"]>nav.bottom-nav,
 body[data-cassola-mode="staff"]>.topbar,
 body[data-cassola-mode="staff"]>main,
 body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
@@ -41,3 +49,23 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 .cassola-access-error{padding:10px 11px;border-radius:14px;background:rgba(255,141,145,.07);border:1px solid rgba(255,141,145,.16);color:var(--danger);font-size:10px;font-weight:750}
 .cassola-access-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cassola-access-actions .btn{min-height:47px;border-radius:16px}
 @media(max-width:460px){.cassola-access-state{align-items:flex-start}.cassola-access-state{flex-direction:column}.cassola-access-state>button,.cassola-access-inline{width:100%}.cassola-access-inline button{flex:1}}
+
+
+/* Cassola Access v0.2 · pre-registered role gate + employee count */
+.cassola-gate-shell,.cassola-employee-shell{max-width:760px;margin:0 auto}
+.cassola-gate-card{padding:18px;border:1px solid rgba(255,255,255,.075);border-radius:28px;background:linear-gradient(145deg,rgba(31,36,48,.98),rgba(23,27,36,.98));box-shadow:0 14px 35px rgba(0,0,0,.16);display:flex;flex-direction:column;gap:12px}
+.cassola-gate-card label{display:flex;flex-direction:column;gap:7px;color:var(--muted);font-size:11px;font-weight:800}
+.cassola-gate-card input{min-height:56px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.035);color:var(--text);padding:0 15px;font-size:24px;font-weight:900;letter-spacing:.16em}
+.cassola-gate-card small{color:var(--muted);font-size:9.5px;line-height:1.45;text-align:center}
+
+.cassola-employee-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+.cassola-employee-top>div{flex:1;min-width:0}.cassola-employee-top h1{margin:3px 0 0;font-size:27px;letter-spacing:-.035em}.cassola-employee-top p{margin:6px 0 0;color:var(--muted);font-size:11px}
+.cassola-role-pill{flex:0 0 auto;padding:7px 9px;border-radius:999px;background:rgba(155,231,173,.07);border:1px solid rgba(155,231,173,.13);color:var(--good);font-size:9px;font-weight:850}
+.cassola-employee-summary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}.cassola-employee-summary>div{padding:13px;border-radius:20px;background:rgba(255,255,255,.035);border:1px solid var(--line)}.cassola-employee-summary span{display:block;color:var(--muted);font-size:9px}.cassola-employee-summary b{display:block;margin-top:5px;font-size:19px}
+.cassola-employee-note{padding:11px 12px;margin-bottom:12px;border-radius:17px;background:rgba(185,201,255,.045);border:1px solid rgba(185,201,255,.11);color:var(--muted);font-size:9.5px;line-height:1.45}
+.cassola-employee-counts{display:flex;flex-direction:column;gap:9px}.cassola-employee-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border-radius:20px;background:linear-gradient(145deg,rgba(31,36,48,.96),rgba(23,27,36,.96));border:1px solid var(--line)}
+.cassola-employee-row>div:first-child{min-width:0;flex:1}.cassola-employee-row strong{display:block;font-size:12.5px}.cassola-employee-row small{display:block;margin-top:3px;color:var(--muted);font-size:9px}
+.cassola-employee-input{display:grid;grid-template-columns:minmax(72px,96px) auto;align-items:center;gap:6px;flex:0 0 auto}.cassola-employee-input input{width:100%;min-height:44px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.035);color:var(--text);padding:0 10px;text-align:center;font-size:17px;font-weight:900}.cassola-employee-input span{color:var(--muted);font-size:9.5px;font-weight:800}
+.cassola-employee-actions{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:auto 1fr;gap:9px;margin-top:14px;padding:10px;border-radius:21px;background:rgba(20,23,31,.92);border:1px solid rgba(255,255,255,.07);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.cassola-employee-actions .btn{min-height:48px;border-radius:16px}.cassola-employee-foot{padding:11px 5px 0;color:var(--muted);font-size:9px;text-align:center;line-height:1.4}
+@media(max-width:460px){.cassola-employee-row{align-items:flex-start}.cassola-employee-input{grid-template-columns:minmax(66px,82px) auto}.cassola-employee-actions{grid-template-columns:1fr}}
