@@ -74,10 +74,10 @@
     if(n===0)return'±0';
     return (n>0?'+':'')+fmt(n);
   }
-  function preview(data){
+  function preview(data,options={}){
     let v;
     try{v=validate(data)}catch(err){alert('员工盘货包无法导入：'+err.message);return}
-    pending={data,validation:v};
+    pending={data,validation:v,cloudSubmissionId:options.cloudSubmissionId||null};
     const changed=v.rows.filter(x=>x.qty!==x.old),same=v.rows.length-changed.length;
     const activeText=v.active?`${v.active.credentialId} · ${new Date(v.active.submittedAt).toLocaleString('zh-CN',{hour:'2-digit',minute:'2-digit'})}`:'无';
     const mode=v.stale?'stale':'ready';
@@ -141,11 +141,17 @@
       changedCount:changed
     });
     saveState();
+    const cloudSubmissionId=pending.cloudSubmissionId;
     document.getElementById('eiImportDialog').close();
     pending=null;
     renderAll();
     refresh();
     showToast(`已采用员工盘货 · ${changed} 项变化`);
+    if(cloudSubmissionId&&window.CassolaCloud?.reviewEmployee){
+      window.CassolaCloud.reviewEmployee(cloudSubmissionId,'accepted','Applied to Supervisor local ledger')
+        .then(()=>{if(typeof showToast==='function')showToast('☁️ 云端员工盘货已标记采用')})
+        .catch(err=>console.warn('Cloud employee review sync failed',err));
+    }
   }
 
   function readFile(file){
