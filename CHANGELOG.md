@@ -2,6 +2,22 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Cloud Hotfix · service_role Data API grants
+**2026-10-06**
+
+- 修复实机 Supervisor 本地登录成功但 Cloud 显示“未连接”的问题。
+- Supabase Edge Function 实际已收到 login；失败点是 PostgREST 读取 `access_credentials / access_rate_limits` 返回 403 permission denied。
+- 根因：项目关闭“Automatically expose new tables”后，Cloud 表没有自动授予 service_role Data API CRUD 权限；RLS 本身不是这次故障原因。
+- migration `cassola_cloud_v02_service_role_data_api_grants`：
+  - service_role 获得 public Cloud 表 SELECT / INSERT / UPDATE / DELETE
+  - service_role 获得 public sequences USAGE / SELECT
+  - 写入 future default privileges
+  - anon / authenticated 继续 revoke all，保持 direct API deny
+- 数据库权限复核确认 service_role 已拥有 CRUD；公开客户端权限仍未开放。
+- Service Worker cache 更新为 `cassola-suite-v066`。
+
+---
+
 ## Employee Ops v0.2 + UX Intelligence
 **2026-10-06**
 
