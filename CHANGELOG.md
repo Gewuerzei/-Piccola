@@ -2,6 +2,32 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Suite Access v0.3 · Supervisor Employee Import
+**2026-10-05**
+
+- Supervisor 端新增员工盘货包导入 / 审核：
+  - 接受 `cassola-employee-count-v1`
+  - 校验 credential 是否已登记为 employee
+  - 校验 package scope 与 registry scope 是否一致
+  - 校验所有 SKU 都在员工责任区内，越权 SKU 整包拒绝
+  - 重复 `submissionId` 拒绝
+- 员工导出现在要求先盘完整个责任区，再允许生成当日包；包内新增 `scopeSkuIds`。
+- Supervisor 导入前显示差异：
+  - 当前库存 → 员工实盘
+  - 差值
+  - 责任区 / 日期 / 提交槽位 / 提交时间
+- 只有 Supervisor 点击“采用最新版”后才修改 `cassola_inventory_v01`。
+- 同责任区同一天只允许一个 active submission：
+  - 新提交 `submittedAt` 晚于当前 active 才可采用
+  - 新版采用后，旧 active 标记为 `superseded`
+  - 旧于当前 active 的文件不会覆盖库存
+- 新增 `employeeSubmissions[]` 审计记录，并进入 Inventory group-chat handoff / fingerprint。
+- 员工盘货产生的库存变化继续写入标准 `history`，并带 `employeeSubmissionId / employeeScopeId / employeeCredentialId`。
+- Supervisor Access Code 保持预注册 `supervisor` 角色；明文 code 不写入公开仓库。
+- Service Worker cache 更新为 `cassola-suite-v058`。
+
+---
+
 ## Suite Access v0.2 · Pre-registered Roles
 **2026-10-05**
 
