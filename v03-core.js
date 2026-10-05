@@ -104,4 +104,13 @@ function v3Level(s){
 function v3Suggestion(s){if(!s.autoOrder)return 0;let target=v3Num(s.targetQty);if(target==null){const w=v3WeeklyUse(s),weeks=v3Num(s.targetWeeks);if(!(w>0)||!(weeks>0))return 0;target=w*weeks}return Math.max(0,Math.ceil((target-Number(s.qty))*10)/10)}
 function v5SuggestedOrderQty(s){const need=v3Suggestion(s);if(!(need>0))return 0;const factor=v5UnitsPerOrder(s);return v5UsesPurchasePack(s)?Math.ceil(need/factor):need}
 function v5SuggestedStockQty(s){const q=v5SuggestedOrderQty(s);return q>0?q*v5UnitsPerOrder(s):0}
-function v3Hint(s){const level=v3Level(s),cov=v3Coverage(s),sug=v3Suggestion(s),manual=[s.redAt,s.yellowAt,s.blueAt].some(v=>v3Num(v)!=null),configured=s.warningMode==='manual'?manual:(cov!=null||v3Num(s.targetQty)!=null),names={zero:'❌ 0库存',red:'🔴 见底',yellow:'🟡 偏低',blue:'🔵 留意',ok:configured?'库存正常':'未设置预警'},parts=[names[level]];if(cov!=null)parts.push(`约 ${fmt(cov)} 周`);if(sug>0){const oq=v5SuggestedOrderQty(s),sq=v5SuggestedStockQty(s);parts.push(v5UsesPurchasePack(s)?`建议 +${fmt(oq)}${v5OrderUnit(s)}（${fmt(sq)}${s.unit}）`:`建议 +${fmt(sug)}${s.unit}`)}return parts.join(' · ')}
+function v3StockoutText(s){
+  const cov=v3Coverage(s),q=Number(s?.qty)||0;
+  if(q<=0)return'已见底';
+  if(!(cov>=0))return'';
+  const days=cov*7;
+  if(days>84)return`预计约 ${Math.round(days/7)} 周后见底`;
+  const d=new Date(Date.now()+days*86400000),week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  return`预计约 ${Math.max(1,Math.round(days))} 天后见底 · ${week}附近`;
+}
+function v3Hint(s){const level=v3Level(s),cov=v3Coverage(s),sug=v3Suggestion(s),manual=[s.redAt,s.yellowAt,s.blueAt].some(v=>v3Num(v)!=null),configured=s.warningMode==='manual'?manual:(cov!=null||v3Num(s.targetQty)!=null),names={zero:'❌ 0库存',red:'🔴 见底',yellow:'🟡 偏低',blue:'🔵 留意',ok:configured?'库存正常':'未设置预警'},parts=[names[level]],forecast=v3StockoutText(s);if(forecast)parts.push(forecast);if(sug>0){const oq=v5SuggestedOrderQty(s),sq=v5SuggestedStockQty(s);parts.push(v5UsesPurchasePack(s)?`建议 +${fmt(oq)}${v5OrderUnit(s)}（${fmt(sq)}${s.unit}）`:`建议 +${fmt(sug)}${s.unit}`)}return parts.join(' · ')}
