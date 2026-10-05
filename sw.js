@@ -1,8 +1,8 @@
-const CACHE='cassola-suite-v056';
+const CACHE='cassola-suite-v057';
 const CORE=[
   './','./index.html','./styles.css','./v03.css','./hub.css','./staff.css',
   './app.js','./v03-core.js','./inventory-prices.js','./v03-orders.js','./v03-ui.js','./v031-handoff.js',
-  './staff.js','./hub.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'
+  './staff.js','./access-registry.js','./hub.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'
 ];
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())
