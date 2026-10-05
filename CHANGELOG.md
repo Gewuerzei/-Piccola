@@ -2,6 +2,17 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Hotfix · Access Gate light theme
+**2026-10-06**
+
+- 修复日间模式下 Access Gate / Supervisor Hub / Employee 全屏入口仍使用硬编码深色背景的问题。
+- Access Gate 外层背景、标题文字、Gate 卡、输入框、Access 状态卡、Hub 标记、Cloud 摘要与全局搜索入口现在会跟随 light theme。
+- Hub / Employee 的浅色 surface 与当前 Accent 保持兼容，不改变 Access / Cloud / Inventory 数据。
+- 不清空任何 localStorage / IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v070`。
+
+---
+
 ## UI Hotfix · Suite-wide theme coverage
 **2026-10-06**
 
