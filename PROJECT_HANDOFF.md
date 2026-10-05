@@ -239,6 +239,15 @@ Cloud v0.1 的核心规则：
 
 全店不是一个“越来越大的 revision number”，而是四个 scope Head 的组合。Supervisor 拥有全店操作权，但 partial sync 仍是首等功能。
 
+### Cloud service_role Data API invariant
+
+- Supabase 创建项目时关闭了 “Automatically expose new tables”，因此新表不会自动获得 Data API CRUD grants。
+- Cassola Edge Function 使用 server-side secret key / service role 通过 PostgREST 访问 Cloud 表。
+- **service_role 必须拥有 Cloud 表的 SELECT / INSERT / UPDATE / DELETE 权限**；anon / authenticated 必须继续保持无直连表权限。
+- 2026-10-06 曾出现实机“☁️ 未连接”：Edge Function 已收到 login，但读取 `access_credentials / access_rate_limits` 时因 service_role 只有 REFERENCES / TRIGGER / TRUNCATE 而被 PostgREST 403 拒绝。
+- migration `cassola_cloud_v02_service_role_data_api_grants` 已补齐当前表与 future default privileges。
+- 新建 Cloud 表后如果出现 Edge 内部 403，优先检查 `information_schema.role_table_grants`，不要误判为 PWA 网络 / PIN / RLS policy 问题。
+
 ### Supabase 数据结构
 
 核心表：
