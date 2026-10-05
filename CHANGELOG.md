@@ -25,7 +25,7 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 下载云端前自动导出本机完整 JSON 安全备份。
 - Staff 暂不进入 Cloud v0.1。
 - 新增：`cloud-sync.js`、`cloud.css`。
-- Service Worker cache 更新为 `cassola-suite-v060`。
+- Service Worker cache 更新为 `cassola-suite-v061`。
 - 当前正式本地数据没有被自动上传或迁移；第一次 Cloud seed 必须由 Supervisor 手动执行上传。
 
 ---
