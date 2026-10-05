@@ -24,7 +24,9 @@ document.addEventListener('click',e=>{
   const fin=e.target.closest('[data-v3-finish]');if(fin){v3Finish(fin.dataset.v3Finish);return}
   const copyPlaced=e.target.closest('[data-v4-copy-order]');if(copyPlaced){v4CopyPlacedOrder(copyPlaced.dataset.v4CopyOrder);return}
   const exp=e.target.closest('[data-v4-export-order]');if(exp){v4ExportOrder(exp.dataset.v4ExportOrder);return}
-  const archive=e.target.closest('[data-v4-archive-period]');if(archive){v4ToggleArchivePeriod(archive.dataset.v4ArchivePeriod);return}
+  const year=e.target.closest('[data-v4-archive-year]');if(year){v4ToggleArchiveYear(year.dataset.v4ArchiveYear);return}
+  const quarter=e.target.closest('[data-v4-archive-quarter]');if(quarter){v4ToggleArchiveQuarter(quarter.dataset.v4ArchiveQuarter);return}
+  const week=e.target.closest('[data-v4-archive-week]');if(week){v4ToggleArchiveWeek(week.dataset.v4ArchiveWeek);return}
   const settled=e.target.closest('[data-v4-toggle-settled]');if(settled){v4ToggleSettledOrder(settled.dataset.v4ToggleSettled);return}
   const focus=e.target.closest('[data-v4-focus-pending]');if(focus){v4FocusPending();return}
   const area=e.target.closest('[data-v4-area]');if(area){v4AreaFilter=area.dataset.v4Area;v4RenderAreaTabs();renderStock();renderCount();return}
