@@ -1,4 +1,4 @@
-/* Cassola UI Extras v0.1 */
+/* Cassola UI Extras v0.1.1 */
 :root[data-accent="graphite"]{--accent:#f5f2e9;--accentText:#161820;--soft-blue:#b9c9ff;--soft-blue-bg:rgba(185,201,255,.11)}
 :root[data-accent="matcha"]{--accent:#b7ddb0;--accentText:#142018;--soft-blue:#b7ddb0;--soft-blue-bg:rgba(183,221,176,.13)}
 :root[data-accent="ocean"]{--accent:#a9caff;--accentText:#132039;--soft-blue:#a9caff;--soft-blue-bg:rgba(169,202,255,.13)}
@@ -48,10 +48,11 @@
 
 .ui-theme-card{display:flex;flex-direction:column;gap:13px}
 .ui-theme-card h2,.ui-theme-card p{margin-top:0}.ui-theme-group>span{display:block;margin-bottom:7px;color:var(--muted);font-size:9px;font-weight:850}
-.ui-theme-segment{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.ui-theme-segment button,.ui-accent-grid button{min-height:42px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025);color:var(--muted);font-size:9px;font-weight:800}
-.ui-theme-segment button.active,.ui-accent-grid button.active{border-color:color-mix(in srgb,var(--accent) 36%,transparent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--text)}
-.ui-accent-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.ui-accent-grid button{display:flex;align-items:center;justify-content:center;gap:5px;padding:0 5px}.ui-accent-grid i{width:10px;height:10px;border-radius:50%;background:var(--accent)}
-.ui-accent-grid [data-theme-accent="graphite"] i{background:#d8d6d0}.ui-accent-grid [data-theme-accent="matcha"] i{background:#9bc391}.ui-accent-grid [data-theme-accent="ocean"] i{background:#91b8f2}.ui-accent-grid [data-theme-accent="sakura"] i{background:#dfa4b9}
+.ui-theme-segment{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.ui-theme-segment button,.ui-accent-grid button{min-height:42px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025);color:var(--muted);font-size:9px;font-weight:800;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.ui-theme-segment button.active{border-color:color-mix(in srgb,var(--accent) 36%,transparent);background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--text)}
+.ui-accent-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.ui-accent-grid button{display:flex;align-items:center;justify-content:center;gap:5px;padding:0 5px;transition:border-color .12s ease,background .12s ease,transform .12s ease}.ui-accent-grid button:active{transform:scale(.98)}.ui-accent-grid i{width:10px;height:10px;border-radius:50%;background:var(--choice-accent,var(--accent))}
+.ui-accent-grid [data-theme-accent="graphite"]{--choice-accent:#d8d6d0;--choice-bg:rgba(216,214,208,.10)}.ui-accent-grid [data-theme-accent="matcha"]{--choice-accent:#9bc391;--choice-bg:rgba(155,195,145,.12)}.ui-accent-grid [data-theme-accent="ocean"]{--choice-accent:#91b8f2;--choice-bg:rgba(145,184,242,.12)}.ui-accent-grid [data-theme-accent="sakura"]{--choice-accent:#dfa4b9;--choice-bg:rgba(223,164,185,.12)}
+.ui-accent-grid button.active{border-color:var(--choice-accent);background:var(--choice-bg);color:var(--text);box-shadow:0 0 0 1px var(--choice-accent) inset}.ui-accent-grid button.active i{box-shadow:0 0 0 4px var(--choice-bg)}
 
 .global-search-trigger{width:38px;height:38px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.035);color:var(--text);font-size:19px;font-weight:900}
 .global-search-hub{width:100%;display:flex;align-items:center;gap:11px;padding:12px 13px;margin:0 0 13px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.025);color:var(--text);text-align:left}
