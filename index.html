@@ -9,11 +9,26 @@
   <meta name="apple-mobile-web-app-title" content="Cassola" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <script>
+    (function(){
+      try{
+        var t=JSON.parse(localStorage.getItem('cassola_ui_theme_v01')||'{}')||{};
+        var mode=t.mode||'system',resolved=mode==='light'||mode==='dark'?mode:(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+        document.documentElement.dataset.theme=resolved;
+        document.documentElement.dataset.themeMode=mode;
+        document.documentElement.dataset.accent=t.accent||'graphite';
+      }catch(_){}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="v03.css" />
   <link rel="stylesheet" href="hub.css" />
   <link rel="stylesheet" href="cloud.css" />
   <link rel="stylesheet" href="staff.css" />
+  <link rel="stylesheet" href="employee-tools.css" />
+  <link rel="stylesheet" href="inventory-insights.css" />
+  <link rel="stylesheet" href="analytics.css" />
+  <link rel="stylesheet" href="ui-extras.css" />
   <title>Cassola</title>
 </head>
 <body>
@@ -335,5 +350,9 @@
   <script src="access-registry.js" defer></script>
   <script src="hub.js" defer></script>
   <script src="cloud-sync.js" defer></script>
+  <script src="employee-tools.js" defer></script>
+  <script src="inventory-insights.js" defer></script>
+  <script src="analytics.js" defer></script>
+  <script src="ui-extras.js" defer></script>
 </body>
 </html>
