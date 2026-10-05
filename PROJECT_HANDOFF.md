@@ -11,7 +11,7 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
-- Access: **v0.1 · Local Admin PIN**
+- Access: **v0.2 · Pre-registered Roles**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -23,21 +23,33 @@
 
 ## 1.1 Access / Role Layer
 
-Cassola 正在从 Pietro 单人工具扩展为管理员总账 + 员工责任区盘货。当前先完成 **Local Admin PIN** 地基。
+Cassola 从 Pietro 单人工具扩展为 **Supervisor 总账 + 员工责任区盘货**。Access Code 必须在发布版本里预先登记，设备端不能自己创建管理员权限。
 
 当前规则：
-- Hub 中 Inventory / Staff 都属于管理员模块
-- 第一次进入管理员模块时，本机若没有管理员 PIN，会先要求设置
-- PIN 只保存在当前设备本地，公开仓库里**绝不能出现真实 PIN**
-- localStorage key：`cassola_access_v01`
-- sessionStorage key：`cassola_admin_unlocked_v01`
-- 本地只保存随机 salt + PBKDF2-SHA256 派生值，不保存明文
-- 管理解锁仅当前页面会话有效；重新打开 / 刷新 PWA 自动回到锁定
-- Hub 可手动“立即锁定”或在已解锁时修改 PIN
+- PWA 打开后先进入 **Access Gate**
+- `access-registry.js` 是角色登记表，只允许放匿名 credential id / role / scope / salt / hash
+- **绝不能提交明文 Access Code，也不要提交真实员工姓名**
+- 当前 credential：
+  - `supervisor` → 完整 Hub / Inventory / Staff
+  - `produce_a` → employee，scope = `category: 蔬果`
+  - `produce_b` → employee，scope = `category: 蔬果`
+- 同一责任区可以有多个员工 credential；身份槽位不同，但 scope 相同
+- Access Code 使用随机 salt + PBKDF2-SHA256 派生值校验
+- 角色会话只存在当前页面运行时；重新加载 PWA 重新要求输入 Access Code
 - 连续输错 5 次，当前会话冷却 30 秒
-- 这只是本机 UI / casual access gate，不是服务器身份认证；不能把它描述成高安全账户系统
-- Inventory / Staff 业务 JSON 不应携带 PIN 数据
-- 后续 Employee Mode 放在管理员锁外，员工只看到授权责任区的 SKU，并通过 scoped submission 把盘货事实交给管理员确认
+- 静态 PWA 没有服务器，因此此机制是内部权限隔离 / casual access gate，不是高安全账户认证；短数字 code 理论上可离线穷举
+
+Employee Mode 当前：
+- 只显示 scope 允许的 SKU，不能进入 Inventory / Staff 管理界面
+- 当前 `produce` scope 依据 `category = 蔬果`
+- 员工只填写现场盘货数量
+- 员工草稿使用独立 localStorage 前缀 `cassola_employee_count_v01`，**不得写入 `cassola_inventory_v01`**
+- 导出格式：`cassola-employee-count-v1`
+- scoped JSON 只包含该责任区已填写 SKU，不得夹带其他 scope SKU
+- 包内使用匿名 `credentialId` 记录提交槽位，不暴露员工姓名
+- 同责任区同一天共享 `effectiveKey = scopeId:date`
+- 多人同日提交时，未来 Supervisor 导入器以 `submittedAt` 最新的一份作为 active；旧提交保留为 superseded 历史
+- 当前员工端已能生成 scoped JSON，**Supervisor 侧的员工盘货包导入 / 差异审核仍待实现**
 
 ## 2. 顶层架构
 
