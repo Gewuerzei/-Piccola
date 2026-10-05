@@ -90,7 +90,10 @@
   }
   function saveEmployeeDraft(x){localStorage.setItem(draftKey(),JSON.stringify(x))}
   function scopeSkus(scope){
-    let rows=typeof v3Skus==='function'?v3Skus():((typeof state!=='undefined'&&Array.isArray(state.skus))?state.skus:[]);
+    const cloudRows=window.CassolaCloud?.employeeCatalog?.();
+    let rows=isEmployee()&&Array.isArray(cloudRows)
+      ?cloudRows
+      :(typeof v3Skus==='function'?v3Skus():((typeof state!=='undefined'&&Array.isArray(state.skus))?state.skus:[]));
     if(!scope)return[];
     if(scope.kind==='category')rows=rows.filter(s=>s.category===scope.value);
     else if(scope.kind==='area')rows=rows.filter(s=>(s.area||'sushi')===scope.value);
