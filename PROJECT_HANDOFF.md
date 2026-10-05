@@ -166,6 +166,13 @@ Inventory 用：
 
 以后新增类似事务，也优先设计唯一 event id / batch id，而不是靠“应该不会点两次”。
 
+### Dialog cancel / close invariant
+
+所有位于 `<form method="dialog">` 内、语义为“取消 / 关闭”的按钮必须绕过表单校验：
+- 推荐保留原生 dialog submit 关闭行为，并加 `formnovalidate`
+- 不允许因为 `required` 字段为空而让 ✕ / 取消按钮失效
+- 新增 dialog 时必须检查这一点
+
 ### I. 修改后固定走一遍发布闭环
 1. 改源码
 2. 静态检查 JS / DOM
