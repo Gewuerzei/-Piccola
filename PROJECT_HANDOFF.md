@@ -202,6 +202,7 @@ Cloud v0.1 的核心规则：
 - **手动 checkpoint**：Supervisor 可随时对选定 scope 创建完整 checkpoint，并可填写备注。要保存本机尚未上传的状态，应先上传再创建 checkpoint。
 - **JSON 永远保留**：下载云端前 PWA 会先自动导出一份完整本机 JSON 安全备份；设置页原有完整 JSON 导出继续存在。
 - **Employee append-only**：员工联网时只上传新的 `employee_submission`，不能直接修改 canonical Inventory。JSON employee package 继续保留作离线备用。
+- **Employee catalog**：员工联网登录时优先使用 Cloud canonical Head 汇总出的责任区 SKU 目录；只有 Cloud 尚未初始化或离线时，才退回员工设备自己的本机 catalog / seed。Supervisor 改 SKU 后需先上传 Cloud，员工下次联网打开即可取得新目录。
 - **Staff 不同步**：Cloud v0.1 只覆盖 Inventory scope + employee submission inbox。
 
 ### Cloud scope
