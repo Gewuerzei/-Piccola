@@ -2,6 +2,33 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Employee Ops v0.2 + UX Intelligence
+**2026-10-06**
+
+- 员工 credential 的公开仓库仍保持匿名；真实显示名迁入私有 Supabase `access_credentials.display_name`。
+- 员工界面顶部改为“负责人：显示名”；显示名本机缓存后可离线显示。
+- Cloud catalog 增加持久化缓存，员工重新打开 PWA 且断网时仍可使用最近一次正式责任区 SKU 目录。
+- 离线员工盘货新增 Outbox：无网时“上传”变为本机待发送；恢复网络后由员工手动点击上传，禁止静默自动提交。
+- 新增员工 SKU proposal：
+  - 规格 / 单位 / 包装倍率变更
+  - SKU 问题报告
+  - 现场新 SKU
+- Proposal 服务端再次验证 credential scope；员工永远不能直接改 canonical Inventory。
+- Supervisor 新增 SKU proposal inbox；采用后写入本机 Inventory，再由 Supervisor 自己决定何时上传 Cloud。
+- 新 SKU proposal 被采用时默认供应商“待确认”且关闭自动订货。
+- 新增日间 / 夜间 / 跟随系统，以及石墨 / 抹茶 / 海蓝 / 樱色 Accent；主题只保存在当前设备。
+- 新增全局 command search：SKU、供应商、未处理订单、涨价项、Cloud 员工待办、SKU 提议、分析视图、主题入口。
+- 批量盘货后新增差异摘要：完成 / 有变化 / 大幅变化；大幅变化可一键回盘货复核，不阻止保存。
+- 库存周耗提示升级为近似断货日期：“预计约 N 天后见底 · 周X附近”。
+- 新增供应商战绩：从真实收货事务推导准确率、少到/缺货率、挂起项。
+- 新增 Price Radar：仅比较可比价格记录。
+- 新增只读 Staff 检察院：扫描 active swap / rest move / attendance 引用异常，不自动修改排班。
+- 新增文件：`employee-tools.*`、`ui-extras.*`、`inventory-insights.*`、`analytics.*`。
+- Supabase 新增 `employee_sku_proposals`，Edge Function 升级到 v5。
+- Service Worker cache 更新为 `cassola-suite-v063`。
+
+---
+
 ## Cassola Cloud v0.1 · Manual Scoped Sync
 **2026-10-05**
 
