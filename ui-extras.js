@@ -76,6 +76,16 @@
     },50);
     document.getElementById('globalSearchDialog')?.close();
   }
+  function openSupplier(name){
+    window.CassolaHub?.openInventory?.();
+    setTimeout(()=>{
+      document.querySelector('[data-view="order"]')?.click();
+      document.querySelector('[data-v3-order-mode="draft"]')?.click();
+      const btn=[...document.querySelectorAll('[data-supplier]')].find(b=>b.dataset.supplier===name);
+      btn?.click();
+    },50);
+    document.getElementById('globalSearchDialog')?.close();
+  }
   function openOrders(){
     window.CassolaHub?.openInventory?.();
     setTimeout(()=>{
@@ -128,7 +138,7 @@
     skus.forEach(s=>{if(s.supplier)supplierMap.set(s.supplier,(supplierMap.get(s.supplier)||0)+1)});
     for(const [name,count] of supplierMap){
       if(q&& !terms(name).includes(q))continue;
-      rows.push({kind:'supplier',rank:4,icon:'🚚',title:name,sub:count+' 个 SKU',action:'supplier'});
+      rows.push({kind:'supplier',rank:4,icon:'🚚',title:name,sub:count+' 个 SKU',action:'supplier',value:name});
     }
 
     const openOrders=(state.placedOrders||[]).filter(o=>{
@@ -167,7 +177,7 @@
     const input=document.getElementById('globalSearchInput'),list=document.getElementById('globalSearchResults');if(!input||!list)return;
     const rows=buildResults(input.value);
     list.innerHTML=rows.length?rows.map(r=>`
-      <button type="button" class="global-search-row" data-global-action="${esc(r.action)}" ${r.id?'data-global-id="'+esc(r.id)+'"':''}>
+      <button type="button" class="global-search-row" data-global-action="${esc(r.action)}" ${r.id?'data-global-id="'+esc(r.id)+'"':''} ${r.value?'data-global-value="'+esc(r.value)+'"':''}>
         <span class="global-search-icon">${esc(r.icon)}</span>
         <span class="global-search-copy"><strong>${esc(r.title)}</strong><small>${esc(r.sub||'')}</small></span>
         <span class="global-search-go">›</span>
@@ -214,8 +224,9 @@
     const accent=e.target.closest('[data-theme-accent]');if(accent){const t=readTheme();t.accent=accent.dataset.themeAccent;saveTheme(t);return}
     if(e.target.closest('#globalSearchTopBtn,#globalSearchHubBtn')){openSearch();return}
     const row=e.target.closest('[data-global-action]');if(!row)return;
-    const action=row.dataset.globalAction,id=row.dataset.globalId;
+    const action=row.dataset.globalAction,id=row.dataset.globalId,value=row.dataset.globalValue;
     if(action==='sku')openSku(id);
+    else if(action==='supplier')openSupplier(value);
     else if(action==='orders')openOrders();
     else if(action==='employeePending')openCloudPending();
     else if(action==='skuProposals')openCloudProposals();
