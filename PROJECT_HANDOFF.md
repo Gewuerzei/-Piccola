@@ -59,7 +59,7 @@ Employee Mode 当前：
 - 显示名会缓存到本机 `cassola_cloud_identity_v01`，因此同一设备以后离线 PIN 登录仍可显示“负责人：…”；从未联网过的新设备离线时显示通用员工名。
 - Access Code 本地 PBKDF2 校验仍保留，所以**完全断网也能进入 Employee / Supervisor 本地界面**。
 - Cloud SKU catalog 会缓存到 `cassola_employee_catalog_v01`；重新打开 PWA 且断网时，优先用最近一次 Cloud 正式目录，而不是退回旧 seed。
-- Employee 盘货页操作区规则：**固定底部 Dock 只保留“☁️ 上传今日盘货”主按钮**；Dock 使用 viewport `position: fixed`，不能使用会在列表中途卡住的 sticky。清空今日 / 现场新 SKU / JSON 备用 / 待发送上传放在 SKU 列表后的普通流中；员工 shell 必须保留足够 bottom padding，保证最后一个 SKU 不被 Dock 遮挡。
+- Employee 盘货页操作区规则：使用 viewport `position: fixed` 的**四格胖胖 Dock**，从左到右为“清空 / 新 SKU / 上传 / JSON”；不得退回会在列表中途卡住的 sticky。若 Outbox 有待发送项，在“上传”格右上角显示独立 `待N` badge，员工点击 badge 才调用手动 Outbox flush，不能静默发送。员工 shell 必须保留足够 bottom padding，保证最后一个 SKU 不被 Dock 遮挡。
 - 离线员工提交使用 `cassola_cloud_outbox_v01`。当前支持：
   - `employee_submission`
   - `sku_proposal`
