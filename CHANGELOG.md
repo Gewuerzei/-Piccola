@@ -2,6 +2,21 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Polish · Fat rounded visual pass
+**2026-10-06**
+
+- 全 Suite 做一轮 CSS-only “胖胖 ERP”视觉升级：更大的圆角、更厚的控件、更宽松的 padding、更柔和的阴影与更明确的 active state。
+- Inventory：卡片、SKU 图标、库存数值、盘货输入、按钮、设置卡、Dialog 全面增厚；底部导航改成浮动圆角胶囊。
+- Orders / Receiving：区域 tabs、收货行、stepper、archive / settled 控件与 Dialog 统一增厚。
+- Hub / Access / Employee：模块卡、Access Gate、员工盘货行与 sticky action bar 统一圆润化。
+- Cloud / Employee Proposal / Analytics / Count Review：卡片、row、输入与 Dialog 同步到统一胖度。
+- Staff：人员卡、lane、周表容器、设置、Dialog 与底部导航同步圆润化。
+- Light theme 为 Inventory / Staff 浮动底栏增加浅色材质，避免日间模式底部仍是一整块深色栏。
+- 本次不修改 JS 业务逻辑、Inventory / Staff / Cloud schema，也不清空任何本地数据。
+- Service Worker cache 更新为 `cassola-suite-v068`。
+
+---
+
 ## UI Hotfix · iPhone Accent picker
 **2026-10-06**
 
