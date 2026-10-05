@@ -67,3 +67,26 @@
 .global-search-icon{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.04);font-size:19px}
 .global-search-copy{flex:1;min-width:0}.global-search-copy strong{display:block;font-size:11.5px}.global-search-copy small{display:block;margin-top:3px;color:var(--muted);font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.global-search-go{color:var(--muted);font-size:19px}
 @media(max-width:460px){.ui-accent-grid{grid-template-columns:1fr 1fr}.ui-theme-segment{grid-template-columns:1fr 1fr 1fr}}
+
+/* Cassola Fat UI v0.1 · theme controls + search */
+.ui-theme-card{gap:16px}
+.ui-theme-segment{gap:9px}
+.ui-theme-segment button{min-height:50px;border-radius:19px;font-size:9.5px}
+.ui-accent-grid{gap:9px}
+.ui-accent-grid button{min-height:52px;border-radius:20px;font-size:9.5px}
+.ui-accent-grid i{width:12px;height:12px}
+.global-search-trigger{width:44px;height:44px;border-radius:17px}
+.global-search-hub{min-height:58px;border-radius:22px;padding:14px 15px}
+.global-search-dialog{border-radius:34px}
+.global-search-dialog>form{padding:20px;gap:13px}
+.global-search-input{min-height:56px!important;border-radius:21px!important}
+.global-search-results{gap:9px}
+.global-search-row{min-height:60px;border-radius:20px;padding:12px}
+.global-search-icon{width:42px;height:42px;border-radius:16px}
+:root[data-theme="light"] .bottom-nav{
+  background:rgba(250,248,243,.94);
+  border-color:rgba(31,37,48,.09);
+  box-shadow:0 16px 38px rgba(73,65,52,.16);
+}
+:root[data-theme="light"] .nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+:root[data-theme="light"] .nav-btn.active span{background:color-mix(in srgb,var(--accent) 18%,transparent)}
