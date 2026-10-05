@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.6.1 · Order Inbox & Archive**
+- Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
@@ -232,18 +232,20 @@ SKU 可使用手动阈值或历史周耗。
 
 报损不是正常消耗，内部转换不能伪装成消耗。
 
-### Order Inbox & Half-Month Archive
+### Order Inbox & Week / Quarter / Year Archive
 
 “已下单”页面不再全量展开所有历史订单。视图规则：
 - 未结案订单进入 **🔔 未结束工作区**，永远置顶
 - 未结案订单内，只默认渲染仍需处理或待保存的 SKU
 - 同单已处理 SKU 默认折叠，需要时点“查看已处理 N 项”再展开
 - 顶部铃铛提供 **🎯 定位未处理**；连续点击依次定位当前工作区中的未处理 SKU
-- 已结案订单进入 **🗄️ 历史归档**
-- 历史以半月分组：1–15 日 / 16–月底
-- 默认只渲染半月周期入口；打开一个周期时才渲染该周期完整订单
+- 本周已结案订单直接显示为 **📅 本周已结案**
+- 更早的已结案订单进入 **🗄️ 历史订单**
+- 历史层级固定为：**年度 → 季度 → 周 → 订单**
+- 周定义为周一到周日；跨年周使用周四作为年度 / 季度归属锚点，保证一整周不会被拆到两个父节点
+- 年度 / 季度 / 周节点只渲染轻量计数；只有点开具体一周时才渲染该周完整订单卡片
 - 这是视图 / DOM 按需加载优化，不删除、不裁剪 `placedOrders` 历史数据
-- 订单排序仍按 `createdAt` 新到旧；归档周期也按时间新到旧
+- 订单与时间节点都按新到旧显示
 - 不改变 `cassola_inventory_v01`
 
 ### Purchase Unit Layer
