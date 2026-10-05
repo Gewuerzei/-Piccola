@@ -280,3 +280,39 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
   .employee-dock-btn>small{font-size:8.5px}
 }
 
+/* Employee Dock Safe-Area v0.4 · sink dock into iPhone home area */
+#cassolaEmployee{
+  padding-bottom:0;
+}
+.cassola-employee-shell{
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+}
+.cassola-employee-upload-dock{
+  bottom:0;
+  width:min(760px,calc(100vw - 16px));
+  padding:5px 5px calc(5px + env(safe-area-inset-bottom));
+  gap:6px;
+  border-radius:24px 24px 0 0;
+}
+.cassola-employee-upload-dock .employee-dock-btn{
+  min-height:50px;
+  padding:5px 3px;
+  border-radius:17px;
+}
+.employee-dock-btn>span{font-size:16px}
+.employee-dock-btn>small{font-size:8.5px}
+@media(max-width:460px){
+  .cassola-employee-shell{
+    padding-bottom:calc(74px + env(safe-area-inset-bottom));
+  }
+  .cassola-employee-upload-dock{
+    width:calc(100vw - 12px);
+  }
+}
+@media(max-width:380px){
+  .cassola-employee-upload-dock{gap:4px;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+  .cassola-employee-upload-dock .employee-dock-btn{min-height:48px;border-radius:16px}
+  .employee-dock-btn>span{font-size:15px}
+  .employee-dock-btn>small{font-size:8px}
+}
+
