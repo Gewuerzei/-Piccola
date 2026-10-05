@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Hotfix · Fixed employee upload dock
+**2026-10-06**
+
+- 修正上一版员工上传 Dock 仍使用 `position: sticky`、滚动时会卡在 SKU 列表中途的问题。
+- “☁️ 上传今日盘货”现在改为真正的 viewport `position: fixed` 底部 Dock，并按员工页面最大宽度居中。
+- Employee shell 增加底部安全留白，确保最后一个 SKU 与普通操作按钮都能完整滚到 Dock 上方。
+- 其他员工操作继续留在页面普通流中；Offline Outbox 仍然只允许员工手动提交。
+- 不修改 Employee draft / Inventory / Cloud schema，也不清空任何本地数据。
+- Service Worker cache 更新为 `cassola-suite-v072`。
+
+---
+
 ## UI Hotfix · Employee upload dock
 **2026-10-06**
 
