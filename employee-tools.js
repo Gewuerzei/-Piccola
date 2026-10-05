@@ -14,9 +14,7 @@
     return typeof v3Skus==='function'?v3Skus():((window.state?.skus)||[]);
   }
   function findSku(id){return catalog().find(x=>String(x.id)===String(id))||null}
-  function unitOptions(selected=''){
-    return UNITS.map(x=>'<option value="'+esc(x)+'" '+(x===selected?'selected':'')+'>'+esc(x)+'</option>').join('');
-  }
+  function unitOptions(){return UNITS.map(x=>'<option value="'+esc(x)+'"></option>').join('')}
   function ensureDialogs(){
     if(!document.getElementById('employeeSkuDetailDialog')){
       const d=document.createElement('dialog');d.id='employeeSkuDetailDialog';d.className='employee-tool-dialog';
@@ -28,13 +26,14 @@
           </div>
           <input type="hidden" id="employeeSkuDetailId" />
           <div id="employeeSkuCurrent" class="employee-standard-card"></div>
+          <datalist id="employeeUnitOptions">${unitOptions()}</datalist>
           <div class="employee-proposal-card">
             <strong>🧪 现场规格 / 单位不一致</strong>
             <small>这里只提交提议，不会直接修改正式 SKU。</small>
             <div class="employee-proposal-grid">
               <label>现场规格<input id="employeeSkuSpec" maxlength="100" placeholder="例如 6kg / 箱" /></label>
-              <label>库存单位<select id="employeeSkuUnit"><option value="">保持原单位</option>${unitOptions()}</select></label>
-              <label>订货单位<select id="employeeSkuOrderUnit"><option value="">保持原单位</option>${unitOptions()}</select></label>
+              <label>库存单位<input id="employeeSkuUnit" list="employeeUnitOptions" maxlength="24" placeholder="保持原单位 / 可自定义" /></label>
+              <label>订货单位<input id="employeeSkuOrderUnit" list="employeeUnitOptions" maxlength="24" placeholder="保持原单位 / 可自定义" /></label>
               <label>1 大包装 = 几个最小包装<input id="employeeSkuFactor" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 10" /></label>
             </div>
             <label>备注<input id="employeeSkuNote" maxlength="300" placeholder="例如：今天到的是整箱，标签写 6kg" /></label>
@@ -59,11 +58,12 @@
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
           <div class="employee-proposal-banner">🟠 新 SKU 只会进入待审核区。Supervisor 接受以后才会进入正式库存。</div>
+          <datalist id="employeeNewUnitOptions">${unitOptions()}</datalist>
           <label>名称<input id="employeeNewName" maxlength="80" required placeholder="例如 硬芒果" /></label>
           <div class="employee-proposal-grid">
             <label>规格<input id="employeeNewSpec" maxlength="100" placeholder="例如 6kg / 箱" /></label>
-            <label>库存单位<select id="employeeNewUnit" required><option value="">选择单位</option>${unitOptions()}</select></label>
-            <label>订货单位<select id="employeeNewOrderUnit"><option value="">与库存单位相同</option>${unitOptions()}</select></label>
+            <label>库存单位<input id="employeeNewUnit" list="employeeNewUnitOptions" maxlength="24" required placeholder="个 / 包 / 箱 / 其他" /></label>
+            <label>订货单位<input id="employeeNewOrderUnit" list="employeeNewUnitOptions" maxlength="24" placeholder="与库存单位相同" /></label>
             <label>1 大包装 = 几个最小包装<input id="employeeNewFactor" type="text" inputmode="decimal" autocomplete="off" value="1" /></label>
           </div>
           <div class="employee-proposal-grid">
