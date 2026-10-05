@@ -1,24 +1,38 @@
-/* Cassola UI Extras v0.1 · theme + global command search */
+/* Cassola UI Extras v0.1.1 · theme + global command search */
 (function(){
   const THEME_KEY='cassola_ui_theme_v01';
   const defaults={mode:'system',accent:'graphite'};
+  const themeModes=new Set(['system','light','dark']);
+  const themeAccents=new Set(['graphite','matcha','ocean','sakura']);
+  const accentLabels={graphite:'石墨',matcha:'抹茶',ocean:'海蓝',sakura:'樱色'};
   let media=null;
 
   function esc(v){return typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'')}
-  function readTheme(){
-    try{return{...defaults,...(JSON.parse(localStorage.getItem(THEME_KEY)||'{}')||{})}}catch(_){return{...defaults}}
+  function normalizeTheme(raw){
+    const t={...defaults,...(raw||{})};
+    if(!themeModes.has(t.mode))t.mode=defaults.mode;
+    if(!themeAccents.has(t.accent))t.accent=defaults.accent;
+    return t;
   }
-  function saveTheme(x){localStorage.setItem(THEME_KEY,JSON.stringify(x));applyTheme()}
+  function readTheme(){
+    try{return normalizeTheme(JSON.parse(localStorage.getItem(THEME_KEY)||'{}'))}catch(_){return{...defaults}}
+  }
+  function saveTheme(x){
+    const t=normalizeTheme(x);
+    try{localStorage.setItem(THEME_KEY,JSON.stringify(t))}catch(_){}
+    applyTheme(t);
+    return t;
+  }
   function resolvedMode(mode){
     if(mode==='light'||mode==='dark')return mode;
     return window.matchMedia?.('(prefers-color-scheme: light)').matches?'light':'dark';
   }
-  function applyTheme(){
-    const t=readTheme(),root=document.documentElement,resolved=resolvedMode(t.mode);
+  function applyTheme(theme){
+    const t=normalizeTheme(theme||readTheme()),root=document.documentElement,resolved=resolvedMode(t.mode);
     root.dataset.theme=resolved;root.dataset.themeMode=t.mode;root.dataset.accent=t.accent;
     const meta=document.querySelector('meta[name="theme-color"]');
     if(meta)meta.content=resolved==='light'?'#f3f1ec':'#161922';
-    renderThemeControls();
+    renderThemeControls(t);
   }
   function setupMedia(){
     media=window.matchMedia?.('(prefers-color-scheme: light)');
@@ -50,12 +64,33 @@
       </div>`;
     const local=settings.querySelector('.settings-card:nth-child(2)');
     local?.insertAdjacentElement('afterend',card)||settings.appendChild(card);
+    bindThemeControls(card);
     renderThemeControls();
   }
-  function renderThemeControls(){
-    const t=readTheme();
-    document.querySelectorAll('[data-theme-mode]').forEach(b=>b.classList.toggle('active',b.dataset.themeMode===t.mode));
-    document.querySelectorAll('[data-theme-accent]').forEach(b=>b.classList.toggle('active',b.dataset.themeAccent===t.accent));
+  function bindThemeControls(card){
+    card.querySelectorAll('[data-theme-mode]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const t=readTheme();t.mode=btn.dataset.themeMode;saveTheme(t);
+      });
+    });
+    card.querySelectorAll('[data-theme-accent]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const t=readTheme();t.accent=btn.dataset.themeAccent;
+        const saved=saveTheme(t);
+        if(typeof showToast==='function')showToast(`Accent：${accentLabels[saved.accent]||saved.accent}`);
+      });
+    });
+  }
+  function renderThemeControls(theme){
+    const t=normalizeTheme(theme||readTheme());
+    document.querySelectorAll('[data-theme-mode]').forEach(b=>{
+      const active=b.dataset.themeMode===t.mode;
+      b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+    });
+    document.querySelectorAll('[data-theme-accent]').forEach(b=>{
+      const active=b.dataset.themeAccent===t.accent;
+      b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+    });
   }
 
   function latestPriceData(s){
@@ -229,8 +264,6 @@
   }
 
   document.addEventListener('click',e=>{
-    const mode=e.target.closest('[data-theme-mode]');if(mode){const t=readTheme();t.mode=mode.dataset.themeMode;saveTheme(t);return}
-    const accent=e.target.closest('[data-theme-accent]');if(accent){const t=readTheme();t.accent=accent.dataset.themeAccent;saveTheme(t);return}
     if(e.target.closest('#globalSearchTopBtn,#globalSearchHubBtn')){openSearch();return}
     const row=e.target.closest('[data-global-action]');if(!row)return;
     const action=row.dataset.globalAction,id=row.dataset.globalId,value=row.dataset.globalValue;
