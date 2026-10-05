@@ -119,8 +119,8 @@
         return '<label class="cassola-employee-row"><div><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></label>';
       }).join(''):'<div class="empty">这个责任区没有可盘 SKU。</div>')+
       '</div>'+
-      '<div class="cassola-employee-actions"><button type="button" class="btn secondary" data-employee-clear>清空今日</button><button type="button" class="btn primary large" data-employee-export>📤 生成今日盘货包</button></div>'+
-      '<div class="cassola-employee-foot">只导出本责任区已填写的 SKU · 同责任区同一天以后按 submittedAt 取最新版</div>'+
+      '<div class="cassola-employee-actions"><button type="button" class="btn secondary" data-employee-clear>清空今日</button><button type="button" class="btn primary large" data-employee-cloud>☁️ 上传今日盘货</button><button type="button" class="btn secondary" data-employee-export>📄 JSON 备用</button></div>'+
+      '<div class="cassola-employee-foot">联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用</div>'+
       '</div>';
   }
   function parseEmployeeQty(raw){
@@ -147,8 +147,8 @@
     localStorage.removeItem(draftKey());
     renderEmployee();
   }
-  function exportEmployeeCount(){
-    if(!isEmployee())return;
+  function buildEmployeePayload(){
+    if(!isEmployee())return null;
     const scope=accessSession.scope||{},rows=scopeSkus(scope),draft=loadEmployeeDraft(),filled=[];
     rows.forEach(s=>{
       const v=draft.counts?.[s.id];
@@ -156,13 +156,13 @@
       const n=Number(v);if(!Number.isFinite(n)||n<0)return;
       filled.push({skuId:s.id,name:s.name,qty:n,unit:s.unit||'',spec:s.spec||''});
     });
-    if(!filled.length){showToast?.('还没有填写盘货数量');return}
+    if(!filled.length){if(typeof showToast==='function')showToast('还没有填写盘货数量');return null}
     const missing=rows.length-filled.length;
-    if(missing>0){showToast?.(`还有 ${missing} 个责任区 SKU 没盘，先盘完再上传`);return}
+    if(missing>0){if(typeof showToast==='function')showToast(`还有 ${missing} 个责任区 SKU 没盘，先盘完再上传`);return null}
     draft.exportRevision=(Number(draft.exportRevision)||0)+1;
     draft.lastExportedAt=new Date().toISOString();
     saveEmployeeDraft(draft);
-    const payload={
+    return{
       format:'cassola-employee-count-v1',
       date:todayKey(),
       submittedAt:draft.lastExportedAt,
@@ -176,13 +176,34 @@
       scopeSkuIds:rows.map(s=>s.id),
       counts:filled
     };
+  }
+  function exportEmployeeCount(){
+    const payload=buildEmployeePayload();if(!payload)return;
+    const scope=accessSession.scope||{};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
     const hh=String(new Date().getHours()).padStart(2,'0'),mm=String(new Date().getMinutes()).padStart(2,'0');
     a.download=`cassola-count-${scope.id||'scope'}-${todayKey()}-${hh}${mm}.json`;
     a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    if(typeof showToast==='function')showToast('今日盘货包已生成');
+    if(typeof showToast==='function')showToast('JSON 备用盘货包已生成');
     renderEmployee();
+  }
+  async function uploadEmployeeCount(){
+    const payload=buildEmployeePayload();if(!payload)return;
+    if(!window.CassolaCloud?.connected?.()){
+      if(typeof showToast==='function')showToast('Cloud 未连接，可先用 JSON 备用');
+      return;
+    }
+    try{
+      await window.CassolaCloud.submitEmployee(payload);
+      const draft=loadEmployeeDraft();
+      draft.lastCloudSubmissionId=payload.submissionId;
+      draft.lastCloudSubmittedAt=payload.submittedAt;
+      saveEmployeeDraft(draft);
+      renderEmployee();
+    }catch(err){
+      alert('上传 Cloud 失败：'+(err?.data?.detail||err?.message||'未知错误')+'\n\n盘货草稿还在本机，可以稍后重试或导出 JSON。');
+    }
   }
 
   function renderSupervisorState(){
@@ -206,18 +227,30 @@
         err.classList.remove('hidden');input.value='';input.focus();return;
       }
       clearFailures();
+      let cloudConnected=false;
+      if(navigator.onLine&&window.CassolaCloud?.login){
+        try{
+          const cloudRecord=await window.CassolaCloud.login(code);
+          cloudConnected=!!cloudRecord&&cloudRecord.id===record.id;
+        }catch(cloudErr){
+          console.warn('Cassola Cloud login unavailable',cloudErr);
+        }
+      }
       accessSession={
         id:record.id,role:record.role,label:record.label,
-        scope:record.scope?JSON.parse(JSON.stringify(record.scope)):null
+        scope:record.scope?JSON.parse(JSON.stringify(record.scope)):null,
+        cloudConnected
       };
       input.value='';
       showMode(record.role==='supervisor'?'hub':'employee');
+      if(!cloudConnected&&navigator.onLine&&typeof showToast==='function')showToast('已进入本地模式 · Cloud 暂未连接');
     }catch(ex){
       err.textContent='这台浏览器无法验证 Access Code。';
       err.classList.remove('hidden');
     }finally{btn.disabled=false}
   }
   function logout(){
+    window.CassolaCloud?.logout?.().catch?.(()=>{});
     accessSession=null;
     showMode('gate');
     setTimeout(()=>document.getElementById('cassolaGateCode')?.focus(),80);
@@ -265,6 +298,7 @@
     document.getElementById('cassolaEmployee').addEventListener('click',e=>{
       if(e.target.closest('[data-cassola-logout]')){logout();return}
       if(e.target.closest('[data-employee-clear]')){clearEmployeeDraft();return}
+      if(e.target.closest('[data-employee-cloud]')){uploadEmployeeCount();return}
       if(e.target.closest('[data-employee-export]')){exportEmployeeCount();return}
     });
   }
