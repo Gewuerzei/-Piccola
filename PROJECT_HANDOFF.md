@@ -11,6 +11,7 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
+- Access: **v0.1 · Local Admin PIN**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - 无 Supabase / Firebase / 自建后端
@@ -19,6 +20,24 @@
 仓库是公开仓库。**不要提交员工头像、真实员工名单、账号密码、API secret、工资或其他敏感经营数据。**
 
 ---
+
+## 1.1 Access / Role Layer
+
+Cassola 正在从 Pietro 单人工具扩展为管理员总账 + 员工责任区盘货。当前先完成 **Local Admin PIN** 地基。
+
+当前规则：
+- Hub 中 Inventory / Staff 都属于管理员模块
+- 第一次进入管理员模块时，本机若没有管理员 PIN，会先要求设置
+- PIN 只保存在当前设备本地，公开仓库里**绝不能出现真实 PIN**
+- localStorage key：`cassola_access_v01`
+- sessionStorage key：`cassola_admin_unlocked_v01`
+- 本地只保存随机 salt + PBKDF2-SHA256 派生值，不保存明文
+- 管理解锁仅当前页面会话有效；重新打开 / 刷新 PWA 自动回到锁定
+- Hub 可手动“立即锁定”或在已解锁时修改 PIN
+- 连续输错 5 次，当前会话冷却 30 秒
+- 这只是本机 UI / casual access gate，不是服务器身份认证；不能把它描述成高安全账户系统
+- Inventory / Staff 业务 JSON 不应携带 PIN 数据
+- 后续 Employee Mode 放在管理员锁外，员工只看到授权责任区的 SKU，并通过 scoped submission 把盘货事实交给管理员确认
 
 ## 2. 顶层架构
 
