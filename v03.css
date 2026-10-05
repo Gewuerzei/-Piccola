@@ -81,3 +81,47 @@
 @media(max-width:420px){.v45-price-entry{grid-template-columns:1fr 1fr}.v45-price-copy strong{font-size:16px}.v45-vat-title{align-items:flex-start;flex-direction:column;gap:2px}}
 
 .v45-spec-warning{padding:10px 11px;border-radius:15px;background:rgba(243,207,122,.065);border:1px solid rgba(243,207,122,.16);color:var(--warn);font-size:9.5px;line-height:1.45}
+
+
+/* Inventory v0.6.1 · active receiving inbox + half-month archive */
+.v4-bell-copy{display:flex;align-items:center;gap:10px;min-width:0}
+.v4-bell-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.v4-bell-actions>span{font-size:9px;font-weight:850;color:var(--warn);padding:6px 8px;border-radius:999px;background:rgba(243,207,122,.08);white-space:nowrap}
+.v4-bell-actions button{border:1px solid rgba(243,207,122,.16);border-radius:13px;padding:7px 9px;background:rgba(243,207,122,.07);color:var(--text);font-size:9px;font-weight:850;white-space:nowrap}
+.v4-bell-actions button:active{transform:scale(.98)}
+
+.v4-active-orders{display:flex;flex-direction:column;gap:11px}
+.v4-active-head,.v4-archive-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 4px 2px}
+.v4-active-head>div,.v4-archive-head>div{min-width:0}
+.v4-active-head b,.v4-archive-head b{display:block;font-size:12px}
+.v4-active-head small,.v4-archive-head small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.35}
+.v4-active-head>span,.v4-archive-head>span{flex:0 0 auto;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,.04);color:var(--muted);font-size:9px;font-weight:850}
+.v4-all-clear{padding:15px;border:1px solid rgba(155,231,173,.12);border-radius:20px;background:rgba(155,231,173,.035);color:var(--good);font-size:11px;font-weight:800;text-align:center}
+
+.v4-settled-fold{margin:2px 0 11px}
+.v4-settled-fold>button{width:100%;border:1px solid var(--line);border-radius:15px;padding:10px 12px;background:rgba(255,255,255,.025);color:var(--muted);font-size:9.5px;font-weight:800;text-align:left}
+.v4-settled-fold>button:active{background:rgba(255,255,255,.05)}
+.v4-settled-body{margin-top:9px;padding-top:2px}
+
+.v4-archive{display:flex;flex-direction:column;gap:10px;margin-top:18px;padding-top:3px;border-top:1px solid rgba(255,255,255,.05)}
+.v4-archive-periods{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.v4-archive-periods button{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:43px;border:1px solid var(--line);border-radius:15px;padding:9px 10px;background:rgba(255,255,255,.025);color:var(--muted);font-size:9px;font-weight:800;text-align:left}
+.v4-archive-periods button b{flex:0 0 auto;font-size:8.5px;color:var(--muted)}
+.v4-archive-periods button.active{background:rgba(185,201,255,.07);border-color:rgba(185,201,255,.17);color:var(--text)}
+.v4-archive-periods button.active b{color:var(--soft-blue)}
+.v4-archive-idle{padding:13px;border-radius:16px;background:rgba(255,255,255,.018);color:var(--muted);font-size:9.5px;text-align:center}
+.v4-archive-open{display:flex;flex-direction:column;gap:11px}
+.v4-archive-open-head{padding:8px 4px 2px;color:var(--muted);font-size:9.5px;font-weight:800}
+.v4-archived-order.done{opacity:1}
+
+.v4-focus-flash{animation:v4PendingFlash 1.35s ease-out}
+@keyframes v4PendingFlash{
+  0%,35%{box-shadow:0 0 0 2px rgba(243,207,122,.58),0 0 0 7px rgba(243,207,122,.08);transform:scale(1.012)}
+  100%{box-shadow:none;transform:scale(1)}
+}
+
+@media(max-width:460px){
+  .v4-receiving-bell{align-items:flex-start}
+  .v4-bell-actions{flex-direction:column;align-items:flex-end}
+  .v4-archive-periods{grid-template-columns:1fr}
+}
