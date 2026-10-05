@@ -34,3 +34,15 @@
   .employee-review-top{flex-direction:column}
   .employee-review-actions{grid-template-columns:1fr}
 }
+
+/* Cassola Fat UI v0.1 · employee proposal surfaces */
+.employee-tool-dialog{border-radius:34px}
+.employee-tool-dialog>form{padding:21px;gap:14px}
+.employee-tool-dialog input,.employee-tool-dialog select{min-height:50px;border-radius:19px;padding:0 13px}
+.employee-standard-card{gap:9px}
+.employee-standard-card>div{padding:12px;border-radius:19px}
+.employee-proposal-card,.employee-review-card{padding:14px;border-radius:22px}
+.employee-proposal-banner{padding:12px 13px;border-radius:19px}
+.employee-review-current,.employee-review-proposed,.employee-review-qty{padding:10px 11px;border-radius:17px}
+.employee-review-actions{gap:9px}
+.employee-review-actions .btn{min-height:48px;border-radius:19px}
