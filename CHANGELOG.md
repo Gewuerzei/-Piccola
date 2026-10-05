@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Polish · Four-up employee dock
+**2026-10-06**
+
+- 员工盘货底部固定 Dock 改为四个并排小胖按钮：🧹 清空 / ＋ 新 SKU / ☁️ 上传 / 📄 JSON。
+- 上传按钮继续使用当前 Accent；其余三项为 secondary，保持四格统一尺寸和拇指区操作。
+- 若 Offline Outbox 有待发送项，不额外长出第五格；在“上传”格右上角显示独立 `待N` badge，员工点击 badge 才执行“上传待发送”，继续满足禁止静默提交原则。
+- 删除页面末尾原来的 secondary action 区，释放纵向空间。
+- 不修改 Employee draft / Inventory / Cloud schema，也不清空任何本地数据。
+- Service Worker cache 更新为 `cassola-suite-v073`。
+
+---
+
 ## UI Hotfix · Fixed employee upload dock
 **2026-10-06**
 
