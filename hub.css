@@ -153,3 +153,43 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
   border-color:var(--line);
   box-shadow:0 14px 34px rgba(73,65,52,.12);
 }
+
+/* Employee Upload Dock v0.1 · keep SKU list visible */
+.cassola-employee-secondary-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:16px;
+}
+.cassola-employee-secondary-actions .btn{
+  min-height:48px;
+  border-radius:19px;
+  padding:11px 10px;
+}
+.cassola-employee-upload-dock{
+  position:sticky;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  z-index:12;
+  margin:12px 0 0;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:27px;
+  background:rgba(20,23,31,.90);
+  box-shadow:0 16px 38px rgba(0,0,0,.22);
+  backdrop-filter:blur(16px) saturate(125%);
+  -webkit-backdrop-filter:blur(16px) saturate(125%);
+}
+.cassola-employee-upload-dock .btn{
+  width:100%;
+  min-height:56px;
+  border-radius:21px;
+}
+:root[data-theme="light"] .cassola-employee-upload-dock{
+  background:rgba(250,248,243,.94);
+  border-color:var(--line);
+  box-shadow:0 14px 34px rgba(73,65,52,.13);
+}
+@media(max-width:460px){
+  .cassola-employee-secondary-actions{grid-template-columns:1fr 1fr}
+}
+
