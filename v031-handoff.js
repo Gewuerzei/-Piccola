@@ -14,7 +14,8 @@ function v31Snapshot(st=state){
     order:st.order||{},
     placedOrders:st.placedOrders||[],
     hiddenSkuIds:st.hiddenSkuIds||[],
-    priceRecords:st.priceRecords||[]
+    priceRecords:st.priceRecords||[],
+    employeeSubmissions:st.employeeSubmissions||[]
   };
 }
 function v31Fingerprint(st=state){return v31HashString(JSON.stringify(v31Snapshot(st)))}
@@ -89,7 +90,12 @@ function v31Diff(incoming){
     const local=localPrices.get(r.id);
     return !local||JSON.stringify(local)!==JSON.stringify(r);
   }).length;
-  return {stock,skuChanges,newHistory,orderChanges,priceChanges};
+  const localEmployee=new Map((state.employeeSubmissions||[]).map(r=>[r.submissionId,r]));
+  const employeeSubmissionChanges=(incoming.employeeSubmissions||[]).filter(r=>{
+    const local=localEmployee.get(r.submissionId);
+    return !local||JSON.stringify(local)!==JSON.stringify(r);
+  }).length;
+  return {stock,skuChanges,newHistory,orderChanges,priceChanges,employeeSubmissionChanges};
 }
 function v31InjectUi(){
   const settings=document.getElementById('view-settings');
@@ -197,6 +203,7 @@ function v31PreviewImport(data){
       <div><span>新增历史</span><b>${diff.newHistory}</b></div>
       <div><span>订单 / 收货变化</span><b>${diff.orderChanges}</b></div>
       <div><span>价格记录变化</span><b>${diff.priceChanges}</b></div>
+      <div><span>员工盘货提交</span><b>${diff.employeeSubmissionChanges}</b></div>
     </div>
     <div class="v31-file-time">导出时间：${escapeHtml(v31FmtTime(data.exportedAt||incomingMeta.updatedAt))}</div>
   `;
