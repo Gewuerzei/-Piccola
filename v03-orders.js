@@ -193,9 +193,12 @@ function v4WeekLabel(key){
   const b=sameMonth?String(end.getDate()).padStart(2,'0'):`${String(end.getMonth()+1).padStart(2,'0')}/${String(end.getDate()).padStart(2,'0')}`;
   return `W${String(v4WeekNumber(start)).padStart(2,'0')} · ${a}–${b}`;
 }
-function v4ArchiveYearKeyFromWeek(key){return String(new Date(key+'T00:00:00').getFullYear())}
+function v4WeekAnchorDate(key){
+  const d=new Date(key+'T00:00:00');d.setDate(d.getDate()+3);return d;
+}
+function v4ArchiveYearKeyFromWeek(key){return String(v4WeekAnchorDate(key).getFullYear())}
 function v4ArchiveQuarterKeyFromWeek(key){
-  const d=new Date(key+'T00:00:00');
+  const d=v4WeekAnchorDate(key);
   return `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`;
 }
 function v4QuarterLabel(key){
