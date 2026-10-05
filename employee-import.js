@@ -199,9 +199,9 @@
     dialog.className='ei-import-dialog';
     dialog.innerHTML=`
       <form method="dialog" class="ei-import-form">
-        <div class="dialog-head"><div><div class="eyebrow">EMPLOYEE COUNT</div><h3>员工盘货差异</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+        <div class="dialog-head"><div><div class="eyebrow">EMPLOYEE COUNT</div><h3>员工盘货差异</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
         <div id="eiImportSummary"></div>
-        <div class="ei-import-actions"><button value="cancel" class="btn secondary">取消</button><button id="eiAcceptBtn" value="default" class="btn primary">采用最新版</button></div>
+        <div class="ei-import-actions"><button value="cancel" formnovalidate class="btn secondary">取消</button><button id="eiAcceptBtn" value="default" class="btn primary">采用最新版</button></div>
       </form>`;
     document.body.appendChild(dialog);
     document.getElementById('eiImportInput').addEventListener('change',e=>{
