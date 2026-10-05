@@ -157,7 +157,7 @@
           <div class="eyebrow" id="dialogCategory">SKU</div>
           <h3 id="dialogTitle">操作</h3>
         </div>
-        <button value="cancel" class="icon-btn" aria-label="关闭">✕</button>
+        <button value="cancel" formnovalidate class="icon-btn" aria-label="关闭">✕</button>
       </div>
       <input type="hidden" id="dialogSkuId" />
       <label>操作
@@ -178,7 +178,7 @@
         <input id="actionNote" type="text" placeholder="例如：草莓发霉 / 周三到货" />
       </label>
       <div class="dialog-actions">
-        <button value="cancel" class="btn secondary">取消</button>
+        <button value="cancel" formnovalidate class="btn secondary">取消</button>
         <button id="confirmActionBtn" value="default" class="btn primary">保存</button>
       </div>
     </form>
@@ -188,7 +188,7 @@
     <form method="dialog" id="v3SkuForm">
       <div class="dialog-head">
         <div><div class="eyebrow">SKU MANAGER</div><h3 id="v3SkuTitle">新建 SKU</h3></div>
-        <button value="cancel" class="icon-btn" aria-label="关闭">✕</button>
+        <button value="cancel" formnovalidate class="icon-btn" aria-label="关闭">✕</button>
       </div>
       <input type="hidden" id="v3SkuId" />
       <div class="v3-form-grid two">
@@ -254,7 +254,7 @@
       </div>
       <div class="v3-dialog-actions">
         <button id="v3DeleteSku" class="btn danger ghost hidden">删除</button>
-        <button value="cancel" class="btn secondary">取消</button>
+        <button value="cancel" formnovalidate class="btn secondary">取消</button>
         <button id="v3SaveSku" value="default" class="btn primary">保存</button>
       </div>
     </form>
@@ -265,7 +265,7 @@
     <form method="dialog" class="v45-form">
       <div class="dialog-head">
         <div><div class="eyebrow">PRICE RECORD</div><h3 id="v45PriceTitle">记录价格</h3></div>
-        <button value="cancel" class="icon-btn" aria-label="关闭">✕</button>
+        <button value="cancel" formnovalidate class="icon-btn" aria-label="关闭">✕</button>
       </div>
       <input type="hidden" id="v45PriceSkuId" />
       <div class="v45-price-entry">
@@ -305,7 +305,7 @@
       </section>
       <label>备注<input id="v45PriceNote" placeholder="例如：电话报价 / 本月报价单" /></label>
       <div class="v45-dialog-actions">
-        <button value="cancel" class="btn secondary">取消</button>
+        <button value="cancel" formnovalidate class="btn secondary">取消</button>
         <button type="button" class="btn primary" id="v45SavePrice">保存价格</button>
       </div>
     </form>
@@ -315,10 +315,10 @@
     <form method="dialog" class="v45-form">
       <div class="dialog-head">
         <div><div class="eyebrow">PRICE HISTORY</div><h3 id="v45PriceHistoryTitle">价格历史</h3></div>
-        <button value="cancel" class="icon-btn" aria-label="关闭">✕</button>
+        <button value="cancel" formnovalidate class="icon-btn" aria-label="关闭">✕</button>
       </div>
       <div id="v45PriceHistoryList" class="v45-history-list"></div>
-      <button value="cancel" class="btn secondary large">关闭</button>
+      <button value="cancel" formnovalidate class="btn secondary large">关闭</button>
     </form>
   </dialog>
 
