@@ -2,6 +2,24 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.6.2 · Week / Quarter / Year Archive
+**2026-10-05**
+
+- 历史订单时间索引从“半月”升级为 **周 → 季度 → 年度**。
+- 未结束订单仍独立常驻顶部，不受时间归档影响。
+- 本周已结案订单直接显示为“📅 本周已结案”，便于快速回看刚收完的单。
+- 更早历史采用三层按需展开：
+  - 年度，例如 `2026 年`
+  - 季度，例如 `2026 Q4 · 10–12月`
+  - 周，例如 `W41 · 10/05–11`
+- 只有点开具体一周时才渲染该周的完整订单卡片；年度 / 季度 / 周节点只保留轻量计数。
+- 周固定为 **周一到周日**；跨年周按周中锚点（周四）归属年度 / 季度，避免同一周被拆开。
+- “🎯 定位未处理”和同单已处理 SKU 折叠逻辑保留。
+- 不修改 `placedOrders`、收货批次或 localStorage 数据结构，只替换历史视图层。
+- Service Worker cache 更新为 `cassola-suite-v055`。
+
+---
+
 ## Inventory v0.6.1 · Order Inbox & Archive
 **2026-10-05**
 
