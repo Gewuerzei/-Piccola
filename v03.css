@@ -157,3 +157,20 @@
 .ei-diff-row.changed .ei-values em{color:var(--warn);background:rgba(243,207,122,.055)}.ei-diff-row.large{border-color:rgba(255,141,145,.18);background:rgba(255,141,145,.025)}.ei-diff-row.large .ei-values em{color:var(--danger);background:rgba(255,141,145,.06)}
 .ei-import-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.ei-import-actions .btn{min-height:46px;border-radius:16px}
 @media(max-width:460px){.ei-meta{grid-template-columns:1fr}.ei-diff-row{align-items:flex-start}.ei-stats{grid-template-columns:1fr 1fr 1fr}}
+
+/* Cassola Fat UI v0.1 · order / receiving surfaces */
+.v3-segment,.v4-area-tabs{padding:6px;border-radius:24px;gap:7px}
+.v3-segment button,.v4-area-tabs button{min-height:46px;border-radius:18px;padding:11px 7px}
+.v3-placed-card{border-radius:30px;padding:17px;box-shadow:var(--fat-shadow)}
+.v4-receive-area{border-radius:25px;padding:11px}
+.v3-receive-row{border-radius:24px;padding:14px}
+.v3-stepper{grid-template-columns:56px 1fr 56px;gap:10px;margin-top:12px}
+.v3-stepper button,.v3-stepper input{min-height:50px;border-radius:19px}
+.v4-receive-actions button{min-height:44px;border-radius:17px;padding:9px 6px}
+.v4-receiving-bell{border-radius:24px;padding:14px 15px}
+.v4-bell-icon{width:40px;height:40px;border-radius:15px}
+.v3-subcard{border-radius:23px;padding:14px}
+.v31-status>div,.v31-diff-grid>div,.v31-compare>div:not(.v31-arrow){border-radius:21px;padding:13px}
+.v4-settled-fold>button,.v4-archive-periods button{min-height:47px;border-radius:18px;padding:11px 13px}
+#v3SkuDialog,#v31ImportDialog{border-radius:34px;padding:20px}
+.v31-import-banner{border-radius:21px;padding:14px}
