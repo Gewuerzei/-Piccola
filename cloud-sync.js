@@ -3,13 +3,15 @@
   const API='https://ktdgxaxkuqwrdqttcajt.supabase.co/functions/v1/cassola-cloud';
   const META_KEY='cassola_cloud_meta_v01';
   const DEVICE_KEY='cassola_cloud_device_v01';
+  const IDENTITY_KEY='cassola_cloud_identity_v01';
+  const OUTBOX_KEY='cassola_cloud_outbox_v01';
   const SCOPES=[
     {id:'sushi',label:'🍣 Sushi'},
     {id:'cucina',label:'🔪 Cucina'},
     {id:'bar',label:'🍸 Bar / Sala'},
     {id:'common',label:'📦 Comune'}
   ];
-  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null;
+  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null,reconnectCode=null;
 
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -21,6 +23,45 @@
     if(!id){id=crypto.randomUUID?.()||('device-'+Date.now()+'-'+Math.random().toString(36).slice(2));localStorage.setItem(DEVICE_KEY,id)}
     return id;
   }
+  function readIdentityCache(){
+    try{return JSON.parse(localStorage.getItem(IDENTITY_KEY)||'{}')||{}}catch(_){return{}}
+  }
+  function cachedIdentity(id){
+    const row=readIdentityCache()[String(id||'')];
+    return row&&typeof row==='object'?clone(row):null;
+  }
+  function cacheIdentity(row){
+    if(!row?.id)return;
+    const all=readIdentityCache();
+    all[row.id]={id:row.id,displayName:row.displayName||null,label:row.label||'',role:row.role||'',updatedAt:new Date().toISOString()};
+    localStorage.setItem(IDENTITY_KEY,JSON.stringify(all));
+  }
+  function readOutbox(){
+    try{const x=JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');return Array.isArray(x)?x:[]}catch(_){return[]}
+  }
+  function writeOutbox(rows){localStorage.setItem(OUTBOX_KEY,JSON.stringify(rows))}
+  function outboxCount(credentialId){
+    const id=String(credentialId||credential?.id||'');
+    return readOutbox().filter(x=>!id||x.credentialId===id).length;
+  }
+  function queueOutbox(type,payload,credentialId){
+    const id=String(credentialId||payload?.credentialId||credential?.id||'');
+    if(!id)throw new Error('credential_required');
+    let rows=readOutbox();
+    if(type==='employee_submission'){
+      rows=rows.filter(x=>!(x.type===type&&x.credentialId===id&&x.payload?.effectiveKey===payload?.effectiveKey));
+    }
+    if(type==='sku_proposal'&&payload?.proposalId){
+      rows=rows.filter(x=>!(x.type===type&&x.credentialId===id&&x.payload?.proposalId===payload.proposalId));
+    }
+    rows.push({id:crypto.randomUUID?.()||String(Date.now()+Math.random()),type,credentialId:id,payload:clone(payload),queuedAt:new Date().toISOString()});
+    writeOutbox(rows);
+    window.dispatchEvent(new CustomEvent('cassola-cloud-outbox-change',{detail:{count:outboxCount(id)}}));
+    return rows[rows.length-1];
+  }
+  function queueEmployeeSubmission(payload){return queueOutbox('employee_submission',payload,payload?.credentialId)}
+  function queueSkuProposal(payload){return queueOutbox('sku_proposal',payload,credential?.id)}
+
   function readMeta(){
     try{
       const x=JSON.parse(localStorage.getItem(META_KEY)||'null')||{};
@@ -192,14 +233,21 @@
   }
   async function login(code){
     const data=await api('login',{code,deviceId:deviceId()},6000);
-    token=data.sessionToken;credential=data.credential||null;
+    token=data.sessionToken;credential=data.credential||null;reconnectCode=String(code||'');
+    if(credential)cacheIdentity(credential);
     injectUi();
     await refreshStatus({silent:false}).catch(()=>{});
     startTimer();
     return data.credential;
   }
+  function rememberAccessCode(code){reconnectCode=String(code||'')}
+  async function reconnect(){
+    if(token)return credential;
+    if(!navigator.onLine||!reconnectCode)return null;
+    try{return await login(reconnectCode)}catch(err){console.warn('Cassola Cloud reconnect failed',err);return null}
+  }
   async function logout(){
-    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;renderCloudUi();
+    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;reconnectCode=null;renderCloudUi();
     if(old){
       token=old;try{await api('logout',{},2500)}catch(_){}finally{token=null}
     }
@@ -361,6 +409,46 @@
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
   }
+  async function submitSkuProposal(proposal){
+    if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
+    const data=await api('employee_sku_proposal',{proposal,deviceId:deviceId()},10000);
+    if(typeof showToast==='function')showToast('🧪 SKU 提议已交给 Supervisor');
+    await refreshStatus({silent:true}).catch(()=>{});
+    return data;
+  }
+  async function listSkuProposals(statuses=['pending']){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('sku_proposals',{statuses},10000);
+  }
+  async function reviewSkuProposal(id,decision){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    const data=await api('sku_proposal_review',{id,decision},8000);
+    await refreshStatus({silent:true}).catch(()=>{});
+    return data;
+  }
+  async function flushOutbox(){
+    if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
+    const id=credential?.id,all=readOutbox(),mine=all.filter(x=>x.credentialId===id);
+    if(!mine.length)return{sent:0,failed:0};
+    let sent=0,failed=0,remaining=all.slice();
+    for(const row of mine){
+      try{
+        if(row.type==='employee_submission')await api('employee_submit',{payload:row.payload},12000);
+        else if(row.type==='sku_proposal')await api('employee_sku_proposal',{proposal:row.payload,deviceId:deviceId()},10000);
+        else continue;
+        remaining=remaining.filter(x=>x.id!==row.id);sent++;
+      }catch(err){
+        if(err?.data?.error==='duplicate_submission'||err?.data?.error==='duplicate_proposal'){
+          remaining=remaining.filter(x=>x.id!==row.id);sent++;continue;
+        }
+        failed++;
+      }
+    }
+    writeOutbox(remaining);
+    window.dispatchEvent(new CustomEvent('cassola-cloud-outbox-change',{detail:{count:outboxCount(id)}}));
+    await refreshStatus({silent:true}).catch(()=>{});
+    return{sent,failed};
+  }
   async function reviewEmployee(id,decision,note=''){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     const data=await api('employee_review',{id,decision,note},8000);
@@ -426,12 +514,13 @@
     if(hub){
       if(!online)hub.innerHTML='<span>☁️ Cloud</span><b>未连接</b>';
       else{
-        const pending=lastStatus?.pendingEmployeeSubmissions||0,heads=lastStatus?.heads||[];
+        const pending=lastStatus?.pendingEmployeeSubmissions||0,proposalPending=lastStatus?.pendingSkuProposals||0,heads=lastStatus?.heads||[];
         const issues=heads.filter(h=>['cloud','conflict','branch'].includes(statusInfo(h.scope_id,h).cls)).length;
-        hub.innerHTML='<span>☁️ Cassola Piccola Cloud</span><b>'+(issues?('⚠️ '+issues+' 区需核对'):'✅ 已检查')+(pending?(' · 👷 '+pending+' 待审核'):'')+'</b>';
+        hub.innerHTML='<span>☁️ Cassola Piccola Cloud</span><b>'+(issues?('⚠️ '+issues+' 区需核对'):'✅ 已检查')+(pending?(' · 👷 '+pending+' 盘货'):'')+(proposalPending?(' · 🧪 '+proposalPending+' 提议'):'')+'</b>';
       }
     }
     const p=document.getElementById('cloudPendingCount');if(p)p.textContent=String(lastStatus?.pendingEmployeeSubmissions||0);
+    const sp=document.getElementById('cloudProposalCount');if(sp)sp.textContent=String(lastStatus?.pendingSkuProposals||0);
   }
 
   function injectUi(){
@@ -485,11 +574,15 @@
   }
   function stopTimer(){if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null}}
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&token)refreshStatus({silent:false}).catch(()=>{})});
+  window.addEventListener('online',()=>{if(!token&&reconnectCode)reconnect().then(()=>window.dispatchEvent(new CustomEvent('cassola-cloud-reconnected'))).catch(()=>{})});
   document.addEventListener('DOMContentLoaded',injectUi);
 
   window.CassolaCloud={
     login,logout,connected,role,refreshStatus,upload,download,checkpoint,
     submitEmployee,reviewEmployee,openPending,
+    submitSkuProposal,listSkuProposals,reviewSkuProposal,
+    queueEmployeeSubmission,queueSkuProposal,flushOutbox,outboxCount,
+    rememberAccessCode,reconnect,cachedIdentity,
     captureScope,mergeScope,meta:readMeta,deviceId,
     session:()=>credential?clone(credential):null,
     employeeCatalog:()=>employeeCatalog===null?null:clone(employeeCatalog),
