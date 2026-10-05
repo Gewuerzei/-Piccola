@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Hotfix · iPhone Accent picker
+**2026-10-06**
+
+- 修复 iPhone / PWA 设置页 Accent（石墨 / 抹茶 / 海蓝 / 樱色）点击后可能没有切换反馈的问题。
+- Theme 控件改为卡片创建后直接绑定 click handler，不再依赖全局 document delegation。
+- 主题状态新增 mode / accent 白名单校验，并在切换时同步 `active` 与 `aria-pressed`。
+- Accent 选中态改为每种颜色自己的边框 / 底色，现场能立即看出已切换；点击后同时给出简短 Toast。
+- 不改 Inventory / Staff / Cloud 数据结构，也不清空任何 localStorage。
+- Service Worker cache 更新为 `cassola-suite-v067`。
+
+---
+
 ## Cloud Hotfix · service_role Data API grants
 **2026-10-06**
 
