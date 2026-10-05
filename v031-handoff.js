@@ -139,11 +139,11 @@ function v31InjectUi(){
     <form method="dialog" class="v31-import-form">
       <div class="dialog-head">
         <div><div class="eyebrow">JSON HANDOFF</div><h3>导入前核对</h3></div>
-        <button value="cancel" class="icon-btn">✕</button>
+        <button value="cancel" formnovalidate class="icon-btn">✕</button>
       </div>
       <div id="v31ImportSummary"></div>
       <div class="v31-import-actions">
-        <button value="cancel" class="btn secondary">取消</button>
+        <button value="cancel" formnovalidate class="btn secondary">取消</button>
         <button id="v31ForceBtn" value="default" class="btn danger ghost hidden">强制采用</button>
         <button id="v31AcceptBtn" value="default" class="btn primary">确认导入</button>
       </div>
