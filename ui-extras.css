@@ -90,3 +90,8 @@
 }
 :root[data-theme="light"] .nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,transparent)}
 :root[data-theme="light"] .nav-btn.active span{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+
+/* Staff Theme Controls v0.1 */
+.staff-settings-card.ui-theme-card{gap:16px}
+.staff-settings-card.ui-theme-card h3{margin:0}
+.staff-settings-card.ui-theme-card p{margin:0}
