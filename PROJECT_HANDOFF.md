@@ -11,7 +11,7 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
-- Access: **v0.4 · Cloud Sessions + Scoped Employee Submission**
+- Access: **v0.5 · Named Employee UI + Offline Outbox + SKU Proposals**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
@@ -52,6 +52,26 @@ Employee Mode 当前：
 - 多人同日提交时，未来 Supervisor 导入器以 `submittedAt` 最新的一份作为 active；旧提交保留为 superseded 历史
 - Supervisor 已支持导入 scoped JSON、差异预览和人工采用；同责任区同一天只允许一个 active submission
 
+### Employee identity / offline / SKU proposal
+
+- 公开仓库继续只保存匿名 credential：`produce_a / produce_b`。**真实员工显示名不得写入 GitHub。**
+- 私有显示名保存在 Supabase `access_credentials.display_name`；Cloud 登录成功后只把当前 credential 的显示名返回客户端。
+- 显示名会缓存到本机 `cassola_cloud_identity_v01`，因此同一设备以后离线 PIN 登录仍可显示“负责人：…”；从未联网过的新设备离线时显示通用员工名。
+- Access Code 本地 PBKDF2 校验仍保留，所以**完全断网也能进入 Employee / Supervisor 本地界面**。
+- Cloud SKU catalog 会缓存到 `cassola_employee_catalog_v01`；重新打开 PWA 且断网时，优先用最近一次 Cloud 正式目录，而不是退回旧 seed。
+- 离线员工提交使用 `cassola_cloud_outbox_v01`。当前支持：
+  - `employee_submission`
+  - `sku_proposal`
+- 恢复网络后 Cloud session 可自动重连，但**Outbox 不静默自动提交**；员工必须自己点击“上传待发送”。
+- 员工可对 scope 内 SKU 提交：
+  - `sku_change`：规格 / 库存单位 / 订货单位 / 包装倍率提议
+  - `sku_issue`：只报告问题
+  - `new_sku`：现场发现新 SKU，可带规格、单位、区域和现场数量
+- 员工提议永远不能直接修改 canonical Inventory。Supabase 表：`employee_sku_proposals`。
+- Supervisor 在本地明确“采用到本机”后才修改 Inventory；采用后仍需 Supervisor 自己上传 Cloud。
+- 新 SKU 由员工提议采用后默认 `supplier = 待确认`、`autoOrder = false`，避免未经核对就进入自动订货。
+- 单位输入提供常用建议，但允许自定义文本；所有自定义值都必须经过 Supervisor proposal review 才能进入正式 SKU。
+
 ### Employee submission import invariant
 
 Supervisor 导入员工盘货包时必须遵守：
@@ -85,6 +105,10 @@ Hub 文件：
 - `hub.css`
 - `cloud-sync.js`
 - `cloud.css`
+- `employee-tools.js` / `employee-tools.css`
+- `inventory-insights.js` / `inventory-insights.css`
+- `analytics.js` / `analytics.css`
+- `ui-extras.js` / `ui-extras.css`
 
 首次打开默认进入主菜单。Inventory 和 Staff 各自管理自己的本地数据，避免互相污染。
 
@@ -282,6 +306,51 @@ Supervisor：
 - 🌿 diverged / 分叉
 
 **任何状态都不会自动执行下载。**
+
+## 2.3 UI / Intelligence Layer
+
+新增模块：
+- `employee-tools.js / .css`：员工 SKU 详情、规格/单位/新 SKU proposal、Supervisor review
+- `ui-extras.js / .css`：设备本地主题 + 全局 command search
+- `inventory-insights.js / .css`：盘货差异摘要 / 大幅变化复核
+- `analytics.js / .css`：供应商战绩、Price Radar、Staff 检察院
+
+### Theme
+- localStorage：`cassola_ui_theme_v01`
+- 外观：跟随系统 / 日间 / 夜间
+- Accent：石墨 / 抹茶 / 海蓝 / 樱色
+- 主题是**设备个人偏好**，不进入 Inventory Cloud snapshot。
+
+### Global Search
+Supervisor Hub / Inventory 顶部提供全局搜索。当前索引：
+- SKU 名称 / 规格 / 供应商 / category / area
+- Supplier
+- 未处理订单
+- 最近可比涨价 SKU
+- Cloud 员工盘货 inbox
+- Cloud SKU proposal inbox
+- 供应商战绩
+- Staff 检察院
+- 外观设置
+
+搜索是运行时索引，不另建重复业务数据库。
+
+### Count difference review
+批量盘货保存后：
+- 继续写标准 `count` history，包括“数量未变”的盘货点，避免破坏周耗计算样本。
+- UI 显示：完成项 / 有变化 / 大幅变化。
+- 大幅变化只提醒，不阻止保存。
+- 大幅判定目前综合绝对差值与比例阈值；可点“回盘货复核”重新定位这些 SKU。
+
+### Stockout forecast
+- `v3StockoutText(s)` 将历史周耗覆盖量转成近似天数。
+- 低中期库存显示“预计约 N 天后见底 · 周X附近”；长周期改显示约 N 周。
+- 这是基于历史平均周耗的**估算**，不应当成承诺日期。
+
+### Analytics
+- 供应商战绩：从 `placedOrders / lineStatus / receiptBatches` 推导订单数、结案准确率、少到/缺货率、挂起行；不另造人工评分。
+- Price Radar：只比较同供应商、同规格、同报价单位且 IVA 基准可比的 priceRecords。
+- Staff 检察院：只读扫描本地 `cassola_staff_v01` 的 missing person、孤立 swap/move、active swap 与当前 attendance 脱链等结构异常；**绝不自动修改 Staff 数据**。
 
 # Inventory
 
