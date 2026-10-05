@@ -125,8 +125,9 @@
         return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">查看详情</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></div>';
       }).join(''):'<div class="empty">这个责任区没有可盘 SKU。</div>')+
       '</div>'+
-      '<div class="cassola-employee-actions"><button type="button" class="btn secondary" data-employee-clear>清空今日</button><button type="button" class="btn secondary" data-employee-new-sku>＋ 现场新 SKU</button><button type="button" class="btn primary large" data-employee-cloud>☁️ 上传今日盘货</button>'+(queued?'<button type="button" class="btn secondary employee-outbox-btn" data-employee-outbox>📤 上传待发送 '+queued+'</button>':'')+'<button type="button" class="btn secondary" data-employee-export>📄 JSON 备用</button></div>'+
+      '<div class="cassola-employee-secondary-actions"><button type="button" class="btn secondary" data-employee-clear>清空今日</button><button type="button" class="btn secondary" data-employee-new-sku>＋ 现场新 SKU</button>'+(queued?'<button type="button" class="btn secondary employee-outbox-btn" data-employee-outbox>📤 上传待发送 '+queued+'</button>':'')+'<button type="button" class="btn secondary" data-employee-export>📄 JSON 备用</button></div>'+
       '<div class="cassola-employee-foot">'+(queued?('📵 本机还有 '+queued+' 份待发送 · 恢复网络后由员工手动提交'):'联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用')+'</div>'+
+      '<div class="cassola-employee-upload-dock"><button type="button" class="btn primary large" data-employee-cloud>☁️ 上传今日盘货</button></div>'+
       '</div>';
     window.CassolaEmployeeTools?.enhance?.();
   }
