@@ -2,6 +2,17 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Fix · Dialog Cancel Validation
+**2026-10-05**
+
+- 修复 SKU 新建 / 编辑弹窗在必填项为空时，右上角 ✕ 和“取消”无法关闭的问题。
+- 根因：`<form method="dialog">` 内的 cancel button 仍会触发表单 constraint validation；存在 `required` 字段时浏览器会拦截关闭。
+- 所有 Inventory / Staff / JSON 导入审核相关 dialog 的 cancel / close submit button 统一增加 `formnovalidate`。
+- 关闭 / 取消现在明确绕过 required 校验，同时保留原生 dialog 关闭语义。
+- Service Worker cache 更新为 `cassola-suite-v059`。
+
+---
+
 ## Suite Access v0.3 · Supervisor Employee Import
 **2026-10-05**
 
