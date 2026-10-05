@@ -11,11 +11,12 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
-- Access: **v0.3 · Pre-registered Roles + Employee Import**
+- Access: **v0.4 · Cloud Sessions + Scoped Employee Submission**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
-- 无 Supabase / Firebase / 自建后端
-- 多设备协作目前使用 **群聊 JSON 数据包交接**
+- Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
+- 架构：**local-first + manual cloud sync**；JSON 保留为独立冷备份 / fallback
+- Staff 当前仍为本地模块，不参与 Cloud v0.1 同步
 
 仓库是公开仓库。**不要提交员工头像、真实员工名单、账号密码、API secret、工资或其他敏感经营数据。**
 
@@ -82,6 +83,8 @@ Cassola Hub
 Hub 文件：
 - `hub.js`
 - `hub.css`
+- `cloud-sync.js`
+- `cloud.css`
 
 首次打开默认进入主菜单。Inventory 和 Staff 各自管理自己的本地数据，避免互相污染。
 
@@ -183,6 +186,101 @@ Inventory 用：
 7. 若实机结果与静态判断冲突，以实机为准继续修
 
 ---
+
+## 2.2 Cassola Cloud v0.1
+
+Cloud v0.1 的核心规则：
+
+- **本地优先**：Inventory 正式本地工作副本仍是 `cassola_inventory_v01`。云端故障 / 断网不能阻止 Supervisor 进入和使用本地 Inventory。
+- **下载永远手动**：PWA 只自动检查云端 Head 是否变化；不会自动把云端数据覆盖到本机。
+- **上传可全店，也可单独 scope**：Supervisor 可上传全部四区，或只上传 Sushi / Cucina / Bar-Sala / Comune。
+- **版本不按数字大小判断新旧**：每个 scope 使用 parent lineage。只有后代关系才叫“云端更新”；共同祖先后各自修改则为 branch / diverged。
+- **分叉不会抢 Head**：基于非当前 Head 上传时，只创建 branch version，不修改 canonical `cloud_scope_heads`。
+- **恢复不删历史**：从历史版本恢复会基于当前 Head 创建新的 restore version；旧错误版本继续保留审计。
+- **当前状态 + patch + checkpoint**：Head 保存当前完整 scope state；普通版本只保存 patch；checkpoint 保存完整 state。
+- **自动 checkpoint**：不是 cron 定时器，而是在 canonical upload 时检查。若距上次 checkpoint ≥ 14 天，则自动生成一次完整 checkpoint。
+- **手动 checkpoint**：Supervisor 可随时对选定 scope 创建完整 checkpoint，并可填写备注。要保存本机尚未上传的状态，应先上传再创建 checkpoint。
+- **JSON 永远保留**：下载云端前 PWA 会先自动导出一份完整本机 JSON 安全备份；设置页原有完整 JSON 导出继续存在。
+- **Employee append-only**：员工联网时只上传新的 `employee_submission`，不能直接修改 canonical Inventory。JSON employee package 继续保留作离线备用。
+- **Staff 不同步**：Cloud v0.1 只覆盖 Inventory scope + employee submission inbox。
+
+### Cloud scope
+
+固定 scope：
+- `sushi` = 🍣 Sushi
+- `cucina` = 🔪 Cucina
+- `bar` = 🍸 Bar / Sala
+- `common` = 📦 Comune
+
+全店不是一个“越来越大的 revision number”，而是四个 scope Head 的组合。Supervisor 拥有全店操作权，但 partial sync 仍是首等功能。
+
+### Supabase 数据结构
+
+核心表：
+- `cloud_scopes`
+- `cloud_scope_heads`
+- `cloud_versions`
+- `cloud_checkpoints`
+- `cloud_audit_events`
+- `access_credentials`
+- `access_sessions`
+- `access_rate_limits`
+- `employee_submissions`
+- `employee_submission_items`
+
+关键 RPC：
+- `cassola_apply_upload_batch`
+- `cassola_materialize_version`
+- `cassola_create_checkpoint`
+- `cassola_version_relation`
+- `cassola_employee_submit`
+- `cassola_employee_review`
+
+Edge Function：
+- `cassola-cloud`
+- 自定义 Access Code → 短期 Cloud session
+- 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
+- public / anon / authenticated 对 Cloud 表没有直接访问权限
+- 所有 Cloud 表启用 RLS；没有开放 RLS policy 是刻意的 deny-by-default 设计
+
+### Cloud 本地元数据
+
+- `cassola_cloud_meta_v01`：每 scope 记录本机基于哪个 cloud version、local fingerprint、lastSyncAt 等
+- `cassola_cloud_device_v01`：匿名设备 ID
+- Cloud session token **不写入 localStorage**，只存在当前页面运行时
+
+### Scope snapshot 当前包含
+
+Inventory scope snapshot 包含：
+- 当前 scope 的 SKU 主数据 / qty / 包装单位
+- hidden SKU
+- order draft
+- history
+- priceRecords
+- placedOrders 中属于该 scope 的 item 与 receipt batch lines
+
+跨区域供应商订单在 Cloud 层按 item 所属 area 拆分后，再按 order id 合并回本机。**把 SKU 从一个 area 移到另一个 area 属于跨 scope 变更，完成此类操作后优先使用“上传全店”。**
+
+### Cloud UI / 交互
+
+Supervisor：
+- ☁️ 上传所选区域
+- ⬇️ 下载所选区域
+- ☁️ 上传全店
+- ⬇️ 下载全店
+- 📸 手动 checkpoint
+- 🕰️ 版本历史 / restore
+- 👷 云端员工盘货待审核
+- ↻ 检查云端
+
+自动检查时只比较 Head lineage 并提醒：
+- ✅ same / 已同步
+- 📱 same + local dirty / 本机有未上传修改
+- ☁️ cloud descendant / 云端 Head 已变化
+- ⚠️ cloud descendant + local dirty / 双方都有变化
+- 🌿 diverged / 分叉
+
+**任何状态都不会自动执行下载。**
 
 # Inventory
 
