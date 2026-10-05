@@ -34,3 +34,17 @@
 .cassola-cloud-hub-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border-radius:18px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);margin:10px 0 14px}
 .cassola-cloud-hub-summary span{font-size:9px;color:var(--muted)}.cassola-cloud-hub-summary b{font-size:9.5px;text-align:right}
 @media(max-width:460px){.cloud-actions{grid-template-columns:1fr}.cloud-actions.small{grid-template-columns:1fr 1fr}.cloud-version-top{flex-direction:column}.cloud-version-tags{justify-content:flex-start}.cloud-sub-actions{grid-template-columns:1fr}}
+
+/* Cassola Fat UI v0.1 · Cloud surfaces */
+.cloud-card{gap:15px}
+.cloud-connection{padding:8px 11px}
+.cloud-scope-row{padding:13px 14px;border-radius:20px}
+.cloud-offline-note,.cloud-rule{padding:11px 12px;border-radius:18px}
+.cloud-scope-select select{min-height:50px;border-radius:19px}
+.cloud-actions{gap:9px}
+.cloud-actions .btn{min-height:48px;border-radius:19px}
+.cloud-dialog{border-radius:34px}
+.cloud-dialog>form{padding:21px;gap:14px}
+.cloud-notice-row{padding:12px 13px;border-radius:19px}
+.cloud-version,.cloud-submission{padding:14px;border-radius:21px}
+.cassola-cloud-hub-summary{padding:13px 15px;border-radius:22px}
