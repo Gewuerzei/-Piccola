@@ -48,3 +48,10 @@
 .cloud-notice-row{padding:12px 13px;border-radius:19px}
 .cloud-version,.cloud-submission{padding:14px;border-radius:21px}
 .cassola-cloud-hub-summary{padding:13px 15px;border-radius:22px}
+
+/* Cassola Hub Theme Coverage v0.1 */
+:root[data-theme="light"] .cassola-cloud-hub-summary{
+  background:rgba(255,255,255,.74);
+  border-color:var(--line);
+  box-shadow:0 8px 22px rgba(73,65,52,.07);
+}
