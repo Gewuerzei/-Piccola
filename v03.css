@@ -83,7 +83,7 @@
 .v45-spec-warning{padding:10px 11px;border-radius:15px;background:rgba(243,207,122,.065);border:1px solid rgba(243,207,122,.16);color:var(--warn);font-size:9.5px;line-height:1.45}
 
 
-/* Inventory v0.6.1 · active receiving inbox + half-month archive */
+/* Inventory v0.6.2 · active receiving inbox + year / quarter / week archive */
 .v4-bell-copy{display:flex;align-items:center;gap:10px;min-width:0}
 .v4-bell-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
 .v4-bell-actions>span{font-size:9px;font-weight:850;color:var(--warn);padding:6px 8px;border-radius:999px;background:rgba(243,207,122,.08);white-space:nowrap}
@@ -125,3 +125,7 @@
   .v4-bell-actions{flex-direction:column;align-items:flex-end}
   .v4-archive-periods{grid-template-columns:1fr}
 }
+
+.v4-current-week{display:flex;flex-direction:column;gap:11px;margin-top:18px}
+.v4-archive-level{display:flex;flex-direction:column;gap:7px}
+.v4-archive-level-title{padding:2px 3px;color:var(--muted);font-size:9px;font-weight:850;letter-spacing:.03em}
