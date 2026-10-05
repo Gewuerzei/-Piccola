@@ -328,6 +328,8 @@ Supervisor：
 - localStorage：`cassola_ui_theme_v01`
 - 外观：跟随系统 / 日间 / 夜间
 - Accent：石墨 / 抹茶 / 海蓝 / 樱色
+- Accent 按钮使用直接绑定的 click handler，并同步 `active / aria-pressed`；这是为 iPhone PWA 现场点击可靠性做的 hotfix，不要退回只靠 document delegation。
+- 主题读取会校验 mode / accent 白名单；异常主题值只回退主题默认值，**不得清空任何 Inventory / Staff localStorage**。
 - 主题是**设备个人偏好**，不进入 Inventory Cloud snapshot。
 
 ### Global Search
