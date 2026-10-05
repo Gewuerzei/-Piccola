@@ -371,7 +371,7 @@
 
       <dialog class="staff-dialog" id="staffPersonDialog">
         <form method="dialog" id="staffPersonForm">
-          <div class="dialog-head"><div><div class="eyebrow">STAFF</div><h3 id="staffPersonDialogTitle">新增人员</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">STAFF</div><h3 id="staffPersonDialogTitle">新增人员</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-photo-preview" id="staffPhotoPreview">👤</div>
           <div class="staff-photo-actions">
             <label class="btn secondary staff-file-label">选择头像<input id="staffPhotoInput" type="file" accept="image/*"></label>
@@ -385,7 +385,7 @@
           <label>备注<textarea id="staffPersonNote" placeholder="例如：只上晚班 / 可顶 Maki"></textarea></label>
           <div class="staff-dialog-actions">
             <button type="button" class="btn danger ghost" id="staffDeletePerson">删除</button>
-            <button value="cancel" class="btn secondary">取消</button>
+            <button value="cancel" formnovalidate class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffSavePerson">保存</button>
           </div>
         </form>
@@ -393,14 +393,14 @@
 
       <dialog class="staff-dialog" id="staffMoveDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">MOVE</div><h3 id="staffMoveTitle">安排岗位</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">MOVE</div><h3 id="staffMoveTitle">安排岗位</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-move-grid" id="staffMoveGrid"></div>
         </form>
       </dialog>
 
       <dialog class="staff-dialog" id="staffAttendanceDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">ATTENDANCE</div><h3 id="staffAttendanceTitle">记录状态</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">ATTENDANCE</div><h3 id="staffAttendanceTitle">记录状态</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-attendance-grid" id="staffAttendanceChoices">
             <button type="button" data-att-status="work">· 上班</button>
             <button type="button" data-att-status="rest">💤 休息</button>
@@ -427,7 +427,7 @@
             <button type="button" class="btn secondary hidden" id="staffSwapRestBtn">🔄 与他人换休</button>
             <button type="button" class="btn secondary hidden" id="staffMoveRestBtn">↪️ 移动自己的休息日</button>
             <button type="button" class="btn secondary hidden staff-swap-manage-btn" id="staffManageSwapBtn">↩️ 处理这次换休</button>
-            <button value="cancel" class="btn secondary">取消</button>
+            <button value="cancel" formnovalidate class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffSaveAttendance">保存</button>
           </div>
         </form>
@@ -435,14 +435,14 @@
 
       <dialog class="staff-dialog" id="staffSwapDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">REST SWAP</div><h3 id="staffSwapTitle">交换休息日</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">REST SWAP</div><h3 id="staffSwapTitle">交换休息日</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-swap-source" id="staffSwapSource"></div>
           <label>与谁换<select id="staffSwapPartner"></select></label>
           <label>对方的休息日<select id="staffSwapTargetDate"></select></label>
           <label>谁发起这次换休<select id="staffSwapInitiator"></select></label>
           <label>备注<textarea id="staffSwapNote" placeholder="例如：临时有事 / 双方同意"></textarea></label>
           <div class="staff-dialog-actions">
-            <button value="cancel" class="btn secondary">取消</button>
+            <button value="cancel" formnovalidate class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffConfirmSwap">确认交换</button>
           </div>
         </form>
@@ -450,12 +450,12 @@
 
       <dialog class="staff-dialog" id="staffSwapLifecycleDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">SWAP LIFECYCLE</div><h3 id="staffSwapLifecycleTitle">处理换休</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">SWAP LIFECYCLE</div><h3 id="staffSwapLifecycleTitle">处理换休</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-swap-source" id="staffSwapLifecycleSource"></div>
           <div class="staff-swap-lifecycle-tip">两种操作都会恢复换休前的休息日。区别只在历史语义：手滑用“撤销”；后来反悔、请求未通过或重新安排，用“后续修改”。</div>
           <label>说明（可选）<textarea id="staffSwapLifecycleNote" placeholder="例如：手滑 / 请求未通过 / 后来重新安排"></textarea></label>
           <div class="staff-swap-lifecycle-actions">
-            <button value="cancel" class="btn secondary">取消</button>
+            <button value="cancel" formnovalidate class="btn secondary">取消</button>
             <button type="button" class="btn danger ghost" id="staffRevokeSwap">↩️ 撤销（手滑）</button>
             <button type="button" class="btn primary" id="staffSupersedeSwap">📝 后续修改</button>
           </div>
@@ -464,12 +464,12 @@
 
       <dialog class="staff-dialog" id="staffRestMoveDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">REST MOVE</div><h3 id="staffRestMoveTitle">移动休息日</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">REST MOVE</div><h3 id="staffRestMoveTitle">移动休息日</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-swap-source" id="staffRestMoveSource"></div>
           <label>改休到<input id="staffRestMoveTarget" type="date"></label>
           <label>备注<textarea id="staffRestMoveNote" placeholder="例如：临时有事 / 已批准"></textarea></label>
           <div class="staff-dialog-actions">
-            <button value="cancel" class="btn secondary">取消</button>
+            <button value="cancel" formnovalidate class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffConfirmRestMove">确认移动</button>
           </div>
         </form>
@@ -477,14 +477,14 @@
 
       <dialog class="staff-dialog" id="staffWeekVersionsDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">WEEK VERSIONS</div><h3 id="staffWeekVersionsTitle">周表版本</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">WEEK VERSIONS</div><h3 id="staffWeekVersionsTitle">周表版本</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-week-version-list" id="staffWeekVersionList"></div>
         </form>
       </dialog>
 
       <dialog class="staff-dialog" id="staffPersonRecordsDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">PERSON RECORDS</div><h3 id="staffPersonRecordsTitle">人员记录</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">PERSON RECORDS</div><h3 id="staffPersonRecordsTitle">人员记录</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-person-record-summary-grid" id="staffPersonRecordsSummary"></div>
           <div class="staff-person-record-filters">
             <button type="button" class="active" data-person-record-filter="all">全部</button>
@@ -498,10 +498,10 @@
 
       <dialog class="staff-dialog" id="staffImportDialog">
         <form method="dialog">
-          <div class="dialog-head"><div><div class="eyebrow">JSON HANDOFF</div><h3>导入前核对</h3></div><button value="cancel" class="icon-btn">✕</button></div>
+          <div class="dialog-head"><div><div class="eyebrow">JSON HANDOFF</div><h3>导入前核对</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div id="staffImportSummary"></div>
           <div class="staff-dialog-actions">
-            <button value="cancel" class="btn secondary">取消</button>
+            <button value="cancel" formnovalidate class="btn secondary">取消</button>
             <button type="button" class="btn danger ghost" id="staffForceImport">强制采用</button>
             <button type="button" class="btn primary" id="staffAcceptImport">确认导入</button>
           </div>
