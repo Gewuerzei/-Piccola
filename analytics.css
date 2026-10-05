@@ -7,3 +7,11 @@
 .prosecutor-summary{padding:9px 10px;border-radius:14px;font-size:9px;font-weight:800}.prosecutor-summary.ok{background:var(--good-bg);color:var(--good)}.prosecutor-summary.warn{background:var(--warn-bg);color:var(--warn)}
 .prosecutor-row{padding:9px 10px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.02)}.prosecutor-row strong{display:block;font-size:9.5px}.prosecutor-row small{display:block;margin-top:3px;color:var(--muted);font-size:8px}.prosecutor-row.warn{border-color:rgba(243,207,122,.15)}.prosecutor-row.danger{border-color:rgba(255,141,145,.18)}
 @media(max-width:520px){.analytics-row.supplier{align-items:flex-start;flex-direction:column}.analytics-metrics{justify-content:flex-start}.analytics-head{flex-direction:column}}
+
+/* Cassola Fat UI v0.1 · analytics surfaces */
+.analytics-card{gap:14px}
+.analytics-row{min-height:58px;padding:13px 14px;border-radius:20px}
+.analytics-metrics{gap:6px}
+.analytics-metrics span{padding:5px 8px}
+.prosecutor-summary{padding:11px 12px;border-radius:18px}
+.prosecutor-row{padding:11px 12px;border-radius:18px}
