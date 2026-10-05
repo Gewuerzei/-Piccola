@@ -330,6 +330,7 @@ Supervisor：
 - Accent：石墨 / 抹茶 / 海蓝 / 樱色
 - Inventory 设置页与 Staff 设置页都提供同一套主题控件；两处入口共同读写同一个设备级 `cassola_ui_theme_v01`。
 - Staff 不是独立主题。Inventory / Staff / Orders / Receiving 必须同时响应 `document.documentElement.dataset.theme / dataset.accent`。
+- Access Gate / Supervisor Hub / Employee 全屏入口也必须响应设备主题；这些页面不能保留硬编码 `#101218` 石头洞背景。
 - Orders / Receiving 与 Staff 的硬编码深色 surface 必须提供 light-theme override，不能出现“外层日间、收货卡仍黑色”的断层。
 - Accent 按钮使用直接绑定的 click handler，并同步 `active / aria-pressed`；这是为 iPhone PWA 现场点击可靠性做的 hotfix，不要退回只靠 document delegation。
 - 主题读取会校验 mode / accent 白名单；异常主题值只回退主题默认值，**不得清空任何 Inventory / Staff localStorage**。
