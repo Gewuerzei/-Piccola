@@ -1,4 +1,7 @@
-/* Inventory v0.4 · areas + open / partial receiving */
+/* Inventory v0.6.1 · active receiving inbox + half-month archive */
+let v4ArchivePeriodOpen=null;
+const v4ExpandedSettledOrders=new Set();
+let v4PendingFocusIndex=0;
 
 renderCategoryFilter=function(){
   const el=document.getElementById('categoryFilter'),cur=el.value||'全部';
@@ -139,45 +142,92 @@ function v4ReceiveRow(o,item){
     </div>`}
   </div>`;
 }
-function v4OrderAreaSections(o){
+function v4ActionItems(o){return (o.items||[]).filter(i=>!v4LineClosed(i)||i.dirty)}
+function v4SettledItems(o){return (o.items||[]).filter(i=>v4LineClosed(i)&&!i.dirty)}
+function v4OrderDone(o){return o.status==='received'||(v4ActionItems(o).length===0&&v4OrderDirty(o).length===0)}
+function v4OrderAreaSections(o,mode='all'){
   return v4Areas.map(a=>{
-    const items=(o.items||[]).filter(i=>(i.area||v4AreaOf(sku(i.skuId)))===a.id);
+    let items=(o.items||[]).filter(i=>(i.area||v4AreaOf(sku(i.skuId)))===a.id);
+    if(mode==='active')items=items.filter(i=>!v4LineClosed(i)||i.dirty);
+    else if(mode==='settled')items=items.filter(i=>v4LineClosed(i)&&!i.dirty);
     if(!items.length)return'';
     const outstanding=items.filter(i=>!v4LineClosed(i)||i.dirty).length;
     return `<section class="v4-receive-area"><div class="v4-area-head"><span>${a.icon} ${escapeHtml(a.label)}</span><b>${outstanding?('🔔 '+outstanding+' 待处理'):'✓ 已处理'}</b></div><div class="v3-receive-list">${items.map(i=>v4ReceiveRow(o,i)).join('')}</div></section>`;
   }).join('');
 }
-function v4RenderReceivingBell(){
+function v4RenderReceivingBell(activeOrders){
   const box=document.getElementById('v4ReceivingBell');if(!box)return;
-  const openOrders=(state.placedOrders||[]).filter(o=>o.status!=='received');
-  const items=openOrders.flatMap(o=>(o.items||[]).filter(i=>!v4LineClosed(i)||i.dirty));
+  const items=(activeOrders||[]).flatMap(v4ActionItems);
   if(!items.length){box.classList.add('hidden');box.innerHTML='';return}
   const later=items.filter(i=>i.lineStatus==='later'&&!i.dirty).length;
   const other=items.filter(i=>i.lineStatus==='other'&&!i.dirty).length;
   const pending=items.filter(i=>i.lineStatus==='pending').length;
   const unsaved=items.filter(i=>i.dirty&&i.lineStatus!=='pending').length;
   box.classList.remove('hidden');
-  box.innerHTML=`<div><span class="v4-bell-icon">🔔</span><div><b>还有 ${items.length} 项未结束</b><small>待核对 ${pending} · 晚到 ${later} · 待他人 ${other} · 待保存 ${unsaved}</small></div></div><span>${openOrders.length} 张单</span>`;
+  box.innerHTML=`<div class="v4-bell-copy"><span class="v4-bell-icon">🔔</span><div><b>还有 ${items.length} 项未结束</b><small>待核对 ${pending} · 晚到 ${later} · 待他人 ${other} · 待保存 ${unsaved}</small></div></div><div class="v4-bell-actions"><span>${activeOrders.length} 张单</span><button type="button" data-v4-focus-pending>🎯 定位未处理</button></div>`;
+}
+function v4ArchivePeriodKey(o){
+  const d=new Date(o.createdAt||0),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),half=d.getDate()<=15?'1':'2';
+  return `${y}-${m}-${half}`;
+}
+function v4ArchivePeriodLabel(key){
+  const [ys,ms,half]=String(key).split('-'),y=Number(ys),m=Number(ms),last=new Date(y,m,0).getDate();
+  return `${y}年${m}月${half==='1'?'上半月 · 1–15':'下半月 · 16–'+last}`;
+}
+function v4PlacedCard(o,archived=false){
+  v4NormalizeOrder(o);
+  const open=v4OrderOpenItems(o),dirty=v4OrderDirty(o),done=v4OrderDone(o),dirtyClosed=dirty.filter(i=>v4LineClosed(i)).length;
+  const settled=v4SettledItems(o),expanded=v4ExpandedSettledOrders.has(o.id);
+  const status=done?'✅ 已结案':(open.length?`🔔 ${open.length} 项未结束`:`💾 ${dirtyClosed} 项待保存`);
+  const batches=(o.receiptBatches||[]).length;
+  const body=done?v4OrderAreaSections(o,'all'):
+    v4OrderAreaSections(o,'active')+
+    (settled.length?`<div class="v4-settled-fold"><button type="button" data-v4-toggle-settled="${escapeHtml(o.id)}">${expanded?'▴ 收起':'▾ 查看'}已处理 ${settled.length} 项</button>${expanded?`<div class="v4-settled-body">${v4OrderAreaSections(o,'settled')}</div>`:''}</div>`:'');
+  return `<article class="v3-placed-card ${done?'done':'v4-open-order'} ${archived?'v4-archived-order':''}" data-v4-order-card="${escapeHtml(o.id)}">
+    <div class="v3-placed-head"><div><div class="eyebrow">${escapeHtml(o.supplier||'订单')}</div><h3>${new Date(o.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</h3><small class="v4-batch-count">${batches?('已保存 '+batches+' 次收货'):'尚未入库'}</small></div><span>${status}</span></div>
+    ${body}
+    <div class="v4-order-footer">
+      <button class="btn secondary" data-v4-copy-order="${escapeHtml(o.id)}">📋 复制订单</button>
+      <button class="btn secondary" data-v4-export-order="${escapeHtml(o.id)}">📤 本单 JSON</button>
+      ${done?`<div class="v3-finished">历史已保留。</div>`:`<button class="btn primary large" data-v3-finish="${escapeHtml(o.id)}" ${dirty.length?'':'disabled'}>📥 保存本次收货${dirty.length?' · '+dirty.length+'项':''}</button>`}
+    </div>
+  </article>`;
+}
+function v4ArchiveMarkup(doneOrders){
+  if(!doneOrders.length)return'';
+  const groups=new Map();
+  doneOrders.forEach(o=>{const key=v4ArchivePeriodKey(o);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(o)});
+  const keys=[...groups.keys()].sort().reverse();
+  if(v4ArchivePeriodOpen&&!groups.has(v4ArchivePeriodOpen))v4ArchivePeriodOpen=null;
+  const buttons=keys.map(key=>`<button type="button" class="${v4ArchivePeriodOpen===key?'active':''}" data-v4-archive-period="${key}"><span>${escapeHtml(v4ArchivePeriodLabel(key))}</span><b>${groups.get(key).length} 张</b></button>`).join('');
+  const openRows=v4ArchivePeriodOpen?(groups.get(v4ArchivePeriodOpen)||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)):[];
+  return `<section class="v4-archive">
+    <div class="v4-archive-head"><div><b>🗄️ 历史归档</b><small>已结案订单按半月加载，不再和待处理混在一起。</small></div><span>${doneOrders.length} 张</span></div>
+    <div class="v4-archive-periods">${buttons}</div>
+    ${v4ArchivePeriodOpen?`<div class="v4-archive-open"><div class="v4-archive-open-head">${escapeHtml(v4ArchivePeriodLabel(v4ArchivePeriodOpen))} · ${openRows.length} 张</div>${openRows.map(o=>v4PlacedCard(o,true)).join('')}</div>`:`<div class="v4-archive-idle">点一个半月周期，再加载其中的已结案订单。</div>`}
+  </section>`;
+}
+function v4ToggleArchivePeriod(key){v4ArchivePeriodOpen=v4ArchivePeriodOpen===key?null:key;v3RenderPlaced()}
+function v4ToggleSettledOrder(id){if(v4ExpandedSettledOrders.has(id))v4ExpandedSettledOrders.delete(id);else v4ExpandedSettledOrders.add(id);v3RenderPlaced()}
+function v4FocusPending(){
+  const rows=[...document.querySelectorAll('.v4-open-order .v3-receive-row:not(.is-closed)')];
+  if(!rows.length){showToast('当前没有未处理 SKU');return}
+  v4PendingFocusIndex=v4PendingFocusIndex%rows.length;
+  const el=rows[v4PendingFocusIndex++];
+  document.querySelectorAll('.v4-focus-flash').forEach(x=>x.classList.remove('v4-focus-flash'));
+  el.classList.add('v4-focus-flash');
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>el.classList.remove('v4-focus-flash'),1400);
 }
 function v3RenderPlaced(){
-  const orders=state.placedOrders.slice().reverse();
-  v4RenderReceivingBell();
-  document.getElementById('v3PlacedList').innerHTML=orders.length?orders.map(o=>{
-    v4NormalizeOrder(o);
-    const open=v4OrderOpenItems(o),dirty=v4OrderDirty(o),done=o.status==='received'||(open.length===0&&dirty.length===0);
-    const dirtyClosed=dirty.filter(i=>v4LineClosed(i)).length;
-    const status=done?'✅ 已结案':(open.length?`🔔 ${open.length} 项未结束`:`💾 ${dirtyClosed} 项待保存`);
-    const batches=(o.receiptBatches||[]).length;
-    return `<article class="v3-placed-card ${done?'done':''}">
-      <div class="v3-placed-head"><div><div class="eyebrow">${escapeHtml(o.supplier||'订单')}</div><h3>${new Date(o.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</h3><small class="v4-batch-count">${batches?('已保存 '+batches+' 次收货'):'尚未入库'}</small></div><span>${status}</span></div>
-      ${v4OrderAreaSections(o)}
-      <div class="v4-order-footer">
-        <button class="btn secondary" data-v4-copy-order="${o.id}">📋 复制订单</button>
-        <button class="btn secondary" data-v4-export-order="${o.id}">📤 本单 JSON</button>
-        ${done?`<div class="v3-finished">这张供应商单已经结案，历史差异仍保留。</div>`:`<button class="btn primary large" data-v3-finish="${o.id}" ${dirty.length?'':'disabled'}>📥 保存本次收货${dirty.length?' · '+dirty.length+'项':''}</button>`}
-      </div>
-    </article>`;
-  }).join(''):'<div class="empty">还没有“已下单”订单 📦</div>';
+  const orders=state.placedOrders.slice();
+  orders.forEach(v4NormalizeOrder);
+  orders.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const active=orders.filter(o=>!v4OrderDone(o)),done=orders.filter(v4OrderDone);
+  v4RenderReceivingBell(active);
+  const activeHtml=active.length?`<section class="v4-active-orders"><div class="v4-active-head"><div><b>🔔 未结束工作区</b><small>只展开仍需要处理的 SKU。</small></div><span>${active.length} 张</span></div>${active.map(o=>v4PlacedCard(o,false)).join('')}</section>`:
+    '<div class="v4-all-clear">✅ 当前没有未结束订单</div>';
+  document.getElementById('v3PlacedList').innerHTML=orders.length?activeHtml+v4ArchiveMarkup(done):'<div class="empty">还没有“已下单”订单 📦</div>';
 }
 function v3Step(orderId,skuId,d){
   const {o,item}=v3OrderItem(orderId,skuId);if(!o||!item||o.status==='received'||(v4LineClosed(item)&&!item.dirty))return;
