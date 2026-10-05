@@ -2,6 +2,34 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Cassola Cloud v0.1 · Manual Scoped Sync
+**2026-10-05**
+
+- 新建 Supabase 项目 **Cassola Piccola Cloud**，Zurich / `eu-central-2`。
+- 新增 per-scope Cloud 架构：Sushi / Cucina / Bar-Sala / Comune 各自拥有独立 Head 和版本血缘。
+- Supervisor 支持：
+  - 上传所选区域 / 上传全店
+  - 手动下载所选区域 / 下载全店
+  - 自动发现云端 Head 变化但**绝不自动下载**
+  - 手动 checkpoint + 备注
+  - 版本历史 / restore
+  - 云端员工盘货 inbox
+- 版本判断由 parent lineage 决定，不比较 revision number 大小。
+- 基于旧 Head 上传会生成 branch，不会覆盖 canonical Head。
+- restore 会生成新的 restore version，不删除旧历史。
+- Cloud 存储采用 **current scope state + JSON patch versions + checkpoint**，避免每个版本都复制完整总账。
+- canonical upload 距上次 checkpoint ≥ 14 天时自动生成 biweekly checkpoint。
+- 员工主流程改为 **☁️ 上传今日盘货**；JSON 盘货包保留为离线 / 灾难恢复备用。
+- Access Code 增加服务器端验证和短期 Cloud session；本地 Access Gate 继续保留作 offline fallback。
+- 数据库表默认 RLS + direct API deny；浏览器不持有 Supabase secret。
+- 下载云端前自动导出本机完整 JSON 安全备份。
+- Staff 暂不进入 Cloud v0.1。
+- 新增：`cloud-sync.js`、`cloud.css`。
+- Service Worker cache 更新为 `cassola-suite-v060`。
+- 当前正式本地数据没有被自动上传或迁移；第一次 Cloud seed 必须由 Supervisor 手动执行上传。
+
+---
+
 ## UI Fix · Dialog Cancel Validation
 **2026-10-05**
 
