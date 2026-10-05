@@ -1,5 +1,7 @@
-/* Inventory v0.6.1 · active receiving inbox + half-month archive */
-let v4ArchivePeriodOpen=null;
+/* Inventory v0.6.2 · active receiving inbox + year / quarter / week archive */
+let v4ArchiveYearOpen=null;
+let v4ArchiveQuarterOpen=null;
+let v4ArchiveWeekOpen=null;
 const v4ExpandedSettledOrders=new Set();
 let v4PendingFocusIndex=0;
 
@@ -166,13 +168,40 @@ function v4RenderReceivingBell(activeOrders){
   box.classList.remove('hidden');
   box.innerHTML=`<div class="v4-bell-copy"><span class="v4-bell-icon">🔔</span><div><b>还有 ${items.length} 项未结束</b><small>待核对 ${pending} · 晚到 ${later} · 待他人 ${other} · 待保存 ${unsaved}</small></div></div><div class="v4-bell-actions"><span>${activeOrders.length} 张单</span><button type="button" data-v4-focus-pending>🎯 定位未处理</button></div>`;
 }
-function v4ArchivePeriodKey(o){
-  const d=new Date(o.createdAt||0),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),half=d.getDate()<=15?'1':'2';
-  return `${y}-${m}-${half}`;
+function v4WeekStartDate(value){
+  const d=new Date(value||0);d.setHours(0,0,0,0);
+  const mondayOffset=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-mondayOffset);
+  return d;
 }
-function v4ArchivePeriodLabel(key){
-  const [ys,ms,half]=String(key).split('-'),y=Number(ys),m=Number(ms),last=new Date(y,m,0).getDate();
-  return `${y}年${m}月${half==='1'?'上半月 · 1–15':'下半月 · 16–'+last}`;
+function v4LocalDateKey(d){
+  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+}
+function v4WeekKey(o){return v4LocalDateKey(v4WeekStartDate(o.createdAt))}
+function v4CurrentWeekKey(){return v4LocalDateKey(v4WeekStartDate(Date.now()))}
+function v4WeekNumber(start){
+  const d=new Date(start);d.setHours(0,0,0,0);
+  const thursday=new Date(d);thursday.setDate(d.getDate()+3);
+  const jan4=new Date(thursday.getFullYear(),0,4);jan4.setHours(0,0,0,0);
+  const jan4Mon=new Date(jan4);jan4Mon.setDate(jan4.getDate()-((jan4.getDay()+6)%7));
+  return 1+Math.round((d-jan4Mon)/604800000);
+}
+function v4WeekLabel(key){
+  const start=new Date(key+'T00:00:00'),end=new Date(start);end.setDate(start.getDate()+6);
+  const sameMonth=start.getMonth()===end.getMonth();
+  const a=`${String(start.getMonth()+1).padStart(2,'0')}/${String(start.getDate()).padStart(2,'0')}`;
+  const b=sameMonth?String(end.getDate()).padStart(2,'0'):`${String(end.getMonth()+1).padStart(2,'0')}/${String(end.getDate()).padStart(2,'0')}`;
+  return `W${String(v4WeekNumber(start)).padStart(2,'0')} · ${a}–${b}`;
+}
+function v4ArchiveYearKeyFromWeek(key){return String(new Date(key+'T00:00:00').getFullYear())}
+function v4ArchiveQuarterKeyFromWeek(key){
+  const d=new Date(key+'T00:00:00');
+  return `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`;
+}
+function v4QuarterLabel(key){
+  const [y,q]=String(key).split('-Q');
+  const n=Number(q),a=(n-1)*3+1,b=n*3;
+  return `${y} Q${n} · ${a}–${b}月`;
 }
 function v4PlacedCard(o,archived=false){
   v4NormalizeOrder(o);
@@ -193,21 +222,85 @@ function v4PlacedCard(o,archived=false){
     </div>
   </article>`;
 }
-function v4ArchiveMarkup(doneOrders){
+function v4ArchiveTree(doneOrders){
   if(!doneOrders.length)return'';
-  const groups=new Map();
-  doneOrders.forEach(o=>{const key=v4ArchivePeriodKey(o);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(o)});
-  const keys=[...groups.keys()].sort().reverse();
-  if(v4ArchivePeriodOpen&&!groups.has(v4ArchivePeriodOpen))v4ArchivePeriodOpen=null;
-  const buttons=keys.map(key=>`<button type="button" class="${v4ArchivePeriodOpen===key?'active':''}" data-v4-archive-period="${key}"><span>${escapeHtml(v4ArchivePeriodLabel(key))}</span><b>${groups.get(key).length} 张</b></button>`).join('');
-  const openRows=v4ArchivePeriodOpen?(groups.get(v4ArchivePeriodOpen)||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)):[];
-  return `<section class="v4-archive">
-    <div class="v4-archive-head"><div><b>🗄️ 历史归档</b><small>已结案订单按半月加载，不再和待处理混在一起。</small></div><span>${doneOrders.length} 张</span></div>
-    <div class="v4-archive-periods">${buttons}</div>
-    ${v4ArchivePeriodOpen?`<div class="v4-archive-open"><div class="v4-archive-open-head">${escapeHtml(v4ArchivePeriodLabel(v4ArchivePeriodOpen))} · ${openRows.length} 张</div>${openRows.map(o=>v4PlacedCard(o,true)).join('')}</div>`:`<div class="v4-archive-idle">点一个半月周期，再加载其中的已结案订单。</div>`}
+  const currentWeek=v4CurrentWeekKey();
+  const currentRows=doneOrders.filter(o=>v4WeekKey(o)===currentWeek).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const historical=doneOrders.filter(o=>v4WeekKey(o)!==currentWeek);
+  const weeks=new Map();
+  historical.forEach(o=>{
+    const wk=v4WeekKey(o);
+    if(!weeks.has(wk))weeks.set(wk,[]);
+    weeks.get(wk).push(o);
+  });
+  const years=new Map();
+  for(const [wk,rows] of weeks){
+    const y=v4ArchiveYearKeyFromWeek(wk),q=v4ArchiveQuarterKeyFromWeek(wk);
+    if(!years.has(y))years.set(y,new Map());
+    if(!years.get(y).has(q))years.get(y).set(q,new Map());
+    years.get(y).get(q).set(wk,rows);
+  }
+  const yearKeys=[...years.keys()].sort((a,b)=>Number(b)-Number(a));
+  if(v4ArchiveYearOpen&&!years.has(v4ArchiveYearOpen)){v4ArchiveYearOpen=null;v4ArchiveQuarterOpen=null;v4ArchiveWeekOpen=null}
+  const currentYearMap=v4ArchiveYearOpen?years.get(v4ArchiveYearOpen):null;
+  if(v4ArchiveQuarterOpen&&(!currentYearMap||!currentYearMap.has(v4ArchiveQuarterOpen))){v4ArchiveQuarterOpen=null;v4ArchiveWeekOpen=null}
+  const currentQuarterMap=v4ArchiveQuarterOpen&&currentYearMap?currentYearMap.get(v4ArchiveQuarterOpen):null;
+  if(v4ArchiveWeekOpen&&(!currentQuarterMap||!currentQuarterMap.has(v4ArchiveWeekOpen)))v4ArchiveWeekOpen=null;
+
+  const currentHtml=currentRows.length?`<section class="v4-current-week">
+    <div class="v4-active-head"><div><b>📅 本周已结案</b><small>${escapeHtml(v4WeekLabel(currentWeek))} · 周一到周日</small></div><span>${currentRows.length} 张</span></div>
+    ${currentRows.map(o=>v4PlacedCard(o,true)).join('')}
+  </section>`:'';
+
+  if(!historical.length)return currentHtml;
+
+  const yearButtons=yearKeys.map(y=>{
+    const qmap=years.get(y);
+    let count=0;for(const wmap of qmap.values())for(const rows of wmap.values())count+=rows.length;
+    return `<button type="button" class="${v4ArchiveYearOpen===y?'active':''}" data-v4-archive-year="${y}"><span>${y} 年</span><b>${count} 张</b></button>`;
+  }).join('');
+
+  let quarterHtml='';
+  if(currentYearMap){
+    const qs=[...currentYearMap.keys()].sort().reverse();
+    const buttons=qs.map(q=>{
+      const wmap=currentYearMap.get(q);let count=0;for(const rows of wmap.values())count+=rows.length;
+      return `<button type="button" class="${v4ArchiveQuarterOpen===q?'active':''}" data-v4-archive-quarter="${q}"><span>${escapeHtml(v4QuarterLabel(q))}</span><b>${count} 张</b></button>`;
+    }).join('');
+    quarterHtml=`<div class="v4-archive-level"><div class="v4-archive-level-title">${escapeHtml(v4ArchiveYearOpen)} · 季度</div><div class="v4-archive-periods">${buttons}</div></div>`;
+  }
+
+  let weekHtml='';
+  if(currentQuarterMap){
+    const wks=[...currentQuarterMap.keys()].sort().reverse();
+    const buttons=wks.map(wk=>`<button type="button" class="${v4ArchiveWeekOpen===wk?'active':''}" data-v4-archive-week="${wk}"><span>${escapeHtml(v4WeekLabel(wk))}</span><b>${currentQuarterMap.get(wk).length} 张</b></button>`).join('');
+    weekHtml=`<div class="v4-archive-level"><div class="v4-archive-level-title">${escapeHtml(v4QuarterLabel(v4ArchiveQuarterOpen))} · 周</div><div class="v4-archive-periods">${buttons}</div></div>`;
+  }
+
+  let orderHtml='';
+  if(v4ArchiveWeekOpen&&currentQuarterMap){
+    const rows=(currentQuarterMap.get(v4ArchiveWeekOpen)||[]).slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    orderHtml=`<div class="v4-archive-open"><div class="v4-archive-open-head">${escapeHtml(v4WeekLabel(v4ArchiveWeekOpen))} · ${rows.length} 张</div>${rows.map(o=>v4PlacedCard(o,true)).join('')}</div>`;
+  }
+
+  return currentHtml+`<section class="v4-archive">
+    <div class="v4-archive-head"><div><b>🗄️ 历史订单</b><small>年度 → 季度 → 周。只在点开一周时加载完整订单。</small></div><span>${historical.length} 张</span></div>
+    <div class="v4-archive-level"><div class="v4-archive-level-title">年度</div><div class="v4-archive-periods">${yearButtons}</div></div>
+    ${quarterHtml}${weekHtml}${orderHtml}
+    ${!v4ArchiveYearOpen?'<div class="v4-archive-idle">先选年度，再进入季度和周。</div>':''}
   </section>`;
 }
-function v4ToggleArchivePeriod(key){v4ArchivePeriodOpen=v4ArchivePeriodOpen===key?null:key;v3RenderPlaced()}
+function v4ToggleArchiveYear(key){
+  if(v4ArchiveYearOpen===key){v4ArchiveYearOpen=null;v4ArchiveQuarterOpen=null;v4ArchiveWeekOpen=null}
+  else{v4ArchiveYearOpen=key;v4ArchiveQuarterOpen=null;v4ArchiveWeekOpen=null}
+  v3RenderPlaced();
+}
+function v4ToggleArchiveQuarter(key){
+  if(v4ArchiveQuarterOpen===key){v4ArchiveQuarterOpen=null;v4ArchiveWeekOpen=null}
+  else{v4ArchiveQuarterOpen=key;v4ArchiveWeekOpen=null}
+  v3RenderPlaced();
+}
+function v4ToggleArchiveWeek(key){v4ArchiveWeekOpen=v4ArchiveWeekOpen===key?null:key;v3RenderPlaced()}
 function v4ToggleSettledOrder(id){if(v4ExpandedSettledOrders.has(id))v4ExpandedSettledOrders.delete(id);else v4ExpandedSettledOrders.add(id);v3RenderPlaced()}
 function v4FocusPending(){
   const rows=[...document.querySelectorAll('.v4-open-order .v3-receive-row:not(.is-closed)')];
@@ -227,7 +320,7 @@ function v3RenderPlaced(){
   v4RenderReceivingBell(active);
   const activeHtml=active.length?`<section class="v4-active-orders"><div class="v4-active-head"><div><b>🔔 未结束工作区</b><small>只展开仍需要处理的 SKU。</small></div><span>${active.length} 张</span></div>${active.map(o=>v4PlacedCard(o,false)).join('')}</section>`:
     '<div class="v4-all-clear">✅ 当前没有未结束订单</div>';
-  document.getElementById('v3PlacedList').innerHTML=orders.length?activeHtml+v4ArchiveMarkup(done):'<div class="empty">还没有“已下单”订单 📦</div>';
+  document.getElementById('v3PlacedList').innerHTML=orders.length?activeHtml+v4ArchiveTree(done):'<div class="empty">还没有“已下单”订单 📦</div>';
 }
 function v3Step(orderId,skuId,d){
   const {o,item}=v3OrderItem(orderId,skuId);if(!o||!item||o.status==='received'||(v4LineClosed(item)&&!item.dirty))return;
