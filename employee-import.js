@@ -111,11 +111,11 @@
     if(v.stale){showToast('这不是当天最新版');return}
     if(!confirm(`采用 ${v.scope.label||v.scope.id} · ${pending.data.date} 的员工盘货？`))return;
     const now=stamp(),submissionId=pending.data.submissionId;
-    if(v.active){
-      v.active.status='superseded';
-      v.active.supersededAt=now;
-      v.active.supersededBy=submissionId;
-    }
+    state.employeeSubmissions.filter(x=>x.effectiveKey===v.effectiveKey&&x.status==='active').forEach(x=>{
+      x.status='superseded';
+      x.supersededAt=now;
+      x.supersededBy=submissionId;
+    });
     const batch=`employee:${submissionId}`;
     let changed=0;
     v.rows.forEach(({s,qty,old})=>{
