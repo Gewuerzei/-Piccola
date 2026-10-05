@@ -158,7 +158,7 @@
     });
     if(!filled.length){showToast?.('还没有填写盘货数量');return}
     const missing=rows.length-filled.length;
-    if(missing>0&&!confirm(`还有 ${missing} 个责任区 SKU 未填写，仍然生成盘货包？`))return;
+    if(missing>0){showToast?.(`还有 ${missing} 个责任区 SKU 没盘，先盘完再上传`);return}
     draft.exportRevision=(Number(draft.exportRevision)||0)+1;
     draft.lastExportedAt=new Date().toISOString();
     saveEmployeeDraft(draft);
@@ -173,6 +173,7 @@
       effectiveKey:`${scope.id}:${todayKey()}`,
       latestRule:'submittedAt',
       deviceRevision:draft.exportRevision,
+      scopeSkuIds:rows.map(s=>s.id),
       counts:filled
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');
