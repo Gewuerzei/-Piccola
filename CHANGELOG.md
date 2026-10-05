@@ -2,6 +2,26 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.6.1 · Order Inbox & Archive
+**2026-10-05**
+
+- “已下单”不再把所有历史订单整页全量渲染。
+- 新增“🔔 未结束工作区”：
+  - 未结案订单永远置顶
+  - 一张未结案订单里，只默认展开仍需处理 / 待保存的 SKU
+  - 已处理 SKU 折叠为“查看已处理 N 项”，需要时再展开
+- 顶部未结束铃铛新增“🎯 定位未处理”：
+  - 点击跳到一个未处理 SKU
+  - 连续点击按当前页面顺序继续定位下一项
+- 已结案订单进入“🗄️ 历史归档”：
+  - 以半月为周期分组：1–15 日 / 16–月底
+  - 默认只渲染轻量周期入口
+  - 点开某个周期时，才渲染该半月的完整订单卡片
+- 订单与收货历史数据结构不变，只修改视图和按需渲染；`cassola_inventory_v01` 不变。
+- Service Worker cache 更新为 `cassola-suite-v054`。
+
+---
+
 ## Inventory v0.6 · Purchase Unit Layer
 **2026-10-04**
 
