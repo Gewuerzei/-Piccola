@@ -193,3 +193,26 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
   .cassola-employee-secondary-actions{grid-template-columns:1fr 1fr}
 }
 
+/* Employee Fixed Upload Dock v0.2 · true viewport dock */
+.cassola-employee-shell{
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+.cassola-employee-upload-dock{
+  position:fixed;
+  left:50%;
+  right:auto;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  width:min(760px,calc(100vw - 36px));
+  margin:0;
+  transform:translateX(-50%);
+  z-index:270;
+}
+@media(max-width:460px){
+  .cassola-employee-shell{
+    padding-bottom:calc(92px + env(safe-area-inset-bottom));
+  }
+  .cassola-employee-upload-dock{
+    width:calc(100vw - 28px);
+  }
+}
+
