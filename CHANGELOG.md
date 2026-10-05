@@ -2,6 +2,19 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Hotfix · Suite-wide theme coverage
+**2026-10-06**
+
+- 修复日间模式下 Orders / Receiving 仍保留深色硬编码 surface 的问题；placed order、收货区域、收货行、archive / settled、价格卡与相关 Dialog 现在会跟随主题。
+- Staff 补齐 light-theme 覆盖：lane、人员卡、周表、月度卡、设置卡、Dialog、输入区与浮动底栏统一响应设备主题。
+- Staff 设置页新增与 Inventory 相同的“外观 / Accent”入口。
+- Inventory 与 Staff 的主题入口共享同一个 `cassola_ui_theme_v01`，因此不是两套主题；任意一处切换都会立即影响整个 Suite。
+- 保留 iPhone Accent 直接 click binding 与 `active / aria-pressed` 同步。
+- 不修改 Inventory / Staff / Cloud 数据结构，不清空任何 localStorage / IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v069`。
+
+---
+
 ## UI Polish · Fat rounded visual pass
 **2026-10-06**
 
