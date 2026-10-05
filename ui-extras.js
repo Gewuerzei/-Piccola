@@ -1,4 +1,4 @@
-/* Cassola UI Extras v0.1.1 · theme + global command search */
+/* Cassola UI Extras v0.1.2 · theme + global command search */
 (function(){
   const THEME_KEY='cassola_ui_theme_v01';
   const defaults={mode:'system',accent:'graphite'};
@@ -44,7 +44,7 @@
     const card=document.createElement('div');card.id='uiThemeCard';card.className='settings-card ui-theme-card';
     card.innerHTML=`
       <h2>🌗 外观</h2>
-      <p>只保存在这台设备，不进入 Cloud。员工和 Supervisor 可以各自选自己喜欢的样子。</p>
+      <p>只保存在这台设备，不进入 Cloud。Inventory / Staff 共用同一套外观。</p>
       <div class="ui-theme-group">
         <span>外观</span>
         <div class="ui-theme-segment">
@@ -64,6 +64,37 @@
       </div>`;
     const local=settings.querySelector('.settings-card:nth-child(2)');
     local?.insertAdjacentElement('afterend',card)||settings.appendChild(card);
+    bindThemeControls(card);
+    renderThemeControls();
+  }
+  function injectStaffThemeCard(){
+    const stack=document.querySelector('#staff-view-settings .staff-settings-stack');
+    if(!stack||document.getElementById('staffUiThemeCard'))return;
+    const card=document.createElement('div');
+    card.id='staffUiThemeCard';
+    card.className='staff-settings-card ui-theme-card staff-ui-theme-card';
+    card.innerHTML=`
+      <h3>🌗 外观</h3>
+      <p>和 Inventory 共用这台设备的主题设置，不进入 Cloud。</p>
+      <div class="ui-theme-group">
+        <span>外观</span>
+        <div class="ui-theme-segment">
+          <button type="button" data-theme-mode="system">跟随系统</button>
+          <button type="button" data-theme-mode="light">日间</button>
+          <button type="button" data-theme-mode="dark">夜间</button>
+        </div>
+      </div>
+      <div class="ui-theme-group">
+        <span>Accent</span>
+        <div class="ui-accent-grid">
+          <button type="button" data-theme-accent="graphite"><i></i>石墨</button>
+          <button type="button" data-theme-accent="matcha"><i></i>抹茶</button>
+          <button type="button" data-theme-accent="ocean"><i></i>海蓝</button>
+          <button type="button" data-theme-accent="sakura"><i></i>樱色</button>
+        </div>
+      </div>`;
+    const syncCard=stack.querySelector('.staff-settings-card:nth-child(2)');
+    syncCard?.insertAdjacentElement('afterend',card)||stack.appendChild(card);
     bindThemeControls(card);
     renderThemeControls();
   }
@@ -264,6 +295,7 @@
   }
 
   document.addEventListener('click',e=>{
+    if(e.target.closest('[data-cassola-open="staff"],.staff-nav-btn[data-staff-view="settings"]'))setTimeout(injectStaffThemeCard,0);
     if(e.target.closest('#globalSearchTopBtn,#globalSearchHubBtn')){openSearch();return}
     const row=e.target.closest('[data-global-action]');if(!row)return;
     const action=row.dataset.globalAction,id=row.dataset.globalId,value=row.dataset.globalValue;
@@ -277,9 +309,9 @@
   });
 
   document.addEventListener('DOMContentLoaded',()=>{
-    setupMedia();applyTheme();injectThemeCard();ensureSearch();injectSearchButtons();
+    setupMedia();applyTheme();injectThemeCard();injectStaffThemeCard();ensureSearch();injectSearchButtons();
   });
   window.addEventListener('cassola-cloud-reconnected',injectSearchButtons);
 
-  window.CassolaUIExtras={applyTheme,openSearch,injectThemeCard,injectSearchButtons};
+  window.CassolaUIExtras={applyTheme,openSearch,injectThemeCard,injectStaffThemeCard,injectSearchButtons};
 })();
