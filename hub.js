@@ -125,9 +125,13 @@
         return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">查看详情</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></div>';
       }).join(''):'<div class="empty">这个责任区没有可盘 SKU。</div>')+
       '</div>'+
-      '<div class="cassola-employee-secondary-actions"><button type="button" class="btn secondary" data-employee-clear>清空今日</button><button type="button" class="btn secondary" data-employee-new-sku>＋ 现场新 SKU</button>'+(queued?'<button type="button" class="btn secondary employee-outbox-btn" data-employee-outbox>📤 上传待发送 '+queued+'</button>':'')+'<button type="button" class="btn secondary" data-employee-export>📄 JSON 备用</button></div>'+
-      '<div class="cassola-employee-foot">'+(queued?('📵 本机还有 '+queued+' 份待发送 · 恢复网络后由员工手动提交'):'联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用')+'</div>'+
-      '<div class="cassola-employee-upload-dock"><button type="button" class="btn primary large" data-employee-cloud>☁️ 上传今日盘货</button></div>'+
+      '<div class="cassola-employee-foot">'+(queued?('📵 本机还有 '+queued+' 份待发送 · 点底部“待'+queued+'”手动提交'):'联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用')+'</div>'+
+      '<div class="cassola-employee-upload-dock">'+
+        '<button type="button" class="btn secondary employee-dock-btn" data-employee-clear><span>🧹</span><small>清空</small></button>'+
+        '<button type="button" class="btn secondary employee-dock-btn" data-employee-new-sku><span>＋</span><small>新 SKU</small></button>'+
+        '<div class="cassola-employee-dock-cell"><button type="button" class="btn primary employee-dock-btn employee-dock-upload" data-employee-cloud><span>☁️</span><small>上传</small></button>'+(queued?'<button type="button" class="employee-outbox-badge" data-employee-outbox aria-label="上传待发送 '+queued+'">待'+queued+'</button>':'')+'</div>'+
+        '<button type="button" class="btn secondary employee-dock-btn" data-employee-export><span>📄</span><small>JSON</small></button>'+
+      '</div>'+
       '</div>';
     window.CassolaEmployeeTools?.enhance?.();
   }
