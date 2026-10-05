@@ -1,0 +1,36 @@
+/* Cassola Employee Tools v0.1 */
+.cassola-employee-copy{min-width:0;flex:1}
+.cassola-employee-detail{margin-top:7px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--muted);font-size:8.5px;font-weight:800}
+.employee-outbox-btn{border-color:rgba(255,190,92,.22)!important;color:var(--warn)!important}
+
+.employee-tool-dialog{width:min(94vw,620px);max-height:90vh;padding:0;border:1px solid rgba(255,255,255,.11);border-radius:28px;background:linear-gradient(155deg,#202531,#191d27);color:var(--text);box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.employee-tool-dialog::backdrop{background:rgba(0,0,0,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.employee-tool-dialog>form{padding:17px;display:flex;flex-direction:column;gap:12px;max-height:86vh;overflow:auto}
+.employee-tool-dialog label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:9.5px;font-weight:780}
+.employee-tool-dialog input,.employee-tool-dialog select{min-height:44px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.035);color:var(--text);padding:0 11px;font:inherit;font-size:11px}
+.employee-standard-card{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.employee-standard-card>div{padding:10px;border-radius:15px;background:rgba(255,255,255,.025);border:1px solid var(--line)}
+.employee-standard-card span{display:block;color:var(--muted);font-size:8px}.employee-standard-card b{display:block;margin-top:4px;font-size:10px;line-height:1.35}
+.employee-proposal-card{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:18px;background:rgba(185,201,255,.04);border:1px solid rgba(185,201,255,.11)}
+.employee-proposal-card.issue{background:rgba(255,190,92,.035);border-color:rgba(255,190,92,.12)}
+.employee-proposal-card>strong{font-size:11px}.employee-proposal-card>small{color:var(--muted);font-size:8.5px;line-height:1.4}
+.employee-proposal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.employee-proposal-banner{padding:10px 11px;border-radius:15px;background:rgba(255,190,92,.045);border:1px solid rgba(255,190,92,.13);color:var(--muted);font-size:9px;line-height:1.45}
+
+.employee-proposal-review-list{display:flex;flex-direction:column;gap:9px;max-height:64vh;overflow:auto}
+.employee-review-card{padding:12px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid var(--line)}
+.employee-review-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.employee-review-top strong{display:block;font-size:11px}.employee-review-top small{display:block;margin-top:3px;color:var(--muted);font-size:8.5px}
+.employee-review-top>span{padding:4px 7px;border-radius:999px;background:rgba(255,190,92,.06);border:1px solid rgba(255,190,92,.12);color:var(--warn);font-size:8px;font-weight:850}
+.employee-review-current,.employee-review-proposed,.employee-review-qty{margin-top:8px;padding:8px 9px;border-radius:13px;background:rgba(255,255,255,.02);color:var(--muted);font-size:8.8px;line-height:1.45}
+.employee-review-proposed b,.employee-review-qty b{color:var(--text)}
+.employee-review-card p{margin:8px 0 0;color:var(--muted);font-size:8.8px;line-height:1.45}
+.employee-review-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.employee-review-actions .btn{min-height:42px;border-radius:14px}
+
+@media(max-width:460px){
+  .employee-standard-card{grid-template-columns:1fr}
+  .employee-proposal-grid{grid-template-columns:1fr}
+  .employee-review-top{flex-direction:column}
+  .employee-review-actions{grid-template-columns:1fr}
+}
