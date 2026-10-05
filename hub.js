@@ -112,19 +112,23 @@
     const box=document.getElementById('cassolaEmployee');if(!box||!isEmployee())return;
     const scope=accessSession.scope||{},rows=scopeSkus(scope),draft=loadEmployeeDraft();
     const filled=rows.filter(s=>draft.counts?.[s.id]!==undefined&&draft.counts?.[s.id]!==null&&draft.counts?.[s.id]!=='').length;
+    const cached=window.CassolaCloud?.cachedIdentity?.(accessSession.id);
+    const responsible=accessSession.displayName||cached?.displayName||'责任区员工';
+    const queued=window.CassolaCloud?.outboxCount?.(accessSession.id)||0;
     box.innerHTML='<div class="cassola-employee-shell">'+
-      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(scope.label||'责任区盘货')+'</h1><p>'+escapeHtml(accessSession.label||'员工')+' · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
+      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(scope.label||'责任区盘货')+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
       '<div class="cassola-employee-summary"><div><span>责任区 SKU</span><b>'+rows.length+'</b></div><div><span>今日已填</span><b id="cassolaEmployeeFilled">'+filled+'/'+rows.length+'</b></div></div>'+
-      '<div class="cassola-employee-note">这里只能填写当前责任区的现场数量。不会进入管理员 Inventory，也不会修改其他 SKU。</div>'+
+      '<div class="cassola-employee-note">数量可以离线填写。规格 / 单位异常不要直接改正式 SKU，点“查看详情”提交给 Supervisor 审核。</div>'+
       '<div class="cassola-employee-counts">'+
       (rows.length?rows.map(s=>{
         const v=draft.counts?.[s.id];
-        return '<label class="cassola-employee-row"><div><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></label>';
+        return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">查看详情</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></div>';
       }).join(''):'<div class="empty">这个责任区没有可盘 SKU。</div>')+
       '</div>'+
-      '<div class="cassola-employee-actions"><button type="button" class="btn secondary" data-employee-clear>清空今日</button><button type="button" class="btn primary large" data-employee-cloud>☁️ 上传今日盘货</button><button type="button" class="btn secondary" data-employee-export>📄 JSON 备用</button></div>'+
-      '<div class="cassola-employee-foot">联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用</div>'+
+      '<div class="cassola-employee-actions"><button type="button" class="btn secondary" data-employee-clear>清空今日</button><button type="button" class="btn secondary" data-employee-new-sku>＋ 现场新 SKU</button><button type="button" class="btn primary large" data-employee-cloud>☁️ 上传今日盘货</button>'+(queued?'<button type="button" class="btn secondary employee-outbox-btn" data-employee-outbox>📤 上传待发送 '+queued+'</button>':'')+'<button type="button" class="btn secondary" data-employee-export>📄 JSON 备用</button></div>'+
+      '<div class="cassola-employee-foot">'+(queued?('📵 本机还有 '+queued+' 份待发送 · 恢复网络后由员工手动提交'):'联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用')+'</div>'+
       '</div>';
+    window.CassolaEmployeeTools?.enhance?.();
   }
   function parseEmployeeQty(raw){
     if(typeof parseLocaleDecimal==='function')return parseLocaleDecimal(raw);
@@ -194,7 +198,9 @@
   async function uploadEmployeeCount(){
     const payload=buildEmployeePayload();if(!payload)return;
     if(!window.CassolaCloud?.connected?.()){
-      if(typeof showToast==='function')showToast('Cloud 未连接，可先用 JSON 备用');
+      window.CassolaCloud?.queueEmployeeSubmission?.(payload);
+      if(typeof showToast==='function')showToast('📵 已保存到待发送队列');
+      renderEmployee();
       return;
     }
     try{
@@ -205,8 +211,23 @@
       saveEmployeeDraft(draft);
       renderEmployee();
     }catch(err){
+      if(!navigator.onLine||!err?.status||err?.status>=500){
+        window.CassolaCloud?.queueEmployeeSubmission?.(payload);
+        if(typeof showToast==='function')showToast('📵 Cloud 没接住，已保存待发送');
+        renderEmployee();
+        return;
+      }
       alert('上传 Cloud 失败：'+(err?.data?.detail||err?.message||'未知错误')+'\n\n盘货草稿还在本机，可以稍后重试或导出 JSON。');
     }
+  }
+  async function flushEmployeeOutbox(){
+    if(!window.CassolaCloud?.connected?.()){
+      if(typeof showToast==='function')showToast(navigator.onLine?'Cloud 正在重连':'现在仍然没网');
+      return;
+    }
+    const result=await window.CassolaCloud.flushOutbox();
+    if(typeof showToast==='function')showToast(result.failed?('已发 '+result.sent+' · 失败 '+result.failed):('☁️ 已发送 '+result.sent+' 份'));
+    renderEmployee();
   }
 
   function renderSupervisorState(){
@@ -230,10 +251,12 @@
         err.classList.remove('hidden');input.value='';input.focus();return;
       }
       clearFailures();
-      let cloudConnected=false;
+      window.CassolaCloud?.rememberAccessCode?.(code);
+      const cachedIdentity=window.CassolaCloud?.cachedIdentity?.(record.id);
+      let cloudConnected=false,cloudRecord=null;
       if(navigator.onLine&&window.CassolaCloud?.login){
         try{
-          const cloudRecord=await window.CassolaCloud.login(code);
+          cloudRecord=await window.CassolaCloud.login(code);
           cloudConnected=!!cloudRecord&&cloudRecord.id===record.id;
         }catch(cloudErr){
           console.warn('Cassola Cloud login unavailable',cloudErr);
@@ -241,6 +264,7 @@
       }
       accessSession={
         id:record.id,role:record.role,label:record.label,
+        displayName:cloudRecord?.displayName||cachedIdentity?.displayName||null,
         scope:record.scope?JSON.parse(JSON.stringify(record.scope)):null,
         cloudConnected
       };
@@ -302,9 +326,19 @@
       if(e.target.closest('[data-cassola-logout]')){logout();return}
       if(e.target.closest('[data-employee-clear]')){clearEmployeeDraft();return}
       if(e.target.closest('[data-employee-cloud]')){uploadEmployeeCount();return}
+      if(e.target.closest('[data-employee-outbox]')){flushEmployeeOutbox();return}
       if(e.target.closest('[data-employee-export]')){exportEmployeeCount();return}
     });
   }
+
+  window.addEventListener('cassola-cloud-reconnected',()=>{
+    if(!isEmployee())return;
+    const c=window.CassolaCloud?.session?.();
+    if(c?.displayName)accessSession.displayName=c.displayName;
+    accessSession.cloudConnected=!!c;
+    renderEmployee();
+  });
+  window.addEventListener('cassola-cloud-outbox-change',()=>{if(isEmployee())renderEmployee()});
 
   document.addEventListener('DOMContentLoaded',function(){
     accessSession=null;
