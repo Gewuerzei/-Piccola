@@ -1,0 +1,36 @@
+/* Cassola Cloud v0.1 */
+.cloud-card{display:flex;flex-direction:column;gap:12px}
+.cloud-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cloud-card-head h2{margin:0 0 5px}.cloud-card-head p{margin:0}
+.cloud-connection{flex:0 0 auto;padding:7px 9px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--muted);font-size:9px;font-weight:850}
+.cloud-connection.online{color:var(--good);border-color:rgba(155,231,173,.18);background:rgba(155,231,173,.04)}
+.cloud-scope-rows{display:flex;flex-direction:column;gap:7px}
+.cloud-scope-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;border-radius:15px;background:rgba(255,255,255,.022);border:1px solid var(--line)}
+.cloud-scope-row span{font-size:10px;font-weight:800}.cloud-scope-row b{font-size:9px;text-align:right;color:var(--muted)}
+.cloud-scope-row.synced b{color:var(--good)}.cloud-scope-row.local b{color:var(--accent)}.cloud-scope-row.cloud b{color:var(--warn)}.cloud-scope-row.branch b,.cloud-scope-row.conflict b{color:var(--danger)}
+.cloud-offline-note,.cloud-rule{padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.018);border:1px solid var(--line);color:var(--muted);font-size:9px;line-height:1.45}
+.cloud-scope-select{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:9px}
+.cloud-scope-select select{min-height:44px;border-radius:14px}
+.cloud-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cloud-actions.small{grid-template-columns:1fr 1fr}
+.cloud-actions .btn{min-height:44px;border-radius:15px}
+.cloud-dialog{width:min(94vw,620px);max-height:88vh;padding:0;border:1px solid rgba(255,255,255,.11);border-radius:28px;background:linear-gradient(155deg,#202531,#191d27);color:var(--text);box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.cloud-dialog::backdrop{background:rgba(0,0,0,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.cloud-dialog>form{padding:17px;display:flex;flex-direction:column;gap:12px}
+.cloud-notice-row{display:flex;justify-content:space-between;gap:12px;padding:10px 11px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.02);margin-bottom:7px}
+.cloud-notice-row b{font-size:10px}.cloud-notice-row span{font-size:9px;color:var(--muted);text-align:right}
+.cloud-notice-row.cloud span{color:var(--warn)}.cloud-notice-row.conflict span,.cloud-notice-row.branch span{color:var(--danger)}
+#cloudNoticeBody>p{margin:8px 0 0;color:var(--muted);font-size:9px;line-height:1.45}
+.cloud-history-body{display:flex;flex-direction:column;gap:8px;max-height:62vh;overflow:auto;padding-right:2px}
+.cloud-loading{padding:18px;text-align:center;color:var(--muted)}
+.cloud-version,.cloud-submission{padding:11px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid var(--line)}
+.cloud-version.current{border-color:rgba(155,231,173,.18);background:rgba(155,231,173,.025)}
+.cloud-version-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.cloud-version-top strong{display:block;font-size:10.5px}.cloud-version-top small{display:block;margin-top:2px;color:var(--muted);font-size:8.5px}
+.cloud-version-tags{display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap}.cloud-version-tags span,.cloud-pending-pill{padding:3px 6px;border-radius:999px;background:rgba(255,255,255,.035);font-size:7.5px;color:var(--muted);white-space:nowrap}
+.cloud-version p{margin:8px 0 0;color:var(--muted);font-size:9px;line-height:1.4}.cloud-version .cloud-cp-note{color:var(--text)}
+.cloud-version .btn{margin-top:9px;width:100%}
+.cloud-sub-items{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}.cloud-sub-items span{padding:4px 6px;border-radius:999px;background:rgba(255,255,255,.035);color:var(--muted);font-size:8px}
+.cloud-sub-actions{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:9px}
+.cassola-cloud-hub-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border-radius:18px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);margin:10px 0 14px}
+.cassola-cloud-hub-summary span{font-size:9px;color:var(--muted)}.cassola-cloud-hub-summary b{font-size:9.5px;text-align:right}
+@media(max-width:460px){.cloud-actions{grid-template-columns:1fr}.cloud-actions.small{grid-template-columns:1fr 1fr}.cloud-version-top{flex-direction:column}.cloud-version-tags{justify-content:flex-start}.cloud-sub-actions{grid-template-columns:1fr}}
