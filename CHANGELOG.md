@@ -2,6 +2,22 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Suite Access v0.1 · Local Admin PIN
+**2026-10-05**
+
+- Cassola Hub 新增本机管理员 PIN 锁，作为后续 Employee Mode / 责任区盘货的权限地基。
+- PIN **不写入公开 GitHub 仓库**，也不进入 Inventory / Staff JSON 数据包。
+- 第一次进入管理员 Inventory / Staff 时，本机若尚未设置 PIN，会要求设置 4–8 位数字 PIN。
+- 本地只保存随机 salt + PBKDF2-SHA256 派生值；不保存 PIN 明文。
+- 管理员解锁只在当前页面会话有效；重新打开 / 刷新 PWA 后默认重新锁定。
+- Hub 支持：解锁管理员、立即锁定、修改 PIN。
+- 连续输错 5 次会冷却 30 秒，减少现场反复试码。
+- 当前 PIN 锁属于 **local UI / casual access gate**，不是服务器账户认证；拥有设备调试权限的人仍可绕过。
+- Employee Mode 尚未开放；下一步按责任区限制可见 / 可提交 SKU。
+- Service Worker cache 更新为 `cassola-suite-v056`。
+
+---
+
 ## Inventory v0.6.2 · Week / Quarter / Year Archive
 **2026-10-05**
 
