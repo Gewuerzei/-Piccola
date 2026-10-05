@@ -25,7 +25,7 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 新增只读 Staff 检察院：扫描 active swap / rest move / attendance 引用异常，不自动修改排班。
 - 新增文件：`employee-tools.*`、`ui-extras.*`、`inventory-insights.*`、`analytics.*`。
 - Supabase 新增 `employee_sku_proposals`，Edge Function 升级到 v5。
-- Service Worker cache 更新为 `cassola-suite-v064`。
+- Service Worker cache 更新为 `cassola-suite-v065`。
 
 ---
 
