@@ -95,3 +95,61 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 .cassola-employee-actions{padding:12px;border-radius:26px;gap:10px}
 .cassola-employee-actions .btn{min-height:52px;border-radius:20px}
 @media(max-width:620px){.cassola-module-card{min-height:184px}}
+
+/* Cassola Theme Coverage v0.2 · Access Gate / Hub / Employee light mode */
+:root[data-theme="light"] #cassolaHub,
+:root[data-theme="light"] #cassolaGate,
+:root[data-theme="light"] #cassolaEmployee{
+  background:
+    radial-gradient(circle at 10% -5%,rgba(120,145,190,.12),transparent 34%),
+    radial-gradient(circle at 100% 18%,rgba(90,145,105,.08),transparent 30%),
+    var(--bg);
+  color:var(--text);
+}
+:root[data-theme="light"] .cassola-hub-mark{
+  background:linear-gradient(145deg,#ffffff,#eae6de);
+  border-color:var(--line);
+  box-shadow:0 16px 38px rgba(73,65,52,.13),inset 0 1px 0 rgba(255,255,255,.95);
+}
+:root[data-theme="light"] .cassola-access-state,
+:root[data-theme="light"] .cassola-gate-card,
+:root[data-theme="light"] .cassola-module-card,
+:root[data-theme="light"] .cassola-employee-row{
+  background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(246,243,237,.98));
+  border-color:var(--line);
+  box-shadow:0 12px 30px rgba(73,65,52,.10);
+}
+:root[data-theme="light"] .cassola-access-dot,
+:root[data-theme="light"] .cassola-access-lock,
+:root[data-theme="light"] .cassola-module-icon,
+:root[data-theme="light"] .cassola-employee-summary>div{
+  background:rgba(31,37,48,.045);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .cassola-access-state button,
+:root[data-theme="light"] .cassola-home-btn{
+  background:rgba(255,255,255,.82);
+  border-color:var(--line);
+  color:var(--text);
+}
+:root[data-theme="light"] .cassola-access-dialog{
+  background:linear-gradient(145deg,#ffffff,#f6f3ed);
+  border-color:var(--line);
+  color:var(--text);
+}
+:root[data-theme="light"] #cassolaAccessFields input,
+:root[data-theme="light"] .cassola-gate-card input,
+:root[data-theme="light"] .cassola-employee-input input{
+  background:rgba(255,255,255,.94);
+  border-color:var(--line);
+  color:var(--text);
+}
+:root[data-theme="light"] .cassola-employee-note{
+  background:color-mix(in srgb,var(--accent) 8%,white);
+  border-color:color-mix(in srgb,var(--accent) 18%,transparent);
+}
+:root[data-theme="light"] .cassola-employee-actions{
+  background:rgba(250,248,243,.95);
+  border-color:var(--line);
+  box-shadow:0 14px 34px rgba(73,65,52,.12);
+}
