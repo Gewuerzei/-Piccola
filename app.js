@@ -289,15 +289,19 @@ function confirmAction(e){
 }
 
 function saveBulkCount(){
-  const inputs=[...document.querySelectorAll('.count-input')]; let changed=0;
+  const inputs=[...document.querySelectorAll('.count-input')],diffs=[]; let filled=0,changed=0;
   const batch=stamp();
   inputs.forEach(inp=>{
     if(inp.value==='')return;
     const s=sku(inp.dataset.id); const next=parseLocaleDecimal(inp.value); if(!s||!Number.isFinite(next)||next<0)return;
-    const old=Number(s.qty); s.qty=next; addHistory('count',s.id,`${fmt(old)} → ${fmt(next)} ${s.unit}`,'',{batch}); changed++;
+    const old=Number(s.qty),delta=next-old,abs=Math.abs(delta),pct=old!==0?delta/Math.abs(old)*100:null;
+    const large=abs>=5||(old>0&&abs>=1&&Math.abs(pct)>=35)||(old===0&&next>=3)||(next===0&&old>=2);
+    s.qty=next;addHistory('count',s.id,`${fmt(old)} → ${fmt(next)} ${s.unit}`,'',{batch});
+    filled++;if(delta!==0){changed++;diffs.push({skuId:s.id,name:s.name,unit:s.unit,old,next,delta,pct,large})}
   });
-  if(!changed){showToast('还没填盘货数量');return;}
-  saveState();renderAll();showToast(`已保存 ${changed} 个 SKU`); switchView('stock');
+  if(!filled){showToast('还没填盘货数量');return;}
+  saveState();renderAll();showToast(`已保存 ${filled} 个 SKU · ${changed} 项变化`);switchView('stock');
+  setTimeout(()=>window.CassolaInsights?.showCountSummary?.({filled,changed,diffs,batch}),80);
 }
 function fillCurrent(){document.querySelectorAll('.count-input').forEach(inp=>{inp.value=sku(inp.dataset.id)?.qty??0});showToast('已带入当前库存');}
 function setOrder(id, value){const n=parseLocaleDecimal(value),s=sku(id);if(!Number.isFinite(n)||n<=0||!s)delete state.order[id];else{const stock=typeof v5OrderToStockQty==='function'?v5OrderToStockQty(s,n):n;state.order[id]=stock}saveState();renderOrder();renderStock();}
