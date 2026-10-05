@@ -174,3 +174,76 @@
 .v4-settled-fold>button,.v4-archive-periods button{min-height:47px;border-radius:18px;padding:11px 13px}
 #v3SkuDialog,#v31ImportDialog{border-radius:34px;padding:20px}
 .v31-import-banner{border-radius:21px;padding:14px}
+
+/* Cassola Theme Coverage v0.1 · Orders / Receiving light mode */
+:root[data-theme="light"] .v3-segment,
+:root[data-theme="light"] .v4-area-tabs{
+  background:rgba(31,37,48,.035);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .v3-segment button.active,
+:root[data-theme="light"] .v4-area-tabs button.active{
+  background:linear-gradient(145deg,#ffffff,#efede7);
+  color:var(--text);
+  box-shadow:0 6px 16px rgba(54,48,38,.08);
+}
+:root[data-theme="light"] .v3-placed-card,
+:root[data-theme="light"] .v4-receive-area,
+:root[data-theme="light"] .v3-receive-row{
+  background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(246,243,237,.98));
+  border-color:var(--line);
+  box-shadow:0 10px 28px rgba(54,48,38,.08);
+}
+:root[data-theme="light"] .v3-placed-head>span,
+:root[data-theme="light"] .v4-line-pill,
+:root[data-theme="light"] .v4-closed-note,
+:root[data-theme="light"] .v4-active-head>span,
+:root[data-theme="light"] .v4-archive-head>span,
+:root[data-theme="light"] .v4-settled-fold>button,
+:root[data-theme="light"] .v4-archive-periods button,
+:root[data-theme="light"] .v4-archive-idle,
+:root[data-theme="light"] .ei-latest-row,
+:root[data-theme="light"] .ei-meta>div,
+:root[data-theme="light"] .ei-stats>div,
+:root[data-theme="light"] .ei-latest,
+:root[data-theme="light"] .ei-diff-row{
+  background:rgba(31,37,48,.035);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .v4-receive-actions button{
+  background:rgba(31,37,48,.045);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .v4-receive-actions button:active{
+  background:rgba(31,37,48,.08);
+}
+:root[data-theme="light"] .v4-receiving-bell{
+  background:linear-gradient(145deg,rgba(155,117,37,.08),rgba(255,255,255,.82));
+}
+:root[data-theme="light"] .v4-archive{border-color:var(--line)}
+:root[data-theme="light"] .v45-price-card{
+  background:linear-gradient(145deg,rgba(155,117,37,.08),rgba(255,255,255,.9));
+}
+:root[data-theme="light"] .v45-price-trend,
+:root[data-theme="light"] .v45-vat-card,
+:root[data-theme="light"] .v45-preview-grid span,
+:root[data-theme="light"] .v45-history-item{
+  background:rgba(31,37,48,.035);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .v45-money-input{
+  background:rgba(255,255,255,.92);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .v45-price-preview{
+  background:rgba(31,37,48,.035);
+  border-color:var(--line);
+}
+:root[data-theme="light"] #v3SkuDialog,
+:root[data-theme="light"] #v31ImportDialog,
+:root[data-theme="light"] .v45-dialog,
+:root[data-theme="light"] .ei-import-dialog{
+  background:linear-gradient(145deg,#ffffff,#f6f3ed);
+  border-color:var(--line);
+  color:var(--text);
+}
