@@ -9,7 +9,7 @@
     {id:'bar',label:'🍸 Bar / Sala'},
     {id:'common',label:'📦 Comune'}
   ];
-  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null;
+  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null;
 
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -199,7 +199,7 @@
     return data.credential;
   }
   async function logout(){
-    const old=token;token=null;credential=null;lastStatus=null;renderCloudUi();
+    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;renderCloudUi();
     if(old){
       token=old;try{await api('logout',{},2500)}catch(_){}finally{token=null}
     }
@@ -223,7 +223,9 @@
   async function refreshStatus({silent=false}={}){
     if(!token)return null;
     const data=await api('status',{localBases:bases()},6500);
-    lastStatus=data;renderCloudUi();
+    lastStatus=data;
+    if(role()==='employee')employeeCatalog=data.catalogReady?(Array.isArray(data.scopeCatalog)?clone(data.scopeCatalog):[]):null;
+    renderCloudUi();
     if(!silent)maybeNotice(data);
     return data;
   }
@@ -490,6 +492,7 @@
     submitEmployee,reviewEmployee,openPending,
     captureScope,mergeScope,meta:readMeta,deviceId,
     session:()=>credential?clone(credential):null,
+    employeeCatalog:()=>employeeCatalog===null?null:clone(employeeCatalog),
     injectUi
   };
 })();
