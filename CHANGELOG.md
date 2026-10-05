@@ -2,6 +2,32 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Suite Access v0.2 · Pre-registered Roles
+**2026-10-05**
+
+- 撤销 v0.1 的“每台设备自己设置管理员 PIN”模型；该模型不适合把同一网址发给员工使用。
+- Access Code 现在必须**预先登记在 PWA 发布版本中**，输入不同 code 后得到固定 role / scope。
+- 新增 `access-registry.js`：
+  - 只保存 credential id、role、scope、随机 salt、PBKDF2-SHA256 派生值
+  - 不保存任何明文 Access Code
+  - 不保存真实员工姓名，公共仓库只用 `produce_a / produce_b` 等匿名槽位
+- 当前预注册：
+  - `supervisor` → 完整 Hub / Inventory / Staff
+  - `produce_a` → 员工模式，仅 `category = 蔬果`
+  - `produce_b` → 员工模式，仅 `category = 蔬果`
+- PWA 打开后先进入 Access Gate；设备不能自行创建或提升角色。
+- Employee Mode v0.1：
+  - 只渲染当前 scope 的 SKU
+  - 只允许填写现场盘货数量
+  - 草稿独立保存在 `cassola_employee_count_v01:* `，不写管理员 Inventory 总账
+  - 可导出 `cassola-employee-count-v1` scoped JSON
+  - 包内只包含本责任区已填写 SKU
+  - 同责任区同一天使用 `effectiveKey = scopeId:date`；后续管理员导入按 `submittedAt` 选择最新版
+- Access Code 仍属于静态 PWA 的内部权限门，不是服务器账户系统；短数字 code 理论上可被离线穷举。
+- Service Worker cache 更新为 `cassola-suite-v057`。
+
+---
+
 ## Suite Access v0.1 · Local Admin PIN
 **2026-10-05**
 
