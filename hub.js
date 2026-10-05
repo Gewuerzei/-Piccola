@@ -90,7 +90,7 @@
   }
   function saveEmployeeDraft(x){localStorage.setItem(draftKey(),JSON.stringify(x))}
   function scopeSkus(scope){
-    const cloudRows=window.CassolaCloud?.employeeCatalog?.();
+    const cloudRows=window.CassolaCloud?.employeeCatalog?.(accessSession?.id);
     let rows=isEmployee()&&Array.isArray(cloudRows)
       ?cloudRows
       :(typeof v3Skus==='function'?v3Skus():((typeof state!=='undefined'&&Array.isArray(state.skus))?state.skus:[]));
