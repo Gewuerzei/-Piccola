@@ -131,10 +131,10 @@ Employee Mode 当前：
 ### Employee SKU proposal center
 - Employee `📦 SKU` 页是 **Inventory SKU Manager 的额外入口**，不是迁移 / 剪切。Supervisor 原有 Inventory → 新建 / 编辑 / 删除 SKU 功能继续是 canonical 管理入口。
 - 员工当前可提交：
-  - `new_sku`：新 SKU，包含名称 / 规格 / 单位 / 分类 / 供应商 / 区域 / 可选现场数量
+  - `new_sku`：新 SKU，包含名称 / 商品卡 / 品牌 / 库存规格 / 库存单位 / 订货单位 / 分类 / 供应商 / 区域 / 可选现场数量
   - `new_category`：独立新分类提议
   - `sku_reclassify`：把已有 SKU 建议改到已有或新分类
-  - `sku_change`：规格 / 单位 / 订货包装异常
+  - `sku_change`：库存规格 / 品牌 / 库存单位 / 订货单位 / 换算异常
   - `sku_issue`：只报告问题
 - proposal 只是事实 / 建议。Edge Function 只做结构、scope、数值合法性验证；**业务上是否采用由 Supervisor 决定**。例如员工把 SKU 名写成胡话，Cloud 可以接收为待审核文本，但不会自动创建 canonical SKU。
 - 新分类批准后进入 Inventory `state.customCategories[]`；Inventory 分类筛选和 SKU Manager datalist 会动态显示它。自定义分类随普通 Inventory JSON 保存，并通过 `common` Cloud scope 同步 standalone category registry。
@@ -624,7 +624,7 @@ sku.unitsPerOrder  // 1 个订货单位 = 几个库存单位
 - 旧 SKU 自动兼容为 `orderUnit = unit`、`unitsPerOrder = 1`
 - `state.order` 内部继续保存**库存单位数量**，避免已有草稿在后来补箱规后被错误重解释
 - 草稿 UI / 手动订货输入显示采购单位；输入后先换算成库存单位再写入 `state.order`
-- 自动订货先算需要补多少库存单位；有大包装时向上取整到完整采购包装
+- 自动订货先算需要补多少库存单位；存在订货单位换算时向上取整到完整订货单位
 - 新 placed order 快照必须保存 `orderQty / orderUnit / unitsPerOrder`
 - placed order 的 `orderedQty / actualQty / creditedQty` 继续以库存单位保存，保持收货幂等逻辑
 - 收货 UI 按采购单位输入，保存时换算回库存单位入库
