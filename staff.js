@@ -13,6 +13,9 @@
   let personRecordsView={personId:null,filter:'all'};
   let pendingAvatarBlob=null;
   let editPersonId=null;
+  let taskPublisherPersonId=null;
+  let taskOptionsCache=null;
+  let taskRowsCache=[];
   let importCandidate=null;
   let suppressClickUntil=0;
   const avatarUrlCache=new Map();
@@ -332,6 +335,15 @@
               <div class="staff-role-list" id="staffRoleList"></div>
               <div class="staff-settings-actions"><button class="btn secondary" id="staffAddRole">＋ 岗位</button></div>
             </div>
+            <div class="staff-settings-card staff-cloud-card">
+              <div class="staff-cloud-head"><div><h3>☁️ Staff Cloud</h3><p>同步人员表、出勤、换休、排班与发布版本。头像继续只留本机 / 完整备份。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
+              <div id="staffCloudDetail" class="staff-cloud-detail">Staff Cloud 不会自动覆盖本机。</div>
+              <div class="staff-settings-actions">
+                <button class="btn primary" id="staffCloudUpload">☁️ 上传 Staff</button>
+                <button class="btn secondary" id="staffCloudDownload">⬇️ 下载 Staff</button>
+                <button class="btn secondary" id="staffCloudHistory">🕘 云端历史</button>
+              </div>
+            </div>
             <div class="staff-settings-card">
               <h3>📨 群聊 JSON 交接</h3><p>和 Inventory 一样，用版本号防止旧文件静默覆盖。普通 Staff JSON 不带头像；只有“完整备份”才会打包压缩头像。</p>
               <div class="staff-sync-grid">
@@ -356,7 +368,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.3.3</h3><p>Published weekly rest · swap lifecycle · personal rest moves · monthly audit · JSON handoff</p>
+              <h3>Staff v0.4</h3><p>Staff Cloud · managed employee access · published inventory tasks · weekly publication history</p>
             </div>
           </div>
         </section>
@@ -383,11 +395,48 @@
           </div>
           <label>主要岗位<select id="staffPersonRole"></select></label>
           <label>备注<textarea id="staffPersonNote" placeholder="例如：只上晚班 / 可顶 Maki"></textarea></label>
+          <div class="staff-access-card" id="staffAccessCard">
+            <div class="staff-access-head"><div><b>🔐 Employee Access</b><small>随机 PIN 只用于进入自己的员工任务界面。</small></div><span id="staffAccessBadge">—</span></div>
+            <div id="staffAccessBody" class="staff-access-body">保存人员后可以开通。</div>
+            <div class="staff-access-actions">
+              <button type="button" class="btn primary" id="staffAccessCreate">生成随机 PIN</button>
+              <button type="button" class="btn secondary" id="staffAccessCopy">复制 PIN</button>
+              <button type="button" class="btn secondary" id="staffAccessRegenerate">重新生成</button>
+              <button type="button" class="btn danger ghost" id="staffAccessToggle">停用</button>
+              <button type="button" class="btn secondary" id="staffOpenTaskPublisher">📋 发布盘货任务</button>
+            </div>
+          </div>
           <div class="staff-dialog-actions">
             <button type="button" class="btn danger ghost" id="staffDeletePerson">删除</button>
             <button value="cancel" formnovalidate class="btn secondary">取消</button>
             <button type="button" class="btn primary" id="staffSavePerson">保存</button>
           </div>
+        </form>
+      </dialog>
+
+      <dialog class="staff-dialog staff-task-dialog" id="staffTaskDialog">
+        <form method="dialog">
+          <div class="dialog-head"><div><div class="eyebrow">PUBLISH TASK</div><h3 id="staffTaskTitle">📋 发布盘货任务</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
+          <div class="staff-task-note">任务按发布瞬间冻结 SKU 清单。以后新增同分类 / 同供应商 SKU，不会偷偷塞进已经发布的任务。</div>
+          <div class="staff-form-grid">
+            <label>发布方式
+              <select id="staffTaskSelectorType">
+                <option value="supplier">供应商</option>
+                <option value="category">SKU 分类</option>
+                <option value="area">区域</option>
+                <option value="sku">单独 SKU</option>
+              </select>
+            </label>
+            <label>选择<select id="staffTaskSelectorValue"></select></label>
+          </div>
+          <label>任务名称（可空）<input id="staffTaskLabel" maxlength="120" placeholder="留空自动生成"></label>
+          <div id="staffTaskPreview" class="staff-task-preview"></div>
+          <button type="button" class="btn primary large" id="staffTaskPublish">📣 发布给员工</button>
+          <div class="staff-task-existing">
+            <div class="staff-task-existing-head"><b>当前已发布任务</b><small>撤销后员工下次联网刷新会消失。</small></div>
+            <div id="staffTaskList"></div>
+          </div>
+          <button value="cancel" formnovalidate class="btn secondary large">关闭</button>
         </form>
       </dialog>
 
@@ -680,6 +729,12 @@
     log('publish','发布周休表 v'+version,note,snap.weekStart,'all');
     save();renderWeek();renderHistory();
     toast(version===1?'周休表 v1 已发布':'修改版 v'+version+' 已发布');
+    if(cloudReady()){
+      window.CassolaCloud.staffUpload('Published week '+snap.weekStart+' v'+version).catch(err=>{
+        console.warn('Staff publication Cloud upload failed',err);
+        toast('本地已发布 v'+version+' · Cloud 未同步');
+      });
+    }
   }
   function openWeekVersions(){
     const ws=weekStartIso(currentDate),list=weekPublications(currentDate,false).slice().reverse();
@@ -1097,15 +1152,155 @@
     document.getElementById('staffMoveDialog').showModal();
   }
 
+  function cloudReady(){
+    return !!window.CassolaCloud?.connected?.()&&window.CassolaCloud?.role?.()==='supervisor';
+  }
+  function renderStaffCloudState(){
+    const badge=document.getElementById('staffCloudBadge'),detail=document.getElementById('staffCloudDetail');
+    const buttons=['staffCloudUpload','staffCloudDownload','staffCloudHistory'].map(id=>document.getElementById(id)).filter(Boolean);
+    const ready=cloudReady();buttons.forEach(b=>b.disabled=!ready);
+    if(!badge||!detail)return;
+    if(!ready){badge.textContent='☁️ 未连接';badge.className='';detail.textContent='输入 Supervisor Access Code 并连接 Cloud 后可同步。';return}
+    const st=window.CassolaCloud?.staffStatus?.()||{icon:'☁️',text:'等待检查',cls:'empty'};
+    badge.textContent=st.icon+' '+st.text;badge.className=st.cls||'';
+    detail.textContent=st.cls==='conflict'?'本机和云端都有修改，不会自动覆盖。上传只会形成分支。':'Cloud 只在你明确上传 / 下载 / 发布时改变 Staff 数据。';
+  }
+  async function refreshPersonAccess(){
+    const body=document.getElementById('staffAccessBody'),badge=document.getElementById('staffAccessBadge');
+    const create=document.getElementById('staffAccessCreate'),copy=document.getElementById('staffAccessCopy'),regen=document.getElementById('staffAccessRegenerate'),toggle=document.getElementById('staffAccessToggle'),taskBtn=document.getElementById('staffOpenTaskPublisher');
+    if(!body||!badge)return;
+    const p=editPersonId?personById(editPersonId):null;
+    if(!p){
+      badge.textContent='未保存';body.textContent='保存人员后可以开通。';
+      [create,copy,regen,toggle,taskBtn].forEach(b=>{if(b)b.disabled=true});return;
+    }
+    if(!cloudReady()){
+      badge.textContent='离线';body.innerHTML='<small>需要连接 Staff Cloud 才能查看 / 生成员工 PIN。已有员工在自己的设备上仍可按离线规则进入。</small>';
+      [create,copy,regen,toggle,taskBtn].forEach(b=>{if(b)b.disabled=true});return;
+    }
+    body.innerHTML='<small>正在读取 Access…</small>';
+    try{
+      const data=await window.CassolaCloud.staffAccessGet(p.id),cred=data.credential;
+      document.getElementById('staffAccessCard')._credential=cred||null;
+      taskBtn.disabled=!cred||!cred.active;
+      if(!cred){
+        badge.textContent='未开通';body.innerHTML='<small>这个 Staff 人员还没有 Employee Access。</small>';
+        create.disabled=false;copy.disabled=true;regen.disabled=true;toggle.disabled=true;return;
+      }
+      badge.textContent=cred.active?'🟢 已开通':'⚪ 已停用';
+      const pin=cred.managed_pin_plaintext||'—';
+      body.innerHTML='<div class="staff-pin-row"><span>员工 PIN</span><code id="staffManagedPin">'+esc(pin)+'</code></div>'+
+        '<div class="staff-access-meta"><span>Credential</span><b>'+esc(cred.id)+'</b></div>'+
+        '<div class="staff-access-meta"><span>最近登录</span><b>'+(cred.last_login_at?esc(new Date(cred.last_login_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})):'从未')+'</b></div>';
+      create.disabled=true;copy.disabled=!cred.managed_pin_plaintext;regen.disabled=false;toggle.disabled=false;
+      toggle.textContent=cred.active?'停用':'重新启用';toggle.classList.toggle('danger',cred.active);
+    }catch(err){badge.textContent='读取失败';body.innerHTML='<small>'+esc(err?.message||'Cloud error')+'</small>'}
+  }
+  async function createPersonAccess(){
+    const p=editPersonId?personById(editPersonId):null;if(!p)return;
+    if(!cloudReady()){toast('先连接 Cloud');return}
+    try{await window.CassolaCloud.staffAccessCreate(p.id,p.name);toast('🔐 已生成员工 PIN');await refreshPersonAccess()}
+    catch(err){if(err?.data?.error==='staff_access_exists')await refreshPersonAccess();else alert('开通 Access 失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+  }
+  async function regeneratePersonPin(){
+    const p=editPersonId?personById(editPersonId):null;if(!p)return;
+    if(!confirm('重新生成 '+p.name+' 的员工 PIN？\n\n旧 PIN 联网后立即失效；完全离线的旧设备要等重新联网才知道钥匙已经换了。'))return;
+    try{await window.CassolaCloud.staffAccessRegenerate(p.id);toast('🔄 新 PIN 已生成');await refreshPersonAccess()}
+    catch(err){alert('重新生成失败：'+(err?.message||'未知错误'))}
+  }
+  async function togglePersonAccess(){
+    const p=editPersonId?personById(editPersonId):null,cred=document.getElementById('staffAccessCard')?._credential;if(!p||!cred)return;
+    const active=!cred.active;
+    if(!active&&!confirm('停用 '+p.name+' 的员工访问？'))return;
+    try{await window.CassolaCloud.staffAccessSetActive(p.id,active);toast(active?'已重新启用':'已停用员工访问');await refreshPersonAccess()}
+    catch(err){alert('修改 Access 失败：'+(err?.message||'未知错误'))}
+  }
+  async function copyPersonPin(){
+    const pin=document.getElementById('staffManagedPin')?.textContent?.trim();if(!pin||pin==='—')return;
+    try{await navigator.clipboard.writeText(pin);toast('PIN 已复制')}catch(_){prompt('复制员工 PIN',pin)}
+  }
+
+  function taskAreaLabel(v){return v==='sushi'?'🍣 Sushi':v==='cucina'?'🔪 Cucina':v==='bar'?'🍸 Bar / Sala':v==='common'?'📦 Comune':v}
+  function taskMatches(type,value){
+    const skus=taskOptionsCache?.skus||[];
+    if(type==='supplier')return skus.filter(x=>x.supplier===value);
+    if(type==='category')return skus.filter(x=>x.category===value);
+    if(type==='area')return skus.filter(x=>(x.area||'sushi')===value);
+    if(type==='sku')return skus.filter(x=>String(x.id)===String(value));
+    return[];
+  }
+  function fillTaskSelector(){
+    const type=document.getElementById('staffTaskSelectorType')?.value||'supplier',sel=document.getElementById('staffTaskSelectorValue');if(!sel||!taskOptionsCache)return;
+    let rows=[];
+    if(type==='supplier')rows=(taskOptionsCache.suppliers||[]).map(v=>({v,t:v}));
+    else if(type==='category')rows=(taskOptionsCache.categories||[]).map(v=>({v,t:v}));
+    else if(type==='area')rows=(taskOptionsCache.areas||[]).map(v=>({v,t:taskAreaLabel(v)}));
+    else rows=(taskOptionsCache.skus||[]).map(x=>({v:x.id,t:x.name+(x.spec?' · '+x.spec:'')}));
+    sel.innerHTML=rows.length?rows.map(x=>'<option value="'+esc(x.v)+'">'+esc(x.t)+'</option>').join(''):'<option value="">没有可选项</option>';
+    renderTaskPreview();
+  }
+  function renderTaskPreview(){
+    const box=document.getElementById('staffTaskPreview'),type=document.getElementById('staffTaskSelectorType')?.value||'',value=document.getElementById('staffTaskSelectorValue')?.value||'';if(!box)return;
+    const rows=taskMatches(type,value);
+    box.innerHTML=rows.length?'<div class="staff-task-preview-head"><b>'+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,12).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>12?'<span>＋'+(rows.length-12)+'</span>':'')+'</div>':'<div class="empty">这个选择现在没有 SKU。</div>';
+    const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!document.getElementById('staffTaskDialog')?._accessReady;
+  }
+  function renderTaskRows(){
+    const box=document.getElementById('staffTaskList');if(!box)return;
+    const active=(taskRowsCache||[]).filter(x=>x.status==='active');
+    box.innerHTML=active.length?active.map(t=>'<div class="staff-task-row"><div><b>📋 '+esc(t.label)+'</b><small>'+((t.resolved_sku_ids||[]).length)+' SKU · '+esc(new Date(t.published_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><button type="button" class="btn danger ghost" data-staff-task-revoke="'+esc(t.task_id)+'">撤销</button></div>').join(''):'<div class="empty">还没有有效盘货任务。</div>';
+  }
+  async function openTaskPublisher(personId){
+    const p=personById(personId);if(!p)return;
+    taskPublisherPersonId=personId;taskOptionsCache=null;taskRowsCache=[];
+    const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList');
+    document.getElementById('staffTaskTitle').textContent='📋 '+p.name+' · 发布盘货任务';
+    document.getElementById('staffTaskLabel').value='';
+    preview.innerHTML='<div class="empty">正在读取 Cloud Inventory…</div>';list.innerHTML='<div class="empty">正在读取已有任务…</div>';
+    dlg._accessReady=false;document.getElementById('staffTaskPublish').disabled=true;if(!dlg.open)dlg.showModal();
+    if(!cloudReady()){preview.innerHTML='<div class="empty">先连接 Supervisor Cloud 才能发布任务。</div>';list.innerHTML='';return}
+    try{
+      const [opts,tasks,access]=await Promise.all([
+        window.CassolaCloud.inventoryTaskOptions(),
+        window.CassolaCloud.listInventoryTasks(personId),
+        window.CassolaCloud.staffAccessGet(personId)
+      ]);
+      taskOptionsCache=opts;taskRowsCache=tasks.tasks||[];dlg._accessReady=!!access.credential?.active;
+      if(!dlg._accessReady)preview.innerHTML='<div class="empty">先在“编辑人员 → Employee Access”生成并启用员工 PIN。</div>';
+      fillTaskSelector();renderTaskRows();
+    }catch(err){preview.innerHTML='<div class="empty">读取任务资料失败：'+esc(err?.message||'未知错误')+'</div>'}
+  }
+  async function publishPersonTask(){
+    if(!taskPublisherPersonId||!cloudReady())return;
+    const type=document.getElementById('staffTaskSelectorType').value,value=document.getElementById('staffTaskSelectorValue').value,label=document.getElementById('staffTaskLabel').value.trim();
+    if(!value){toast('先选要发布的 SKU 范围');return}
+    try{
+      const data=await window.CassolaCloud.publishInventoryTask(taskPublisherPersonId,{type,value},label,'Published from Staff');
+      toast('📣 已发布 '+(data.task?.resolved_sku_ids?.length||0)+' 个 SKU');
+      taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];
+      renderTaskRows();
+    }catch(err){
+      if(err?.data?.error==='inventory_task_overlap')alert('这些 SKU 与已有任务“'+(err.data.label||'盘货任务')+'”重叠。\n\n先撤销旧任务，或者改发不重叠的范围。');
+      else if(err?.data?.error==='staff_access_required')alert('先给这个 Staff 人员开通 Employee Access。');
+      else alert('发布任务失败：'+(err?.data?.detail||err?.message||'未知错误'));
+    }
+  }
+  async function revokePersonTask(taskId){
+    if(!confirm('撤销这份盘货任务？'))return;
+    try{await window.CassolaCloud.revokeInventoryTask(taskId);taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];renderTaskRows();toast('任务已撤销')}
+    catch(err){alert('撤销失败：'+(err?.message||'未知错误'))}
+  }
+
   function renderPeople(){
     const list=document.getElementById('staffPeopleList');if(!list)return;
     const arr=state.people.filter(p=>p.active!==false);
     list.innerHTML=arr.length?arr.map(p=>{
       const role=roleById(p.primaryRole)?.name||'未设主要岗位';
-      return '<div class="staff-person-row"><div class="staff-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><div class="staff-person-copy"><b>'+esc(p.name)+(p.nickname?' · '+esc(p.nickname):'')+'</b><small>'+esc(role)+(p.note?' · '+esc(p.note):'')+'</small></div><div class="staff-row-actions"><button class="staff-icon-btn" data-person-records="'+esc(p.id)+'" title="人员记录">🕘</button><button class="staff-icon-btn" data-edit-person="'+esc(p.id)+'">✎</button></div></div>';
+      return '<div class="staff-person-row"><div class="staff-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><div class="staff-person-copy"><b>'+esc(p.name)+(p.nickname?' · '+esc(p.nickname):'')+'</b><small>'+esc(role)+(p.note?' · '+esc(p.note):'')+'</small></div><div class="staff-row-actions"><button class="staff-icon-btn" data-person-records="'+esc(p.id)+'" title="人员记录">🕘</button><button class="staff-icon-btn" data-person-task="'+esc(p.id)+'" title="发布盘货任务">📋</button><button class="staff-icon-btn" data-edit-person="'+esc(p.id)+'">✎</button></div></div>';
     }).join(''):'<div class="staff-settings-card"><h3>还没有人员</h3><p>点“＋ 人员”，可以从微信头像开始组建这支臭排班军团🗿。</p></div>';
     list.querySelectorAll('[data-edit-person]').forEach(b=>b.addEventListener('click',()=>openPerson(b.dataset.editPerson)));
     list.querySelectorAll('[data-person-records]').forEach(b=>b.addEventListener('click',()=>openPersonRecords(b.dataset.personRecords)));
+    list.querySelectorAll('[data-person-task]').forEach(b=>b.addEventListener('click',()=>openTaskPublisher(b.dataset.personTask)));
     hydrateAvatars(list);
   }
 
@@ -1218,6 +1413,7 @@
     const prev=document.getElementById('staffPhotoPreview');prev.innerHTML='👤';
     if(p?.avatarStamp){const url=await getAvatarUrl(p.id);if(url)prev.innerHTML='<img alt="" src="'+url+'">'}
     document.getElementById('staffPersonDialog').showModal();
+    refreshPersonAccess();
   }
   async function savePerson(){
     const name=document.getElementById('staffPersonName').value.trim();if(!name){toast('先写名字🗿');return}
@@ -1267,7 +1463,7 @@
       state.roles=state.roles.filter(x=>x.id!==r.id);log('role','删除岗位：'+r.name);save();renderRoles();renderBoard();toast('岗位已删除');
     }));
   }
-  function renderSettings(){renderRoles();refreshSyncUi()}
+  function renderSettings(){renderRoles();refreshSyncUi();renderStaffCloudState()}
   function refreshSyncUi(){
     const r=state?.syncMeta?.revision||1,u=state?.syncMeta?.updatedAt;
     const top=document.getElementById('staffTopVersion');if(top)top.textContent='#'+r;
@@ -1364,6 +1560,27 @@
     localStorage.setItem(KEY,JSON.stringify(state));
     document.getElementById('staffImportDialog').close();importCandidate=null;
     renderAll();toast(force?'已强制采用，现为 #'+state.syncMeta.revision:'已导入 #'+state.syncMeta.revision);
+  }
+
+  async function exportCloudBackup(){return exportJson(false)}
+  function applyCloudState(cloud){
+    if(!cloud||typeof cloud!=='object')throw new Error('invalid_staff_cloud_state');
+    const device=state?.syncMeta?.deviceName||'本设备',oldRev=num(state?.syncMeta?.revision)||1;
+    state=normalize({
+      version:1,
+      people:Array.isArray(cloud.people)?cloneJson(cloud.people):[],
+      roles:Array.isArray(cloud.roles)?cloneJson(cloud.roles):[],
+      schedules:cloud.schedules&&typeof cloud.schedules==='object'?cloneJson(cloud.schedules):{},
+      attendance:cloud.attendance&&typeof cloud.attendance==='object'?cloneJson(cloud.attendance):{},
+      swaps:Array.isArray(cloud.swaps)?cloneJson(cloud.swaps):[],
+      restMoves:Array.isArray(cloud.restMoves)?cloneJson(cloud.restMoves):[],
+      weekPublications:cloud.weekPublications&&typeof cloud.weekPublications==='object'?cloneJson(cloud.weekPublications):{},
+      history:Array.isArray(cloud.history)?cloneJson(cloud.history):[],
+      syncMeta:{revision:oldRev+1,updatedAt:now(),contentHash:'',deviceName:device}
+    });
+    state.syncMeta.contentHash=fingerprint(state);
+    localStorage.setItem(KEY,JSON.stringify(state));
+    renderAll();
   }
 
   async function clearAll(){
@@ -1508,6 +1725,15 @@
     document.querySelectorAll('[data-staff-shift]').forEach(b=>b.addEventListener('click',()=>{currentShift=b.dataset.staffShift;renderBoard()}));
     document.getElementById('staffAddPerson').addEventListener('click',()=>openPerson());
     document.getElementById('staffSavePerson').addEventListener('click',savePerson);
+    document.getElementById('staffAccessCreate').addEventListener('click',createPersonAccess);
+    document.getElementById('staffAccessCopy').addEventListener('click',copyPersonPin);
+    document.getElementById('staffAccessRegenerate').addEventListener('click',regeneratePersonPin);
+    document.getElementById('staffAccessToggle').addEventListener('click',togglePersonAccess);
+    document.getElementById('staffOpenTaskPublisher').addEventListener('click',()=>{const id=editPersonId;document.getElementById('staffPersonDialog').close();if(id)openTaskPublisher(id)});
+    document.getElementById('staffTaskSelectorType').addEventListener('change',fillTaskSelector);
+    document.getElementById('staffTaskSelectorValue').addEventListener('change',renderTaskPreview);
+    document.getElementById('staffTaskPublish').addEventListener('click',publishPersonTask);
+    document.getElementById('staffTaskList').addEventListener('click',e=>{const b=e.target.closest('[data-staff-task-revoke]');if(b)revokePersonTask(b.dataset.staffTaskRevoke)});
     document.getElementById('staffDeletePerson').addEventListener('click',deletePerson);
     document.getElementById('staffPhotoInput').addEventListener('change',async e=>{
       const file=e.target.files?.[0];if(!file)return;
@@ -1521,6 +1747,9 @@
     });
     document.getElementById('staffCopyPrev').addEventListener('click',copyPreviousDay);
     document.getElementById('staffPdfBtn').addEventListener('click',generatePdf);
+    document.getElementById('staffCloudUpload').addEventListener('click',async()=>{try{await window.CassolaCloud.staffUpload('Manual Staff upload');renderStaffCloudState()}catch(err){alert('Staff Cloud 上传失败：'+(err?.message||'未知错误'))}});
+    document.getElementById('staffCloudDownload').addEventListener('click',async()=>{try{await window.CassolaCloud.staffDownload();renderStaffCloudState()}catch(err){alert('Staff Cloud 下载失败：'+(err?.message||'未知错误'))}});
+    document.getElementById('staffCloudHistory').addEventListener('click',async()=>{try{await window.CassolaCloud.staffHistory()}catch(err){alert('读取 Staff Cloud 历史失败：'+(err?.message||'未知错误'))}});
     document.getElementById('staffExportBtn').addEventListener('click',()=>exportJson(false));
     document.getElementById('staffExportFullBtn').addEventListener('click',()=>exportJson(true));
     document.getElementById('staffImportInput').addEventListener('change',e=>{
@@ -1542,6 +1771,8 @@
   function show(){if(!state)init();document.getElementById('staffApp')?.removeAttribute('aria-hidden');renderAll()}
   function hide(){document.getElementById('staffApp')?.setAttribute('aria-hidden','true')}
 
+  window.addEventListener('cassola-cloud-staff-change',()=>{if(state){renderStaffCloudState();renderPeople()}});
+  document.addEventListener('cassola-cloud-reconnected',()=>{if(state)renderStaffCloudState()});
   document.addEventListener('DOMContentLoaded',init);
-  window.CassolaStaff={show,hide,render:renderAll};
+  window.CassolaStaff={show,hide,render:renderAll,applyCloudState,exportCloudBackup,cloudSnapshot:()=>snapshot(state)};
 })();
