@@ -14,13 +14,13 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 员工收货任务按授权快照显示 supplier、待收量、order unit / 包装倍率；每行填写“本次到货”并选择收齐 / 晚到 / 待他人 / 缺货 / 少到 / 多到。
 - 员工提交后只产生 Cloud receipt submission，**不会直接入库**；Supervisor 在 `☁️ Cloud → 🚚 收货审核`确认后才正式修改 Inventory / receipt batch / order 状态。
 - Supervisor 确认入账复用现有收货账务语义：stock qty、`creditedQty`、`receiptBatches`、`arrival history` 和 lineStatus 同步更新。
-- receipt batch 增加 employee receipt task / submission 元数据，用于幂等恢复；本机已入账但 Cloud review 标记失败时可“补记为已采用”，不会重复加库存。
+- receipt batch 增加 employee receipt task / submission / anonymous credential 元数据，用于幂等恢复；本机已入账但 Cloud review 标记失败时可“补记为已采用”，不会重复加库存。真实员工显示名只用于 Supervisor review UI，不写入 Inventory history / receiptBatches。
 - 授权后若订单已出现其他收货，审核会显示 drift 警告；若包装倍率发生变化则阻止采用并要求重新授权。
-- Employee receipt task 支持本机缓存和 Offline Outbox；恢复网络后仍需员工手动发送。
+- Employee receipt task 支持本机缓存和 Offline Outbox；恢复网络后仍需员工手动发送。若任务已被 Supervisor 撤销，手动 flush 会把该 receipt outbox 标记为失效并移除。
 - Supabase 新增 `employee_receipt_tasks`（RLS deny-by-default，浏览器无直连权限），migration：`cassola_cloud_v03_employee_receipt_tasks`。
 - Supabase Edge Function `cassola-cloud` 升级到 **ACTIVE v9**，新增 employee directory / receipt authorize / task list / submit / pending / review / revoke API。
 - 不修改 canonical Cloud Head，也不清空 Inventory / Staff / Employee localStorage。
-- Service Worker cache 更新为 `cassola-suite-v077`。
+- Service Worker cache 更新为 `cassola-suite-v078`。
 
 ---
 
