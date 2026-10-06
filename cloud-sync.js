@@ -650,6 +650,9 @@
         if(row.type==='employee_receipt'&&err?.data?.error==='receipt_task_not_authorized'){
           remaining=remaining.filter(x=>x.id!==row.id);expired++;continue;
         }
+        if(row.type==='employee_submission'&&err?.data?.error==='inventory_task_not_active'){
+          remaining=remaining.filter(x=>x.id!==row.id);expired++;continue;
+        }
         failed++;
       }
     }
@@ -688,6 +691,7 @@
       credentialId:s.credential_id,
       role:'employee',
       scope:s.scope_definition,
+      inventoryTaskId:s.payload?.inventoryTaskId||null,
       effectiveKey:s.effective_key,
       latestRule:'submittedAt',
       deviceRevision:s.device_revision||0,
