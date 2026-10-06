@@ -82,12 +82,12 @@ function v3ParseCount(h){const m=String(h.text||'').match(/(-?\d+(?:\.\d+)?)\s*â
 function v3ParseMove(h){const m=String(h.text||'').match(/([+-])\s*(\d+(?:\.\d+)?)/);return m?Number(m[2]):0}
 function v3WeeklyUse(s){
   if(Number(s.manualWeeklyUse)>0)return Number(s.manualWeeklyUse);
-  const counts=state.history.map(h=>({h,c:h.type==='count'&&h.skuId===s.id?v3ParseCount(h):null})).filter(x=>x.c).sort((a,b)=>new Date(a.h.at)-new Date(b.h.at));
+  const counts=state.history.filter(h=>!h.employeeSuperseded).map(h=>({h,c:h.type==='count'&&h.skuId===s.id?v3ParseCount(h):null})).filter(x=>x.c).sort((a,b)=>new Date(a.h.at)-new Date(b.h.at));
   if(counts.length<2)return null; const samples=[];
   for(let i=1;i<counts.length;i++){
     const a=counts[i-1],b=counts[i],start=new Date(a.h.at).getTime(),end=new Date(b.h.at).getTime(),days=(end-start)/86400000;if(days<1)continue;
     let arrivals=0,losses=0,out=0,into=0;
-    state.history.forEach(h=>{const t=new Date(h.at).getTime();if(t<=start||t>end)return;const q=v3ParseMove(h);if(h.skuId===s.id&&h.type==='arrival')arrivals+=q;if(h.skuId===s.id&&h.type==='loss')losses+=q;if(h.skuId===s.id&&h.type==='transfer')out+=q;if(h.targetId===s.id&&h.type==='transfer')into+=q});
+    state.history.forEach(h=>{if(h.employeeSuperseded)return;const t=new Date(h.at).getTime();if(t<=start||t>end)return;const q=v3ParseMove(h);if(h.skuId===s.id&&h.type==='arrival')arrivals+=q;if(h.skuId===s.id&&h.type==='loss')losses+=q;if(h.skuId===s.id&&h.type==='transfer')out+=q;if(h.targetId===s.id&&h.type==='transfer')into+=q});
     const used=a.c.next+arrivals+into-losses-out-b.c.next;if(used>=0)samples.push(used*7/days);
   }
   return samples.length?samples.slice(-4).reduce((a,b)=>a+b,0)/Math.min(4,samples.length):null;
