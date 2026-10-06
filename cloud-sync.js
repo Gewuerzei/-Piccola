@@ -616,11 +616,11 @@
   }
   async function staffDownload(){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
-    if(!confirm('下载云端 Staff 会覆盖本机人员 / 出勤 / 换休 / 发布版本。\n\n系统会先导出一份本机 Staff JSON。继续？'))return null;
-    await window.CassolaStaff?.exportCloudBackup?.();
+    if(!confirm('下载云端 Staff 会覆盖本机人员 / 出勤 / 换休 / 发布版本。\n\n应用前会在本设备保存一份回滚快照，不会强制下载 JSON 文件。继续？'))return null;
     const data=await api('download_scopes',{scopeIds:['staff']},15000);
     const row=(data.scopes||[]).find(x=>x.scope_id==='staff'&&x.head_version_id);
     if(!row){if(typeof showToast==='function')showToast('Staff Cloud 还没有正式数据');return null}
+    window.CassolaStaff?.saveCloudRollback?.();
     mergeScope('staff',row.state);
     mutateMeta(meta=>{
       meta.scopes.staff={...(meta.scopes.staff||{}),baseVersionId:row.head_version_id,fingerprint:scopeFingerprint('staff'),cloudContentHash:row.content_hash,lastSyncAt:new Date().toISOString(),branch:false,canonicalHeadVersionId:row.head_version_id};
