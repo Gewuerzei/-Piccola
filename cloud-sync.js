@@ -487,6 +487,10 @@
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
   }
+  async function listReceiptTasks(statuses=['authorized'],orderId=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('receipt_tasks',{statuses,orderId},8000);
+  }
   async function submitEmployeeReceipt(taskId,payload){
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
     const data=await api('receipt_submit',{taskId,payload},12000);
@@ -516,7 +520,7 @@
         else continue;
         remaining=remaining.filter(x=>x.id!==row.id);sent++;
       }catch(err){
-        if(err?.data?.error==='duplicate_submission'||err?.data?.error==='duplicate_proposal'||err?.data?.error==='duplicate_receipt_submission'||err?.data?.error==='receipt_task_not_authorized'){
+        if(err?.data?.error==='duplicate_submission'||err?.data?.error==='duplicate_proposal'||err?.data?.error==='duplicate_receipt_submission'){
           remaining=remaining.filter(x=>x.id!==row.id);sent++;continue;
         }
         failed++;
@@ -663,7 +667,7 @@
     login,logout,connected,role,refreshStatus,upload,download,checkpoint,
     submitEmployee,reviewEmployee,openPending,
     submitSkuProposal,listSkuProposals,reviewSkuProposal,
-    listEmployeeDirectory,authorizeReceiptTask,revokeReceiptTask,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
+    listEmployeeDirectory,authorizeReceiptTask,revokeReceiptTask,listReceiptTasks,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
     queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
     rememberAccessCode,reconnect,cachedIdentity,
     captureScope,mergeScope,meta:readMeta,deviceId,
