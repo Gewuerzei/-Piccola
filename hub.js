@@ -237,10 +237,11 @@
         const pack=(factor!==1||String(line.orderUnit||line.unit||'')!==String(line.unit||''))?(' · 1'+escapeHtml(line.orderUnit||line.unit||'')+' = '+escapeHtml(String(factor))+escapeHtml(line.unit||'')):'';
         const meta=employeeReceiptStatusMeta(d.status);
         return '<div class="cassola-employee-receipt-line" data-receipt-line="'+escapeHtml(line.skuId)+'">'+
-          '<div class="cassola-employee-receipt-line-head"><div><strong>'+escapeHtml(line.skuName||line.skuId)+'</strong><small>'+escapeHtml(line.spec||'无规格')+pack+'</small></div><b>待收 '+escapeHtml(String(remaining))+' '+escapeHtml(line.orderUnit||line.unit||'')+'</b></div>'+
+          '<div class="cassola-employee-receipt-line-head"><div><strong>'+escapeHtml(line.skuName||line.skuId)+'</strong><small>库存规格 '+escapeHtml(line.spec||'未填写')+pack+'</small></div><b>待收 '+escapeHtml(String(remaining))+' '+escapeHtml(line.orderUnit||line.unit||'')+'</b></div>'+
           '<div class="cassola-employee-receipt-qty"><label>本次到货<input type="text" inputmode="decimal" autocomplete="off" data-employee-receipt-qty="'+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.qty??'')+'" placeholder="0"></label><span>'+escapeHtml(line.orderUnit||line.unit||'')+'</span></div>'+
           '<div class="cassola-employee-receipt-status">'+['received','later','other','out','short','over'].map(st=>{const m=employeeReceiptStatusMeta(st);return '<button type="button" class="'+(d.status===st?'active':'')+'" data-employee-receipt-status="'+st+'" data-task-id="'+escapeHtml(task.task_id)+'" data-sku-id="'+escapeHtml(line.skuId)+'">'+m[0]+' '+m[1]+'</button>'}).join('')+'</div>'+
           '<label class="cassola-employee-receipt-note">备注<input type="text" maxlength="300" data-employee-receipt-note="'+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.note||'')+'" placeholder="可空"></label>'+
+          '<button type="button" class="cassola-employee-receipt-spec" data-employee-spec-report="'+escapeHtml(line.skuId)+'">🧪 现场规格 / 包装不一致</button>'+
           '<div class="cassola-employee-receipt-current">'+meta[0]+' '+meta[1]+'</div>'+
         '</div>';
       }).join('')+'</div>'+
