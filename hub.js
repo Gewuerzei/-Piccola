@@ -325,8 +325,9 @@
     if(window.CassolaCloud?.employeeReceiptQueued?.(taskId,accessSession.id)){showToast('这份收货已经在待发送队列里');return}
     const btn=document.querySelector('[data-employee-receipt-submit="'+CSS.escape(String(taskId))+'"]');
     const oldText=btn?.textContent||'📤 提交本次收货';
+    let payload=null;
     try{
-      const payload=buildEmployeeReceiptPayload(task);
+      payload=buildEmployeeReceiptPayload(task);
       if(!payload)return;
       if(btn){btn.disabled=true;btn.textContent='⏳ 正在提交…'}
       if(!window.CassolaCloud?.connected?.()){
