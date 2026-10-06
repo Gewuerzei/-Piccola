@@ -255,12 +255,18 @@
     const cached=window.CassolaCloud?.cachedIdentity?.(accessSession.id);
     const responsible=accessSession.displayName||cached?.displayName||'责任区员工';
     const queued=window.CassolaCloud?.outboxCount?.(accessSession.id)||0,receiptTasks=employeeReceiptTasks(),inventoryTasks=employeeInventoryTasks();
-    const receiptMode=employeePanel==='receipt';
-    const noManagedCountTask=!receiptMode&&ctx.managed&&!inventoryTasks.length;
-    box.innerHTML='<div class="cassola-employee-shell '+(receiptMode?'receipt-mode':'count-mode')+'">'+
-      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(receiptMode?'收货任务':(scope.label||'责任区盘货'))+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
-      '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(!receiptMode?'active':'')+'">📋 盘货'+(inventoryTasks.length?' <b>'+inventoryTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+'">🚚 收货'+(receiptTasks.length?' <b>'+receiptTasks.length+'</b>':'')+'</button></div>'+
-      (receiptMode?employeeReceiptPanelHtml(receiptTasks):(noManagedCountTask?'<div class="cassola-employee-no-task"><span>📋</span><h2>无任务</h2><p>Supervisor 还没有从 Staff 给你发布盘货 SKU。</p></div>':employeeTaskPickerHtml(inventoryTasks,ctx.task?.task_id)+employeeCountPanelHtml(rows,draft,filled,queued)))+
+    const receiptMode=employeePanel==='receipt',skuMode=employeePanel==='sku',countMode=!receiptMode&&!skuMode;
+    const noManagedCountTask=countMode&&ctx.managed&&!inventoryTasks.length;
+    const panelClass=receiptMode?'receipt-mode':skuMode?'sku-mode':'count-mode';
+    const title=receiptMode?'收货任务':skuMode?'SKU 提议':(scope.label||'责任区盘货');
+    let content='';
+    if(receiptMode)content=employeeReceiptPanelHtml(receiptTasks);
+    else if(skuMode)content=window.CassolaEmployeeTools?.panelHtml?.()||'<div class="cassola-employee-no-task"><span>📦</span><h2>SKU 功能加载中</h2></div>';
+    else content=noManagedCountTask?'<div class="cassola-employee-no-task"><span>📋</span><h2>无任务</h2><p>Supervisor 还没有从 Staff 给你发布盘货 SKU。</p></div>':employeeTaskPickerHtml(inventoryTasks,ctx.task?.task_id)+employeeCountPanelHtml(rows,draft,filled,queued);
+    box.innerHTML='<div class="cassola-employee-shell '+panelClass+'">'+
+      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(title)+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
+      '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(countMode?'active':'')+'">📋 盘货'+(inventoryTasks.length?' <b>'+inventoryTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+'">🚚 收货'+(receiptTasks.length?' <b>'+receiptTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="sku" class="'+(skuMode?'active':'')+'">📦 SKU</button></div>'+
+      content+
       '</div>';
     window.CassolaEmployeeTools?.enhance?.();
   }
@@ -332,8 +338,8 @@
     }
   }
   async function switchEmployeePanel(mode){
-    employeePanel=mode==='receipt'?'receipt':'count';
-    if(employeePanel==='receipt'&&window.CassolaCloud?.connected?.()){
+    employeePanel=mode==='receipt'?'receipt':mode==='sku'?'sku':'count';
+    if((employeePanel==='receipt'||employeePanel==='sku')&&window.CassolaCloud?.connected?.()){
       await window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{});
     }
     renderEmployee();
