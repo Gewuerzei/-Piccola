@@ -393,7 +393,12 @@
       return;
     }
     const result=await window.CassolaCloud.flushOutbox();
-    if(typeof showToast==='function')showToast(result.failed?('已发 '+result.sent+' · 失败 '+result.failed):('☁️ 已发送 '+result.sent+' 份'));
+    if(typeof showToast==='function'){
+      const parts=['已发 '+result.sent];
+      if(result.expired)parts.push('失效 '+result.expired);
+      if(result.failed)parts.push('失败 '+result.failed);
+      showToast((result.failed||result.expired?'📤 ':'☁️ ')+parts.join(' · '));
+    }
     renderEmployee();
   }
 
@@ -511,6 +516,7 @@
     renderEmployee();
   });
   window.addEventListener('cassola-cloud-outbox-change',()=>{if(isEmployee())renderEmployee()});
+  window.addEventListener('cassola-cloud-employee-tasks-change',()=>{if(isEmployee())renderEmployee()});
 
   document.addEventListener('DOMContentLoaded',function(){
     accessSession=null;
