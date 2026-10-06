@@ -1,4 +1,4 @@
-/* Inventory v0.6.2 · active receiving inbox + year / quarter / week archive */
+/* Inventory v0.7 · product families + active receiving archive */
 let v4ArchiveYearOpen=null;
 let v4ArchiveQuarterOpen=null;
 let v4ArchiveWeekOpen=null;
