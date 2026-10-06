@@ -118,6 +118,43 @@
       document.body.appendChild(d);
     }
 
+    if(!document.getElementById('employeeNewCategoryDialog')){
+      const d=document.createElement('dialog');d.id='employeeNewCategoryDialog';d.className='employee-tool-dialog';
+      d.innerHTML=`
+        <form method="dialog">
+          <div class="dialog-head">
+            <div><div class="eyebrow">CATEGORY PROPOSAL</div><h3>＋ 提议新分类</h3></div>
+            <button value="cancel" formnovalidate class="icon-btn">✕</button>
+          </div>
+          <div class="employee-proposal-banner">🏷️ 只是提议。Supervisor 批准后才会进入正式 Inventory 分类。</div>
+          <label>新分类名称<input id="employeeNewCategoryName" maxlength="60" placeholder="例如 果泥 / 冷藏甜品" /></label>
+          <label>说明<input id="employeeNewCategoryNote" maxlength="300" placeholder="为什么现有分类不合适？" /></label>
+          <button type="button" class="btn primary large" id="employeeNewCategorySubmit">提交分类提议</button>
+          <button value="cancel" formnovalidate class="btn secondary large">取消</button>
+        </form>`;
+      document.body.appendChild(d);
+    }
+
+    if(!document.getElementById('employeeReclassifyDialog')){
+      const d=document.createElement('dialog');d.id='employeeReclassifyDialog';d.className='employee-tool-dialog';
+      d.innerHTML=`
+        <form method="dialog">
+          <div class="dialog-head">
+            <div><div class="eyebrow">RECLASSIFY PROPOSAL</div><h3 id="employeeReclassifyTitle">🏷️ 重新归类 SKU</h3></div>
+            <button value="cancel" formnovalidate class="icon-btn">✕</button>
+          </div>
+          <input type="hidden" id="employeeReclassifySkuId" />
+          <div id="employeeReclassifyCurrent" class="employee-standard-card"></div>
+          <datalist id="employeeReclassifyCategoryOptions"></datalist>
+          <label>建议分类<input id="employeeReclassifyCategory" list="employeeReclassifyCategoryOptions" maxlength="60" placeholder="选择已有分类，也可以填写新分类" /></label>
+          <label>说明<input id="employeeReclassifyNote" maxlength="300" placeholder="为什么要重新归类？" /></label>
+          <div class="employee-proposal-banner">Supervisor 批准后才会改正式 SKU。若这是新分类，批准时会同时登记分类。</div>
+          <button type="button" class="btn primary large" id="employeeReclassifySubmit">提交归类提议</button>
+          <button value="cancel" formnovalidate class="btn secondary large">取消</button>
+        </form>`;
+      document.body.appendChild(d);
+    }
+
     if(!document.getElementById('employeeProposalReviewDialog')){
       const d=document.createElement('dialog');d.id='employeeProposalReviewDialog';d.className='employee-tool-dialog supervisor-proposal-dialog';
       d.innerHTML=`
@@ -131,6 +168,25 @@
         </form>`;
       document.body.appendChild(d);
     }
+  }
+
+  function refreshProposalOptions(){
+    const cats=proposalCategories(),sups=proposalSuppliers();
+    const c1=document.getElementById('employeeCategoryOptions'),c2=document.getElementById('employeeReclassifyCategoryOptions'),sp=document.getElementById('employeeSupplierOptions');
+    const catHtml=cats.map(x=>'<option value="'+esc(x)+'"></option>').join('');
+    if(c1)c1.innerHTML=catHtml;if(c2)c2.innerHTML=catHtml;
+    if(sp)sp.innerHTML=sups.map(x=>'<option value="'+esc(x)+'"></option>').join('');
+  }
+  function panelHtml(){
+    const rows=proposalCatalog();
+    return '<section class="employee-sku-center">'+
+      '<div class="employee-sku-center-intro"><div><span class="eyebrow">SKU FIELD TOOLS</span><h2>📦 SKU 现场功能</h2><p>发现现实可以，改正式数据库不行。新 SKU / 新分类 / 重新归类都先交给 Supervisor。🗿💢</p></div></div>'+
+      '<div class="employee-sku-center-actions"><button type="button" class="btn primary" data-employee-new-sku>＋ 新 SKU</button><button type="button" class="btn secondary" data-employee-new-category>🏷️ 新分类</button></div>'+
+      '<div class="employee-sku-center-list">'+
+        (rows.length?rows.map(x=>'<article class="employee-sku-center-row"><div><strong>'+esc(x.name||'SKU')+'</strong><small>'+esc(x.spec||'无规格')+' · '+esc(x.category||'未分类')+' · '+esc(x.supplier||'未设供应商')+'</small></div><button type="button" class="btn secondary" data-employee-reclassify="'+esc(x.id)+'">重新归类</button></article>').join(''):'<div class="empty">当前还没有可查看的正式 SKU。新 SKU 仍可以单独提议。</div>')+
+      '</div>'+
+      '<div class="employee-sku-center-foot">员工提交的是 proposal，不会直接创建 / 改名 / 改分类 / 改库存。Supervisor 可以看完再决定要不要收编这只 SKU。</div>'+
+    '</section>';
   }
 
   async function submitOrQueue(proposal){
