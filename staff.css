@@ -261,3 +261,76 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
 :root[data-theme="light"] .staff-swap-source{
   background:rgba(79,139,96,.07);
 }
+
+/* Staff Cloud Access Tasks v0.1 */
+.staff-cloud-card{overflow:hidden}
+.staff-cloud-head,.staff-access-head,.staff-task-preview-head,.staff-task-existing-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px
+}
+.staff-cloud-head h3{margin:0 0 4px}
+.staff-cloud-head p{margin:0}
+#staffCloudBadge,.staff-access-head>span{
+  flex:0 0 auto;padding:6px 8px;border:1px solid var(--line);border-radius:999px;
+  background:rgba(255,255,255,.03);color:var(--muted);font-size:8px;font-weight:850
+}
+#staffCloudBadge.synced{color:var(--good)}
+#staffCloudBadge.cloud,#staffCloudBadge.local{color:var(--warn)}
+#staffCloudBadge.branch,#staffCloudBadge.conflict{color:var(--danger)}
+.staff-cloud-detail{
+  margin-top:10px;padding:10px 11px;border:1px solid var(--line);border-radius:17px;
+  background:rgba(255,255,255,.02);color:var(--muted);font-size:8.5px;line-height:1.45
+}
+.staff-access-card{
+  padding:13px;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.025)
+}
+.staff-access-head b{display:block;font-size:10px}
+.staff-access-head small{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.4}
+.staff-access-body{margin-top:10px}
+.staff-access-body>small{color:var(--muted);font-size:8.5px;line-height:1.45}
+.staff-pin-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;
+  border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line));border-radius:17px;
+  background:color-mix(in srgb,var(--accent) 7%,transparent)
+}
+.staff-pin-row span{color:var(--muted);font-size:8px}
+.staff-pin-row code{font-size:19px;font-weight:900;letter-spacing:.14em;color:var(--text)}
+.staff-access-meta{display:flex;justify-content:space-between;gap:10px;margin-top:6px;color:var(--muted);font-size:7.8px}
+.staff-access-meta b{max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.staff-access-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
+.staff-access-actions .btn{min-height:42px;border-radius:15px;font-size:8.5px}
+#staffOpenTaskPublisher{grid-column:1/-1}
+.staff-task-dialog{width:min(94vw,680px);max-height:90vh}
+.staff-task-note{
+  padding:10px 11px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.025);
+  color:var(--muted);font-size:8.5px;line-height:1.5
+}
+.staff-task-preview{
+  min-height:72px;padding:11px;border:1px solid var(--line);border-radius:19px;background:rgba(255,255,255,.025)
+}
+.staff-task-preview-head b{font-size:10px}
+.staff-task-preview-head span{color:var(--muted);font-size:8px}
+.staff-task-preview-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.staff-task-preview-chips span{
+  padding:5px 7px;border-radius:999px;background:rgba(255,255,255,.04);
+  color:var(--muted);font-size:7.6px
+}
+.staff-task-existing{padding-top:5px}
+.staff-task-existing-head b{font-size:9.5px}
+.staff-task-existing-head small{color:var(--muted);font-size:7.8px}
+#staffTaskList{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.staff-task-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 11px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.022)
+}
+.staff-task-row b{display:block;font-size:9.5px}
+.staff-task-row small{display:block;margin-top:3px;color:var(--muted);font-size:7.8px}
+.staff-task-row .btn{min-height:38px;border-radius:14px;padding:8px 10px;font-size:8px}
+:root[data-theme="light"] .staff-access-card,
+:root[data-theme="light"] .staff-task-note,
+:root[data-theme="light"] .staff-task-preview,
+:root[data-theme="light"] .staff-task-row,
+:root[data-theme="light"] .staff-cloud-detail{background:rgba(31,37,48,.035)}
+@media(max-width:460px){
+  .staff-access-actions{grid-template-columns:1fr 1fr}
+  .staff-pin-row code{font-size:17px}
+}
