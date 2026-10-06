@@ -1,4 +1,4 @@
-/* Cassola Employee Tools v0.3 · SKU proposal center + loss / conversion facts */
+/* Cassola Employee Tools v0.4 · packaging reports + SKU proposals + loss / conversion facts */
 (function(){
   const UNITS=['个','颗','包','盒','袋','箱','瓶','罐','kg','g','L','ml','份','把','托','件'];
   const EMPLOYEE_CONVERSION_TARGETS={
@@ -435,7 +435,7 @@
     if(type==='new_sku')return'＋ 新 SKU';
     if(type==='new_category')return'🏷️ 新分类';
     if(type==='sku_reclassify')return'🏷️ 重新归类';
-    if(type==='sku_change')return'🧪 规格 / 单位';
+    if(type==='sku_change')return'🧪 规格 / 包装';
     return'🚩 SKU 问题';
   }
   function proposalSummary(p){
@@ -516,10 +516,10 @@
       const factor=Number(proposed.unitsPerOrder);
       if(factor>0&&Number(s.unitsPerOrder||1)!==factor){s.unitsPerOrder=factor;changed.push('unitsPerOrder')}
       if(typeof v3NormalizeSku==='function')v3NormalizeSku(s);
-      if(changed.length&&typeof addHistory==='function')addHistory('adjust',s.id,'规格 / 单位已更新','员工 SKU 提议 · '+(p.display_name||p.credential_id),{employeeSkuProposalId:p.proposal_id});
+      if(changed.length&&typeof addHistory==='function')addHistory('adjust',s.id,'规格 / 包装已更新','员工 SKU 提议 · '+(p.display_name||p.credential_id),{employeeSkuProposalId:p.proposal_id});
       if(typeof saveState==='function')saveState();
       if(typeof renderAll==='function')renderAll();
-      return{changed:!!changed.length,message:changed.length?'已采用规格 / 单位提议':'本机已经是这个规格'};
+      return{changed:!!changed.length,message:changed.length?'已采用规格 / 包装提议':'本机已经是这个规格'};
     }
     if(p.proposal_type==='new_category'){
       const name=String(proposed.category||'').trim();if(!name)throw new Error('分类名称为空');
