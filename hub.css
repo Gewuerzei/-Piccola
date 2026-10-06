@@ -516,3 +516,13 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 .cassola-employee-task-picker span{display:block;font-size:9.5px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cassola-employee-task-picker b{display:block;margin-top:5px;color:var(--muted);font-size:8px}
 :root[data-theme="light"] .cassola-employee-task-picker button{background:rgba(31,37,48,.035)}
+
+
+/* Employee receiving · packaging mismatch report */
+.cassola-employee-receipt-spec{
+  width:100%;min-height:38px;margin-top:8px;border:1px dashed rgba(185,201,255,.22);
+  border-radius:14px;background:rgba(185,201,255,.035);color:var(--soft-blue);
+  font-size:8.8px;font-weight:850
+}
+.cassola-employee-receipt-spec:active{transform:scale(.985);background:rgba(185,201,255,.07)}
+:root[data-theme="light"] .cassola-employee-receipt-spec{background:rgba(64,91,148,.045)}
