@@ -440,14 +440,24 @@
   }
   function proposalSummary(p){
     const x=p.proposed||{};
-    if(p.proposal_type==='new_sku')return [x.name,x.spec,x.unit,x.category,x.supplier,x.area].filter(Boolean).join(' · ');
+    if(p.proposal_type==='new_sku')return [
+      x.name,
+      x.familyName?('商品卡 '+x.familyName):'',
+      x.brand?('品牌 '+x.brand):'',
+      x.spec?('库存规格 '+x.spec):'',
+      x.unit?('库存单位 '+x.unit):'',
+      x.orderUnit?('订货单位 '+x.orderUnit):'',
+      Number(x.unitsPerOrder)>0?('1 '+(x.orderUnit||'订货单位')+' = '+x.unitsPerOrder+' '+(x.unit||'库存单位')):'',
+      x.category,x.supplier,x.area
+    ].filter(Boolean).join(' · ');
     if(p.proposal_type==='new_category')return '新分类 '+(x.category||'');
     if(p.proposal_type==='sku_reclassify')return (p.current_snapshot?.category||'未分类')+' → '+(x.category||'');
     if(p.proposal_type==='sku_change')return [
-      x.spec?('规格 '+x.spec):'',
+      x.spec?('库存规格 '+x.spec):'',
+      x.brand?('品牌 '+x.brand):'',
       x.unit?('库存单位 '+x.unit):'',
       x.orderUnit?('订货单位 '+x.orderUnit):'',
-      Number(x.unitsPerOrder)>1?('1='+x.unitsPerOrder):''
+      Number(x.unitsPerOrder)>0?('1 '+(x.orderUnit||'订货单位')+' = '+x.unitsPerOrder+' '+(x.unit||'库存单位')):''
     ].filter(Boolean).join(' · ');
     return p.note||'只报告问题';
   }
@@ -460,21 +470,35 @@
       const data=await window.CassolaCloud.listSkuProposals(['pending']);
       const rows=data.proposals||[];
       dlg._proposals=rows;
-      list.innerHTML=rows.length?rows.map(p=>`
-        <article class="employee-review-card">
-          <div class="employee-review-top">
-            <div><strong>${esc(proposalTypeLabel(p.proposal_type))} · ${esc(p.current_snapshot?.name||p.proposed?.name||p.sku_id||'SKU')}</strong><small>负责人：${esc(p.display_name||p.credential_id)} · ${esc(p.business_date)}</small></div>
-            <span>待审核</span>
-          </div>
-          ${p.current_snapshot?'<div class="employee-review-current">当前：'+esc(p.current_snapshot.spec||'无规格')+' · '+esc(p.current_snapshot.unit||'')+' · '+esc(p.current_snapshot.category||'未分类')+'</div>':''}
-          <div class="employee-review-proposed">提议：<b>${esc(proposalSummary(p))}</b></div>
-          ${p.qty!==null&&p.qty!==undefined?'<div class="employee-review-qty">现场数量：<b>'+esc(p.qty)+' '+esc(p.proposed?.unit||'')+'</b></div>':''}
-          ${p.note?'<p>'+esc(p.note)+'</p>':''}
-          <div class="employee-review-actions">
-            <button type="button" class="btn primary" data-proposal-accept="${esc(p.id)}">${p.proposal_type==='sku_issue'?'✓ 标记已处理':'✓ 采用到本机'}</button>
-            <button type="button" class="btn danger ghost" data-proposal-reject="${esc(p.id)}">拒绝 · 重新盘点 🗿</button>
-          </div>
-        </article>`).join(''):'<div class="empty">没有待审核 SKU 提议。</div>';
+      list.innerHTML=rows.length?rows.map(p=>{
+        const c=p.current_snapshot||null;
+        const currentHtml=c
+          ?'<div class="employee-review-current">当前：库存规格 '+esc(c.spec||'无规格')+
+            ' · 品牌 '+esc(c.brand||'未填写')+
+            ' · 库存单位 '+esc(c.unit||'')+
+            ' · 订货单位 '+esc(c.orderUnit||c.unit||'')+
+            ' · 1 '+esc(c.orderUnit||c.unit||'')+' = '+esc(Number(c.unitsPerOrder)>0?c.unitsPerOrder:1)+' '+esc(c.unit||'')+
+            '</div>'
+          :'';
+        const variantBtn=p.proposal_type==='sku_change'
+          ?'<button type="button" class="btn secondary" data-proposal-new-variant="'+esc(p.id)+'">＋ 新建规格 SKU</button>'
+          :'';
+        return '<article class="employee-review-card">'+
+          '<div class="employee-review-top">'+
+            '<div><strong>'+esc(proposalTypeLabel(p.proposal_type))+' · '+esc(c?.name||p.proposed?.name||p.sku_id||'SKU')+'</strong><small>负责人：'+esc(p.display_name||p.credential_id)+' · '+esc(p.business_date)+'</small></div>'+
+            '<span>待审核</span>'+
+          '</div>'+
+          currentHtml+
+          '<div class="employee-review-proposed">提议：<b>'+esc(proposalSummary(p))+'</b></div>'+
+          (p.qty!==null&&p.qty!==undefined?'<div class="employee-review-qty">现场数量：<b>'+esc(p.qty)+' '+esc(p.proposed?.unit||'')+'</b></div>':'')+
+          (p.note?'<p>'+esc(p.note)+'</p>':'')+
+          '<div class="employee-review-actions">'+
+            '<button type="button" class="btn primary" data-proposal-accept="'+esc(p.id)+'">'+(p.proposal_type==='sku_issue'?'✓ 标记已处理':'✓ 更新当前 SKU')+'</button>'+
+            variantBtn+
+            '<button type="button" class="btn danger ghost" data-proposal-reject="'+esc(p.id)+'">拒绝 · 重新盘点 🗿</button>'+
+          '</div>'+
+        '</article>';
+      }).join(''):'<div class="empty">没有待审核 SKU 提议。</div>';
     }catch(err){list.innerHTML='<div class="empty">读取失败：'+esc(err?.message||'未知错误')+'</div>'}
   }
 
@@ -485,7 +509,7 @@
     if(p.proposal_type==='sku_change'){
       const s=localSku(p.sku_id);if(!s)throw new Error('本机找不到这个 SKU，请先下载对应区域云端');
       const changed=[];
-      ['spec','unit','orderUnit'].forEach(k=>{
+      ['spec','brand','unit','orderUnit'].forEach(k=>{
         const v=String(proposed[k]??'').trim();
         if(v&&String(s[k]??'')!==v){changed.push(k);s[k]=v}
       });
@@ -524,7 +548,7 @@
       if(duplicate&&!confirm('本机已经有同名同规格 SKU：'+duplicate.name+'\n仍然新建？'))throw new Error('cancelled');
       const id='employee-'+(crypto.randomUUID?.()||String(Date.now()+Math.random()));
       let s={
-        id,name:String(proposed.name||'新 SKU'),icon:'📦',spec:String(proposed.spec||''),unit:String(proposed.unit||'个'),
+        id,name:String(proposed.name||'新 SKU'),familyName:String(proposed.familyName||proposed.name||'新 SKU'),brand:String(proposed.brand||''),icon:'📦',spec:String(proposed.spec||''),unit:String(proposed.unit||'个'),
         orderUnit:String(proposed.orderUnit||proposed.unit||'个'),unitsPerOrder:Number(proposed.unitsPerOrder)>0?Number(proposed.unitsPerOrder):1,
         category:String(proposed.category||p.scope_definition?.value||'待确认'),supplier:String(proposed.supplier||'待确认'),area:String(proposed.area||'sushi'),
         qty:Number(p.qty)||0,warningMode:'auto',manualWeeklyUse:null,targetWeeks:2,targetQty:null,autoOrder:false,
@@ -540,6 +564,51 @@
       return{changed:true,message:'已新建 SKU · '+s.category+' · '+s.supplier};
     }
     throw new Error('unknown_proposal_type');
+  }
+
+  function applyProposalAsVariantLocal(p){
+    if(p.proposal_type!=='sku_change')throw new Error('只有规格 / 包装提议可以新建规格 SKU');
+    const current=localSku(p.sku_id);if(!current)throw new Error('本机找不到这个 SKU，请先下载对应区域云端');
+    const proposed=p.proposed||{};
+    const marker=String(p.proposal_id||'')+':variant';
+    const already=(state.skus||[]).find(x=>String(x.employeeSkuProposalId||'')===marker);
+    if(already)return{changed:false,message:'这个规格 SKU 已经建立'};
+    const nextSpec=String(proposed.spec||current.spec||'').trim();
+    const nextBrand=String(proposed.brand||current.brand||'').trim();
+    const nextUnit=String(proposed.unit||current.unit||'').trim();
+    const nextOrderUnit=String(proposed.orderUnit||current.orderUnit||nextUnit).trim()||nextUnit;
+    const nextFactor=Number(proposed.unitsPerOrder)>0?Number(proposed.unitsPerOrder):(Number(current.unitsPerOrder)>0?Number(current.unitsPerOrder):1);
+    const currentFamilyId=String(current.familyId||'');
+    const duplicate=(state.skus||[]).find(x=>
+      String(x.familyId||'')===currentFamilyId&&String(x.spec||'')===nextSpec&&String(x.brand||'')===nextBrand&&
+      String(x.unit||'')===nextUnit&&String(x.orderUnit||'')===nextOrderUnit&&Number(x.unitsPerOrder||1)===nextFactor
+    );
+    if(duplicate&&!confirm('同一商品卡里已经有相同规格 / 品牌 SKU：'+duplicate.name+'\n仍然新建？'))throw new Error('cancelled');
+    const id='employee-'+(crypto.randomUUID?.()||String(Date.now()+Math.random()));
+    let row={
+      ...current,id,qty:0,spec:nextSpec,brand:nextBrand,unit:nextUnit,orderUnit:nextOrderUnit,unitsPerOrder:nextFactor,
+      familyName:current.familyName||current.name,
+      familyId:current.familyId||(typeof v6FamilyKey==='function'?v6FamilyKey(current.familyName||current.name):''),
+      warningMode:'auto',manualWeeklyUse:null,targetQty:null,employeeSkuProposalId:marker,autoOrder:false
+    };
+    delete row.blueAt;delete row.yellowAt;delete row.redAt;
+    if(typeof v3NormalizeSku==='function')row=v3NormalizeSku(row);
+    state.skus.push(row);
+    if(typeof addHistory==='function')addHistory('adjust',row.id,'新建同商品规格 SKU','员工现场规格提议 · '+(p.display_name||p.credential_id),{employeeSkuProposalId:p.proposal_id,sourceSkuId:current.id});
+    if(typeof saveState==='function')saveState();
+    if(typeof renderAll==='function')renderAll();
+    return{changed:true,message:'已新建规格 SKU · '+(row.familyName||row.name)+' · '+(row.spec||'无规格')};
+  }
+  async function acceptProposalAsVariant(id){
+    const dlg=document.getElementById('employeeProposalReviewDialog');
+    const p=(dlg?._proposals||[]).find(x=>String(x.id)===String(id));if(!p)return;
+    if(!confirm('把现场包装作为“同商品的新规格 SKU”建立？\n\n原 SKU 不会被修改，新 SKU 初始库存为 0。之后可在库存卡中分别盘货。'))return;
+    try{
+      const result=applyProposalAsVariantLocal(p);
+      await window.CassolaCloud.reviewSkuProposal(p.id,'accepted');
+      if(typeof showToast==='function')showToast('🗂️ '+result.message);
+      await openReview();
+    }catch(err){if(err?.message!=='cancelled')alert('新建规格 SKU 失败：'+(err?.message||'未知错误'))}
   }
 
   async function acceptProposal(id){
@@ -573,6 +642,7 @@
   function enhance(){ensureDialogs()}
 
   document.addEventListener('click',e=>{
+    const specReport=e.target.closest('[data-employee-spec-report]');if(specReport){openDetail(specReport.dataset.employeeSpecReport,{specOnly:true});return}
     const detail=e.target.closest('[data-employee-detail]');if(detail){openDetail(detail.dataset.employeeDetail);return}
     if(e.target.closest('[data-employee-new-sku]')){openNewSku();return}
     if(e.target.closest('[data-employee-new-category]')){openNewCategory();return}
@@ -586,6 +656,7 @@
     if(e.target.closest('#employeeNewCategorySubmit')){e.preventDefault();submitNewCategory();return}
     if(e.target.closest('#employeeReclassifySubmit')){e.preventDefault();submitReclassify();return}
     if(e.target.closest('[data-cloud-proposals]')){openReview();return}
+    const variant=e.target.closest('[data-proposal-new-variant]');if(variant){acceptProposalAsVariant(variant.dataset.proposalNewVariant);return}
     const accept=e.target.closest('[data-proposal-accept]');if(accept){acceptProposal(accept.dataset.proposalAccept);return}
     const reject=e.target.closest('[data-proposal-reject]');if(reject){rejectProposal(reject.dataset.proposalReject);return}
   });
