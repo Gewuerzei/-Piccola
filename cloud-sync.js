@@ -581,9 +581,9 @@
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     return api('staff_access_get',{personId,personName},8000);
   }
-  async function staffAccessCreate(personId,personName){
+  async function staffAccessCreate(personId,personName,roleId=''){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
-    return api('staff_access_create',{personId,personName},10000);
+    return api('staff_access_create',{personId,personName,roleId},10000);
   }
   async function staffAccessRegenerate(personId){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
@@ -592,6 +592,14 @@
   async function staffAccessSetActive(personId,active){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     return api('staff_access_set_active',{personId,active:!!active},8000);
+  }
+  async function staffAccessSetRole(personId,roleId='',personName=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_access_set_role',{personId,roleId,personName},10000);
+  }
+  async function syncStaffRoleRoster(people){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_role_sync_roster',{people},20000);
   }
   async function inventoryTaskOptions(){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
@@ -608,6 +616,18 @@
   async function revokeInventoryTask(taskId){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     return api('inventory_task_revoke',{taskId},8000);
+  }
+  async function publishRoleInventoryTask(roleId,roleName,selector,label='',note=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('role_inventory_task_publish',{roleId,roleName,selector,label,note},15000);
+  }
+  async function listRoleInventoryTasks(roleId=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('role_inventory_tasks',{roleId},10000);
+  }
+  async function revokeRoleInventoryTask(ruleId){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('role_inventory_task_revoke',{ruleId},10000);
   }
   async function staffUpload(note='Manual Staff upload'){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
