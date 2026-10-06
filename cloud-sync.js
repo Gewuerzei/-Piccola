@@ -6,13 +6,14 @@
   const IDENTITY_KEY='cassola_cloud_identity_v01';
   const OUTBOX_KEY='cassola_cloud_outbox_v01';
   const EMPLOYEE_CATALOG_KEY='cassola_employee_catalog_v01';
+  const EMPLOYEE_RECEIPT_TASK_KEY='cassola_employee_receipt_tasks_v01';
   const SCOPES=[
     {id:'sushi',label:'🍣 Sushi'},
     {id:'cucina',label:'🔪 Cucina'},
     {id:'bar',label:'🍸 Bar / Sala'},
     {id:'common',label:'📦 Comune'}
   ];
-  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null,reconnectCode=null;
+  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null,employeeReceiptTasks=null,reconnectCode=null;
 
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -49,6 +50,18 @@
     const row=readCatalogCache()[String(credentialId||'')];
     return Array.isArray(row?.rows)?clone(row.rows):null;
   }
+  function readReceiptTaskCache(){
+    try{return JSON.parse(localStorage.getItem(EMPLOYEE_RECEIPT_TASK_KEY)||'{}')||{}}catch(_){return{}}
+  }
+  function cacheEmployeeReceiptTasks(credentialId,rows){
+    const id=String(credentialId||'');if(!id||!Array.isArray(rows))return;
+    const all=readReceiptTaskCache();all[id]={updatedAt:new Date().toISOString(),rows:clone(rows)};
+    localStorage.setItem(EMPLOYEE_RECEIPT_TASK_KEY,JSON.stringify(all));
+  }
+  function cachedEmployeeReceiptTasks(credentialId){
+    const row=readReceiptTaskCache()[String(credentialId||'')];
+    return Array.isArray(row?.rows)?clone(row.rows):[];
+  }
   function readOutbox(){
     try{const x=JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');return Array.isArray(x)?x:[]}catch(_){return[]}
   }
@@ -67,6 +80,9 @@
     if(type==='sku_proposal'&&payload?.proposalId){
       rows=rows.filter(x=>!(x.type===type&&x.credentialId===id&&x.payload?.proposalId===payload.proposalId));
     }
+    if(type==='employee_receipt'&&payload?.taskId){
+      rows=rows.filter(x=>!(x.type===type&&x.credentialId===id&&x.payload?.taskId===payload.taskId));
+    }
     rows.push({id:crypto.randomUUID?.()||String(Date.now()+Math.random()),type,credentialId:id,payload:clone(payload),queuedAt:new Date().toISOString()});
     writeOutbox(rows);
     window.dispatchEvent(new CustomEvent('cassola-cloud-outbox-change',{detail:{count:outboxCount(id)}}));
@@ -76,6 +92,14 @@
   function queueSkuProposal(payload,credentialId){
     const id=credentialId||credential?.id||window.CassolaHub?.session?.()?.id;
     return queueOutbox('sku_proposal',payload,id);
+  }
+  function queueEmployeeReceipt(taskId,payload){
+    const id=payload?.credentialId||credential?.id||window.CassolaHub?.session?.()?.id;
+    return queueOutbox('employee_receipt',{taskId,payload},id);
+  }
+  function employeeReceiptQueued(taskId,credentialId){
+    const id=String(credentialId||credential?.id||'');
+    return readOutbox().some(x=>x.type==='employee_receipt'&&(!id||x.credentialId===id)&&String(x.payload?.taskId||'')===String(taskId||''));
   }
 
   function readMeta(){
@@ -263,7 +287,7 @@
     try{return await login(reconnectCode)}catch(err){console.warn('Cassola Cloud reconnect failed',err);return null}
   }
   async function logout(){
-    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;reconnectCode=null;renderCloudUi();
+    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;employeeReceiptTasks=null;reconnectCode=null;renderCloudUi();
     if(old){
       token=old;try{await api('logout',{},2500)}catch(_){}finally{token=null}
     }
@@ -291,6 +315,8 @@
     if(role()==='employee'){
       employeeCatalog=data.catalogReady?(Array.isArray(data.scopeCatalog)?clone(data.scopeCatalog):[]):null;
       if(employeeCatalog!==null&&credential?.id)cacheEmployeeCatalog(credential.id,employeeCatalog);
+      employeeReceiptTasks=Array.isArray(data.receiptTasks)?clone(data.receiptTasks):[];
+      if(credential?.id)cacheEmployeeReceiptTasks(credential.id,employeeReceiptTasks);
     }
     renderCloudUi();
     if(!silent)maybeNotice(data);
@@ -445,6 +471,38 @@
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
   }
+  async function listEmployeeDirectory(){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('employee_directory',{},8000);
+  }
+  async function authorizeReceiptTask(task){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    const data=await api('receipt_authorize',{task},10000);
+    await refreshStatus({silent:true}).catch(()=>{});
+    return data;
+  }
+  async function revokeReceiptTask(taskId,note=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    const data=await api('receipt_revoke',{taskId,note},8000);
+    await refreshStatus({silent:true}).catch(()=>{});
+    return data;
+  }
+  async function submitEmployeeReceipt(taskId,payload){
+    if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
+    const data=await api('receipt_submit',{taskId,payload},12000);
+    await refreshStatus({silent:true}).catch(()=>{});
+    return data;
+  }
+  async function listReceiptPending(){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('receipt_pending',{},10000);
+  }
+  async function reviewReceiptTask(taskId,decision,note=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    const data=await api('receipt_review',{taskId,decision,note},8000);
+    await refreshStatus({silent:true}).catch(()=>{});
+    return data;
+  }
   async function flushOutbox(){
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
     const id=credential?.id,all=readOutbox(),mine=all.filter(x=>x.credentialId===id);
@@ -454,10 +512,11 @@
       try{
         if(row.type==='employee_submission')await api('employee_submit',{payload:row.payload},12000);
         else if(row.type==='sku_proposal')await api('employee_sku_proposal',{proposal:row.payload,deviceId:deviceId()},10000);
+        else if(row.type==='employee_receipt')await api('receipt_submit',{taskId:row.payload?.taskId,payload:row.payload?.payload},12000);
         else continue;
         remaining=remaining.filter(x=>x.id!==row.id);sent++;
       }catch(err){
-        if(err?.data?.error==='duplicate_submission'||err?.data?.error==='duplicate_proposal'){
+        if(err?.data?.error==='duplicate_submission'||err?.data?.error==='duplicate_proposal'||err?.data?.error==='duplicate_receipt_submission'||err?.data?.error==='receipt_task_not_authorized'){
           remaining=remaining.filter(x=>x.id!==row.id);sent++;continue;
         }
         failed++;
@@ -535,13 +594,14 @@
     if(hub){
       if(!online)hub.innerHTML='<span>☁️ Cloud</span><b>未连接</b>';
       else{
-        const pending=lastStatus?.pendingEmployeeSubmissions||0,proposalPending=lastStatus?.pendingSkuProposals||0,heads=lastStatus?.heads||[];
+        const pending=lastStatus?.pendingEmployeeSubmissions||0,proposalPending=lastStatus?.pendingSkuProposals||0,receiptPending=lastStatus?.pendingEmployeeReceipts||0,heads=lastStatus?.heads||[];
         const issues=heads.filter(h=>['cloud','conflict','branch'].includes(statusInfo(h.scope_id,h).cls)).length;
-        hub.innerHTML='<span>☁️ Cassola Piccola Cloud</span><b>'+(issues?('⚠️ '+issues+' 区需核对'):'✅ 已检查')+(pending?(' · 👷 '+pending+' 盘货'):'')+(proposalPending?(' · 🧪 '+proposalPending+' 提议'):'')+'</b>';
+        hub.innerHTML='<span>☁️ Cassola Piccola Cloud</span><b>'+(issues?('⚠️ '+issues+' 区需核对'):'✅ 已检查')+(pending?(' · 👷 '+pending+' 盘货'):'')+(receiptPending?(' · 🚚 '+receiptPending+' 收货'):'')+(proposalPending?(' · 🧪 '+proposalPending+' 提议'):'')+'</b>';
       }
     }
     const p=document.getElementById('cloudPendingCount');if(p)p.textContent=String(lastStatus?.pendingEmployeeSubmissions||0);
     const sp=document.getElementById('cloudProposalCount');if(sp)sp.textContent=String(lastStatus?.pendingSkuProposals||0);
+    const rp=document.getElementById('cloudReceiptCount');if(rp)rp.textContent=String(lastStatus?.pendingEmployeeReceipts||0);
   }
 
   function injectUi(){
@@ -549,7 +609,7 @@
     const settings=document.getElementById('view-settings');
     if(settings){
       const card=document.createElement('div');card.id='cloudSyncCard';card.className='settings-card cloud-card';
-      card.innerHTML='<div class="cloud-card-head"><div><h2>☁️ Cassola Piccola Cloud</h2><p>自动检查 Head，上传 / 下载永远由 Supervisor 手动决定。</p></div><span id="cloudConnectionState" class="cloud-connection">☁️ 未连接</span></div><div id="cloudScopeRows" class="cloud-scope-rows"></div><label class="cloud-scope-select">操作区域<select id="cloudScopeSelect">'+SCOPES.map(s=>'<option value="'+s.id+'">'+s.label+'</option>').join('')+'</select></label><div class="cloud-actions"><button type="button" class="btn primary" data-cloud-upload-scope data-cloud-needs-session>☁️ 上传所选区域</button><button type="button" class="btn secondary" data-cloud-download-scope data-cloud-needs-session>⬇️ 下载所选区域</button><button type="button" class="btn primary" data-cloud-upload-all data-cloud-needs-session>☁️ 上传全店</button><button type="button" class="btn secondary" data-cloud-download-all data-cloud-needs-session>⬇️ 下载全店</button></div><div class="cloud-actions small"><button type="button" class="btn secondary" data-cloud-checkpoint data-cloud-needs-session>📸 手动 checkpoint</button><button type="button" class="btn secondary" data-cloud-history data-cloud-needs-session>🕰️ 版本历史</button><button type="button" class="btn secondary" data-cloud-pending data-cloud-needs-session>👷 待审核 <span id="cloudPendingCount">0</span></button><button type="button" class="btn secondary" data-cloud-refresh data-cloud-needs-session>↻ 检查云端</button></div><div class="cloud-rule">云端变化只提醒，不自动下载。分叉上传只生成 branch，不会自动覆盖正式 Head。下载前自动导出本机 JSON 安全备份。</div>';
+      card.innerHTML='<div class="cloud-card-head"><div><h2>☁️ Cassola Piccola Cloud</h2><p>自动检查 Head，上传 / 下载永远由 Supervisor 手动决定。</p></div><span id="cloudConnectionState" class="cloud-connection">☁️ 未连接</span></div><div id="cloudScopeRows" class="cloud-scope-rows"></div><label class="cloud-scope-select">操作区域<select id="cloudScopeSelect">'+SCOPES.map(s=>'<option value="'+s.id+'">'+s.label+'</option>').join('')+'</select></label><div class="cloud-actions"><button type="button" class="btn primary" data-cloud-upload-scope data-cloud-needs-session>☁️ 上传所选区域</button><button type="button" class="btn secondary" data-cloud-download-scope data-cloud-needs-session>⬇️ 下载所选区域</button><button type="button" class="btn primary" data-cloud-upload-all data-cloud-needs-session>☁️ 上传全店</button><button type="button" class="btn secondary" data-cloud-download-all data-cloud-needs-session>⬇️ 下载全店</button></div><div class="cloud-actions small"><button type="button" class="btn secondary" data-cloud-checkpoint data-cloud-needs-session>📸 手动 checkpoint</button><button type="button" class="btn secondary" data-cloud-history data-cloud-needs-session>🕰️ 版本历史</button><button type="button" class="btn secondary" data-cloud-pending data-cloud-needs-session>👷 盘货审核 <span id="cloudPendingCount">0</span></button><button type="button" class="btn secondary" data-cloud-receipts data-cloud-needs-session>🚚 收货审核 <span id="cloudReceiptCount">0</span></button><button type="button" class="btn secondary" data-cloud-refresh data-cloud-needs-session>↻ 检查云端</button></div><div class="cloud-rule">云端变化只提醒，不自动下载。分叉上传只生成 branch，不会自动覆盖正式 Head。下载前自动导出本机 JSON 安全备份。</div>';
       const handoff=document.getElementById('v31HandoffCard');if(handoff)settings.insertBefore(card,handoff);else settings.prepend(card);
     }
     const hub=document.getElementById('cassolaHub');
@@ -579,6 +639,7 @@
       if(e.target.closest('[data-cloud-checkpoint]')){await checkpoint([currentScopeSelection()]);return}
       if(e.target.closest('[data-cloud-history]')){await openHistory(currentScopeSelection());return}
       if(e.target.closest('[data-cloud-pending]')){await openPending();return}
+      if(e.target.closest('[data-cloud-receipts]')){if(typeof v4OpenEmployeeReceiptInbox==='function')await v4OpenEmployeeReceiptInbox();else alert('员工收货审核模块没有加载。');return}
       if(e.target.closest('[data-cloud-refresh]')){await refreshStatus({silent:false});if(typeof showToast==='function')showToast('云端 Head 已检查');return}
       const restore=e.target.closest('[data-cloud-restore]');if(restore){await restoreVersion(restore.dataset.cloudRestore);return}
       const review=e.target.closest('[data-cloud-review]');if(review){await reviewPending(review.dataset.cloudReview);return}
@@ -602,7 +663,8 @@
     login,logout,connected,role,refreshStatus,upload,download,checkpoint,
     submitEmployee,reviewEmployee,openPending,
     submitSkuProposal,listSkuProposals,reviewSkuProposal,
-    queueEmployeeSubmission,queueSkuProposal,flushOutbox,outboxCount,
+    listEmployeeDirectory,authorizeReceiptTask,revokeReceiptTask,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
+    queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
     rememberAccessCode,reconnect,cachedIdentity,
     captureScope,mergeScope,meta:readMeta,deviceId,
     session:()=>credential?clone(credential):null,
@@ -611,6 +673,11 @@
       return cachedEmployeeCatalog(credentialId||credential?.id);
     },
     cachedEmployeeCatalog,
+    employeeReceiptTasks:(credentialId)=>{
+      if(employeeReceiptTasks!==null)return clone(employeeReceiptTasks);
+      return cachedEmployeeReceiptTasks(credentialId||credential?.id);
+    },
+    cachedEmployeeReceiptTasks,
     injectUi
   };
 })();
