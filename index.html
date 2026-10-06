@@ -152,7 +152,7 @@
         </div>
       </div>
       <div class="settings-card small-print">
-        <strong>v0.5 · Price Layer</strong>
+        <strong>v0.7 · Product Families</strong>
         <p>Offline-first / Cloud-assisted / Manual sync</p>
       </div>
     </section>
@@ -212,15 +212,19 @@
         <label>图标<input id="v3Icon" placeholder="🥑" /></label>
       </div>
       <div class="v3-form-grid two">
-        <label>规格<input id="v3Spec" placeholder="900g / 20kg" /></label>
-        <label>库存单位（最小包装）<input id="v3Unit" placeholder="包 / 盒 / 瓶" required /></label>
+        <label>商品卡 / 商品族<input id="v3FamilyName" placeholder="例如 Ikura / Burro / Surimi" /></label>
+        <label>品牌（可选）<input id="v3Brand" placeholder="例如 Kikkoman / 恒丰" /></label>
+      </div>
+      <div class="v3-form-grid two">
+        <label>库存规格<input id="v3Spec" placeholder="900g / 20kg / 20张" /></label>
+        <label>库存单位<input id="v3Unit" placeholder="包 / 盒 / 瓶" required /></label>
       </div>
       <div class="v3-subcard">
         <div class="v3-form-grid two">
-          <label>订货单位（大包装）<input id="v3OrderUnit" placeholder="箱 / 件 / 托" /></label>
-          <label>1 大包装 = 几个最小包装<input id="v3UnitsPerOrder" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 10" /></label>
+          <label>订货单位<input id="v3OrderUnit" placeholder="箱 / 件 / 托；不换算时同库存单位" /></label>
+          <label>换算：1 订货单位 = 几个库存单位<input id="v3UnitsPerOrder" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 10" /></label>
         </div>
-        <small>例如：库存按“包”，订货按“箱”，填写 1 箱 = 10 包。无需换算时保持 1。</small>
+        <small>例如：库存单位=包，订货单位=箱，填 10 即 1箱=10包。商品卡相同的不同规格 / 品牌 SKU 会折叠在同一张卡里。</small>
       </div>
       <div class="v3-form-grid two">
         <label>分类<input id="v3Category" list="v3CategoryOptions" required /></label>
