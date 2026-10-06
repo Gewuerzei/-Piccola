@@ -1180,7 +1180,7 @@
     }
     body.innerHTML='<small>正在读取 Access…</small>';
     try{
-      const data=await window.CassolaCloud.staffAccessGet(p.id),cred=data.credential;
+      const data=await window.CassolaCloud.staffAccessGet(p.id,p.name),cred=data.credential;
       document.getElementById('staffAccessCard')._credential=cred||null;
       taskBtn.disabled=!cred||!cred.active;
       if(!cred){
@@ -1243,7 +1243,7 @@
     const box=document.getElementById('staffTaskPreview'),type=document.getElementById('staffTaskSelectorType')?.value||'',value=document.getElementById('staffTaskSelectorValue')?.value||'';if(!box)return;
     const rows=taskMatches(type,value);
     box.innerHTML=rows.length?'<div class="staff-task-preview-head"><b>'+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,12).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>12?'<span>＋'+(rows.length-12)+'</span>':'')+'</div>':'<div class="empty">这个选择现在没有 SKU。</div>';
-    const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!document.getElementById('staffTaskDialog')?._accessReady;
+    const btn=document.getElementById('staffTaskPublish'),dlg=document.getElementById('staffTaskDialog');if(btn)btn.disabled=!rows.length||!dlg?._accessReady;
   }
   function renderTaskRows(){
     const box=document.getElementById('staffTaskList');if(!box)return;
@@ -1263,7 +1263,7 @@
       const [opts,tasks,access]=await Promise.all([
         window.CassolaCloud.inventoryTaskOptions(),
         window.CassolaCloud.listInventoryTasks(personId),
-        window.CassolaCloud.staffAccessGet(personId)
+        window.CassolaCloud.staffAccessGet(personId,p.name)
       ]);
       taskOptionsCache=opts;taskRowsCache=tasks.tasks||[];dlg._accessReady=!!access.credential?.active;
       if(!dlg._accessReady)preview.innerHTML='<div class="empty">先在“编辑人员 → Employee Access”生成并启用员工 PIN。</div>';
@@ -1430,6 +1430,10 @@
   async function deletePerson(){
     const p=personById(editPersonId);if(!p)return;
     if(!confirm('删除 '+p.name+'？历史记录会保留，但今后的排班不再显示这个人。'))return;
+    if(cloudReady()){
+      try{const a=await window.CassolaCloud.staffAccessGet(p.id,p.name);if(a.credential?.active)await window.CassolaCloud.staffAccessSetActive(p.id,false)}
+      catch(err){console.warn('Could not disable deleted Staff access',err)}
+    }
     state.people=state.people.filter(x=>x.id!==p.id);removePersonEverywhere(p.id);await avatarDelete(p.id);
     log('person','删除人员：'+p.name);save();document.getElementById('staffPersonDialog').close();renderPeople();renderBoard();renderHistory();toast('已删除');
   }
