@@ -1,6 +1,72 @@
-function v3OpenSku(id=''){const catOptions=document.getElementById('v3CategoryOptions');if(catOptions)catOptions.innerHTML=v3Cats().map(c=>`<option value="${escapeHtml(c)}"></option>`).join('');const editing=!!id,s=editing?sku(id):{id:'',name:'',spec:'',unit:'',category:'蔬果',supplier:'大兴',area:v4AreaFilter||'sushi',qty:0,icon:'',warningMode:'auto',targetWeeks:.6,autoOrder:true};if(!s)return;v3NormalizeSku(s);document.getElementById('v3SkuTitle').textContent=editing?'编辑 SKU':'新建 SKU';document.getElementById('v3SkuId').value=s.id||'';document.getElementById('v3Name').value=s.name||'';document.getElementById('v3Spec').value=s.spec||'';document.getElementById('v3Unit').value=s.unit||'';document.getElementById('v3OrderUnit').value=v5OrderUnit(s);document.getElementById('v3UnitsPerOrder').value=v5UnitsPerOrder(s);document.getElementById('v3Category').value=s.category||'';document.getElementById('v3Supplier').value=s.supplier||'';document.getElementById('v3Area').value=v4AreaOf(s);document.getElementById('v3Icon').value=s.icon||'';document.getElementById('v3Qty').value=s.qty??0;document.getElementById('v3WarningMode').value=s.warningMode||'auto';document.getElementById('v3Blue').value=s.blueAt??'';document.getElementById('v3Yellow').value=s.yellowAt??'';document.getElementById('v3Red').value=s.redAt??'';document.getElementById('v3Weekly').value=s.manualWeeklyUse??'';document.getElementById('v3Weeks').value=s.targetWeeks??v3DefaultWeeks(s.category);document.getElementById('v3Target').value=s.targetQty??'';document.getElementById('v3AutoOrder').checked=s.autoOrder!==false;document.getElementById('v3DeleteSku').classList.toggle('hidden',!editing);v3WarningForm();if(typeof v45RenderSkuPriceCard==='function')v45RenderSkuPriceCard(s.id||'');document.getElementById('v3SkuDialog').showModal()}
+function v3OpenSku(id=''){
+  const catOptions=document.getElementById('v3CategoryOptions');if(catOptions)catOptions.innerHTML=v3Cats().map(c=>`<option value="${escapeHtml(c)}"></option>`).join('');
+  const editing=!!id,s=editing?sku(id):{id:'',name:'',familyName:'',brand:'',spec:'',unit:'',category:'蔬果',supplier:'大兴',area:v4AreaFilter||'sushi',qty:0,icon:'',warningMode:'auto',targetWeeks:.6,autoOrder:true};
+  if(!s)return;v3NormalizeSku(s);
+  document.getElementById('v3SkuTitle').textContent=editing?'编辑 SKU':'新建 SKU';
+  document.getElementById('v3SkuId').value=s.id||'';
+  document.getElementById('v3Name').value=s.name||'';
+  document.getElementById('v3FamilyName').value=s.familyName||s.name||'';
+  document.getElementById('v3Brand').value=s.brand||'';
+  document.getElementById('v3Spec').value=s.spec||'';
+  document.getElementById('v3Unit').value=s.unit||'';
+  document.getElementById('v3OrderUnit').value=v5OrderUnit(s);
+  document.getElementById('v3UnitsPerOrder').value=v5UnitsPerOrder(s);
+  document.getElementById('v3Category').value=s.category||'';
+  document.getElementById('v3Supplier').value=s.supplier||'';
+  document.getElementById('v3Area').value=v4AreaOf(s);
+  document.getElementById('v3Icon').value=s.icon||'';
+  document.getElementById('v3Qty').value=s.qty??0;
+  document.getElementById('v3WarningMode').value=s.warningMode||'auto';
+  document.getElementById('v3Blue').value=s.blueAt??'';
+  document.getElementById('v3Yellow').value=s.yellowAt??'';
+  document.getElementById('v3Red').value=s.redAt??'';
+  document.getElementById('v3Weekly').value=s.manualWeeklyUse??'';
+  document.getElementById('v3Weeks').value=s.targetWeeks??v3DefaultWeeks(s.category);
+  document.getElementById('v3Target').value=s.targetQty??'';
+  document.getElementById('v3AutoOrder').checked=s.autoOrder!==false;
+  document.getElementById('v3DeleteSku').classList.toggle('hidden',!editing);
+  v3WarningForm();
+  if(typeof v45RenderSkuPriceCard==='function')v45RenderSkuPriceCard(s.id||'');
+  document.getElementById('v3SkuDialog').showModal();
+}
 function v3WarningForm(){document.getElementById('v3ManualThresholds').classList.toggle('hidden',document.getElementById('v3WarningMode').value!=='manual')}
-function v3SaveSku(e){e.preventDefault();const id=document.getElementById('v3SkuId').value,name=document.getElementById('v3Name').value.trim(),spec=document.getElementById('v3Spec').value.trim(),unit=document.getElementById('v3Unit').value.trim(),category=document.getElementById('v3Category').value.trim(),supplier=document.getElementById('v3Supplier').value.trim(),icon=document.getElementById('v3Icon').value.trim();if(!name||!unit||!category||!supplier){showToast('名称、单位、分类、供应商要填');return}const area=document.getElementById('v3Area').value||'sushi',orderUnitRaw=document.getElementById('v3OrderUnit').value.trim(),unitsPerOrder=v3Num(document.getElementById('v3UnitsPerOrder').value)??1;if(!(unitsPerOrder>0)){showToast('包装换算必须大于 0');return}const orderUnit=orderUnitRaw||unit;if(unitsPerOrder!==1&&!orderUnitRaw){showToast('设置大包装换算时要填写订货单位');return}state.customCategories=Array.isArray(state.customCategories)?state.customCategories:[];if(!categories.includes(category)&&!state.customCategories.includes(category))state.customCategories.push(category);const data={name,spec,unit,orderUnit,unitsPerOrder,category,supplier,area,icon,qty:Math.max(0,v3Num(document.getElementById('v3Qty').value)??0),warningMode:document.getElementById('v3WarningMode').value,blueAt:v3Num(document.getElementById('v3Blue').value),yellowAt:v3Num(document.getElementById('v3Yellow').value),redAt:v3Num(document.getElementById('v3Red').value),manualWeeklyUse:v3Num(document.getElementById('v3Weekly').value),targetWeeks:v3Num(document.getElementById('v3Weeks').value)??v3DefaultWeeks(category),targetQty:v3Num(document.getElementById('v3Target').value),autoOrder:document.getElementById('v3AutoOrder').checked};if(id){const s=sku(id),old=Number(s.qty);Object.assign(s,data);if(old!==data.qty)addHistory('adjust',id,`${fmt(old)} → ${fmt(data.qty)} ${unit}`,'SKU 编辑库存')}else{state.skus.push(v3NormalizeSku({id:`custom_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...data}))}saveState();document.getElementById('v3SkuDialog').close();renderAll();showToast(id?'SKU 已更新':'SKU 已创建')}
+function v3SaveSku(e){
+  e.preventDefault();
+  const id=document.getElementById('v3SkuId').value;
+  const name=document.getElementById('v3Name').value.trim();
+  const familyName=(document.getElementById('v3FamilyName').value.trim()||name);
+  const brand=document.getElementById('v3Brand').value.trim();
+  const spec=document.getElementById('v3Spec').value.trim();
+  const unit=document.getElementById('v3Unit').value.trim();
+  const category=document.getElementById('v3Category').value.trim();
+  const supplier=document.getElementById('v3Supplier').value.trim();
+  const icon=document.getElementById('v3Icon').value.trim();
+  if(!name||!unit||!category||!supplier){showToast('名称、库存单位、分类、供应商要填');return}
+  const area=document.getElementById('v3Area').value||'sushi';
+  const orderUnitRaw=document.getElementById('v3OrderUnit').value.trim();
+  const unitsPerOrder=v3Num(document.getElementById('v3UnitsPerOrder').value)??1;
+  if(!(unitsPerOrder>0)){showToast('订货单位换算必须大于 0');return}
+  const orderUnit=orderUnitRaw||unit;
+  if(unitsPerOrder!==1&&!orderUnitRaw){showToast('设置换算时要填写订货单位');return}
+  state.customCategories=Array.isArray(state.customCategories)?state.customCategories:[];
+  if(!categories.includes(category)&&!state.customCategories.includes(category))state.customCategories.push(category);
+  const data={
+    name,familyName,familyId:v6FamilyKey(familyName),brand,spec,unit,orderUnit,unitsPerOrder,category,supplier,area,icon,
+    qty:Math.max(0,v3Num(document.getElementById('v3Qty').value)??0),
+    warningMode:document.getElementById('v3WarningMode').value,
+    blueAt:v3Num(document.getElementById('v3Blue').value),yellowAt:v3Num(document.getElementById('v3Yellow').value),redAt:v3Num(document.getElementById('v3Red').value),
+    manualWeeklyUse:v3Num(document.getElementById('v3Weekly').value),targetWeeks:v3Num(document.getElementById('v3Weeks').value)??v3DefaultWeeks(category),targetQty:v3Num(document.getElementById('v3Target').value),
+    autoOrder:document.getElementById('v3AutoOrder').checked
+  };
+  if(id){
+    const current=sku(id),old=Number(current.qty);
+    Object.assign(current,data);v3NormalizeSku(current);
+    if(old!==data.qty)addHistory('adjust',id,`${fmt(old)} → ${fmt(data.qty)} ${unit}`,'SKU 编辑库存');
+  }else{
+    state.skus.push(v3NormalizeSku({id:`custom_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...data}));
+  }
+  saveState();document.getElementById('v3SkuDialog').close();renderAll();showToast(id?'SKU 已更新':'SKU 已创建');
+}
 function v3Delete(){const id=document.getElementById('v3SkuId').value,s=sku(id);if(!s||!confirm(`删除 ${s.name}？`))return;if(v3Builtins.has(id)){state.hiddenSkuIds=state.hiddenSkuIds||[];if(!state.hiddenSkuIds.includes(id))state.hiddenSkuIds.push(id)}else state.skus=state.skus.filter(x=>x.id!==id);delete state.order[id];saveState();document.getElementById('v3SkuDialog').close();renderAll();showToast('SKU 已删除')}
 
 renderHistory=function(){
