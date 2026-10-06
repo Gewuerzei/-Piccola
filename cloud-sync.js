@@ -7,17 +7,19 @@
   const OUTBOX_KEY='cassola_cloud_outbox_v01';
   const EMPLOYEE_CATALOG_KEY='cassola_employee_catalog_v01';
   const EMPLOYEE_RECEIPT_TASK_KEY='cassola_employee_receipt_tasks_v01';
+  const EMPLOYEE_INVENTORY_TASK_KEY='cassola_employee_inventory_tasks_v01';
+  const STAFF_SCOPE={id:'staff',label:'👥 Staff'};
   const SCOPES=[
     {id:'sushi',label:'🍣 Sushi'},
     {id:'cucina',label:'🔪 Cucina'},
     {id:'bar',label:'🍸 Bar / Sala'},
     {id:'common',label:'📦 Comune'}
   ];
-  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null,employeeReceiptTasks=null,reconnectCode=null;
+  let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null,employeeReceiptTasks=null,employeeInventoryTasks=null,reconnectCode=null;
 
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const scopeLabel=id=>SCOPES.find(x=>x.id===id)?.label||id;
+  const scopeLabel=id=>([...SCOPES,STAFF_SCOPE].find(x=>x.id===id)?.label||id);
   const areaOf=s=>String(s?.area||'sushi');
 
   function deviceId(){
@@ -35,7 +37,7 @@
   function cacheIdentity(row){
     if(!row?.id)return;
     const all=readIdentityCache();
-    all[row.id]={id:row.id,displayName:row.displayName||null,label:row.label||'',role:row.role||'',updatedAt:new Date().toISOString()};
+    all[row.id]={id:row.id,displayName:row.displayName||null,label:row.label||'',role:row.role||'',staffPersonId:row.staffPersonId||null,updatedAt:new Date().toISOString()};
     localStorage.setItem(IDENTITY_KEY,JSON.stringify(all));
   }
   function readCatalogCache(){
@@ -60,6 +62,18 @@
   }
   function cachedEmployeeReceiptTasks(credentialId){
     const row=readReceiptTaskCache()[String(credentialId||'')];
+    return Array.isArray(row?.rows)?clone(row.rows):[];
+  }
+  function readInventoryTaskCache(){
+    try{return JSON.parse(localStorage.getItem(EMPLOYEE_INVENTORY_TASK_KEY)||'{}')||{}}catch(_){return{}}
+  }
+  function cacheEmployeeInventoryTasks(credentialId,rows){
+    const id=String(credentialId||'');if(!id||!Array.isArray(rows))return;
+    const all=readInventoryTaskCache();all[id]={updatedAt:new Date().toISOString(),rows:clone(rows)};
+    localStorage.setItem(EMPLOYEE_INVENTORY_TASK_KEY,JSON.stringify(all));
+  }
+  function cachedEmployeeInventoryTasks(credentialId){
+    const row=readInventoryTaskCache()[String(credentialId||'')];
     return Array.isArray(row?.rows)?clone(row.rows):[];
   }
   function readOutbox(){
@@ -113,7 +127,7 @@
   function mutateMeta(fn){const m=readMeta();fn(m);writeMeta(m);return m}
   function bases(){
     const m=readMeta(),out={};
-    SCOPES.forEach(s=>{const id=m.scopes?.[s.id]?.baseVersionId;if(id)out[s.id]=id});
+    [...SCOPES,STAFF_SCOPE].forEach(s=>{const id=m.scopes?.[s.id]?.baseVersionId;if(id)out[s.id]=id});
     return out;
   }
   function stable(v){
@@ -135,8 +149,25 @@
     return areaOf(s);
   }
   function lineClosed(i){return !['pending','later','other'].includes(String(i?.lineStatus||'pending'))}
+  function captureStaffScope(){
+    try{
+      const raw=JSON.parse(localStorage.getItem('cassola_staff_v01')||'{}')||{};
+      return{
+        schemaVersion:1,scopeId:'staff',
+        people:Array.isArray(raw.people)?clone(raw.people):[],
+        roles:Array.isArray(raw.roles)?clone(raw.roles):[],
+        schedules:raw.schedules&&typeof raw.schedules==='object'?clone(raw.schedules):{},
+        attendance:raw.attendance&&typeof raw.attendance==='object'?clone(raw.attendance):{},
+        swaps:Array.isArray(raw.swaps)?clone(raw.swaps):[],
+        restMoves:Array.isArray(raw.restMoves)?clone(raw.restMoves):[],
+        weekPublications:raw.weekPublications&&typeof raw.weekPublications==='object'?clone(raw.weekPublications):{},
+        history:Array.isArray(raw.history)?clone(raw.history):[]
+      };
+    }catch(_){return{schemaVersion:1,scopeId:'staff',people:[],roles:[],schedules:{},attendance:{},swaps:[],restMoves:[],weekPublications:{},history:[]}}
+  }
 
   function captureScope(scopeId){
+    if(scopeId==='staff')return captureStaffScope();
     const allSkus=Array.isArray(state.skus)?state.skus:[];
     const skus=allSkus.filter(s=>areaOf(s)===scopeId);
     const ids=new Set(skus.map(s=>String(s.id)));
@@ -189,6 +220,11 @@
   }
   function mergeScope(scopeId,cloud){
     if(!cloud||typeof cloud!=='object')throw new Error('cloud_scope_state_invalid');
+    if(scopeId==='staff'){
+      if(!window.CassolaStaff?.applyCloudState)throw new Error('staff_module_not_ready');
+      window.CassolaStaff.applyCloudState(cloud);
+      return;
+    }
     const beforeSkus=Array.isArray(state.skus)?state.skus:[];
     const previousIds=new Set(beforeSkus.filter(s=>areaOf(s)===scopeId).map(s=>String(s.id)));
     const incomingSkus=Object.values(cloud.skus||{}).map(clone);
@@ -287,7 +323,7 @@
     try{return await login(reconnectCode)}catch(err){console.warn('Cassola Cloud reconnect failed',err);return null}
   }
   async function logout(){
-    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;employeeReceiptTasks=null;reconnectCode=null;renderCloudUi();
+    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;employeeReceiptTasks=null;employeeInventoryTasks=null;reconnectCode=null;renderCloudUi();
     if(old){
       token=old;try{await api('logout',{},2500)}catch(_){}finally{token=null}
     }
@@ -316,8 +352,16 @@
       employeeCatalog=data.catalogReady?(Array.isArray(data.scopeCatalog)?clone(data.scopeCatalog):[]):null;
       if(employeeCatalog!==null&&credential?.id)cacheEmployeeCatalog(credential.id,employeeCatalog);
       employeeReceiptTasks=Array.isArray(data.receiptTasks)?clone(data.receiptTasks):[];
-      if(credential?.id)cacheEmployeeReceiptTasks(credential.id,employeeReceiptTasks);
-      window.dispatchEvent(new CustomEvent('cassola-cloud-employee-tasks-change',{detail:{count:employeeReceiptTasks.length}}));
+      employeeInventoryTasks=Array.isArray(data.inventoryTasks)?clone(data.inventoryTasks):[];
+      if(credential?.id){
+        cacheEmployeeReceiptTasks(credential.id,employeeReceiptTasks);
+        cacheEmployeeInventoryTasks(credential.id,employeeInventoryTasks);
+      }
+      if(credential){
+        credential.scope=data.credentialScope||credential.scope||null;
+        credential.staffPersonId=data.staffPersonId||credential.staffPersonId||null;
+      }
+      window.dispatchEvent(new CustomEvent('cassola-cloud-employee-tasks-change',{detail:{receiptCount:employeeReceiptTasks.length,inventoryCount:employeeInventoryTasks.length,scope:clone(data.credentialScope||null),staffPersonId:data.staffPersonId||null}}));
     }
     renderCloudUi();
     if(!silent)maybeNotice(data);
@@ -508,6 +552,85 @@
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
   }
+  async function staffAccessGet(personId){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_access_get',{personId},8000);
+  }
+  async function staffAccessCreate(personId,personName){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_access_create',{personId,personName},10000);
+  }
+  async function staffAccessRegenerate(personId){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_access_regenerate',{personId},10000);
+  }
+  async function staffAccessSetActive(personId,active){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_access_set_active',{personId,active:!!active},8000);
+  }
+  async function inventoryTaskOptions(){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('inventory_task_options',{},10000);
+  }
+  async function publishInventoryTask(personId,selector,label='',note=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('inventory_task_publish',{personId,selector,label,note},12000);
+  }
+  async function listInventoryTasks(personId=''){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('inventory_tasks',{personId},10000);
+  }
+  async function revokeInventoryTask(taskId){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('inventory_task_revoke',{taskId},8000);
+  }
+  async function staffUpload(note='Manual Staff upload'){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    const id='staff',m=readMeta(),staffState=captureStaffScope();
+    const item={scopeId:id,baseVersionId:m.scopes?.[id]?.baseVersionId||null,state:staffState,summary:{peopleCount:(staffState.people||[]).length},note};
+    const data=await api('upload_scopes',{deviceId:deviceId(),items:[item],note},20000);
+    const row=(data.results||[])[0];
+    if(row){
+      mutateMeta(meta=>{
+        const current=meta.scopes[id]||{};
+        if(row.status==='canonical'||row.status==='branch'){
+          current.baseVersionId=row.versionId;current.fingerprint=scopeFingerprint(id);current.cloudContentHash=row.contentHash;current.lastSyncAt=new Date().toISOString();current.branch=row.status==='branch';current.canonicalHeadVersionId=row.headAfter||null;
+        }else if(row.status==='same_as_head'){
+          current.baseVersionId=row.headVersionId;current.fingerprint=scopeFingerprint(id);current.cloudContentHash=row.contentHash;current.lastSyncAt=new Date().toISOString();current.branch=false;current.canonicalHeadVersionId=row.headVersionId;
+        }else if(row.status==='noop'){
+          current.fingerprint=scopeFingerprint(id);current.lastSyncAt=new Date().toISOString();
+        }
+        meta.scopes[id]=current;
+      });
+      if(row.status==='branch')alert('🌿 Staff 已上传为分支。云端正式 Staff Head 没有被覆盖，请先核对另一台 Supervisor 的修改。');
+      else if(typeof showToast==='function')showToast('👥 Staff 已上传云端');
+    }
+    await refreshStatus({silent:true}).catch(()=>{});
+    window.dispatchEvent(new CustomEvent('cassola-cloud-staff-change'));
+    return data;
+  }
+  async function staffDownload(){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    if(!confirm('下载云端 Staff 会覆盖本机人员 / 出勤 / 换休 / 发布版本。\n\n系统会先导出一份本机 Staff JSON。继续？'))return null;
+    await window.CassolaStaff?.exportCloudBackup?.();
+    const data=await api('download_scopes',{scopeIds:['staff']},15000);
+    const row=(data.scopes||[]).find(x=>x.scope_id==='staff'&&x.head_version_id);
+    if(!row){if(typeof showToast==='function')showToast('Staff Cloud 还没有正式数据');return null}
+    mergeScope('staff',row.state);
+    mutateMeta(meta=>{
+      meta.scopes.staff={...(meta.scopes.staff||{}),baseVersionId:row.head_version_id,fingerprint:scopeFingerprint('staff'),cloudContentHash:row.content_hash,lastSyncAt:new Date().toISOString(),branch:false,canonicalHeadVersionId:row.head_version_id};
+    });
+    if(typeof showToast==='function')showToast('👥 已下载 Staff Cloud');
+    await refreshStatus({silent:true}).catch(()=>{});
+    window.dispatchEvent(new CustomEvent('cassola-cloud-staff-change'));
+    return row;
+  }
+  function staffStatus(){
+    const head=(lastStatus?.heads||[]).find(x=>x.scope_id==='staff');
+    return statusInfo('staff',head);
+  }
+  async function staffHistory(){return openHistory('staff')}
+
   async function flushOutbox(){
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
     const id=credential?.id,all=readOutbox(),mine=all.filter(x=>x.credentialId===id);
@@ -672,6 +795,9 @@
     submitEmployee,reviewEmployee,openPending,
     submitSkuProposal,listSkuProposals,reviewSkuProposal,
     listEmployeeDirectory,authorizeReceiptTask,revokeReceiptTask,listReceiptTasks,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
+    staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,
+    inventoryTaskOptions,publishInventoryTask,listInventoryTasks,revokeInventoryTask,
+    staffUpload,staffDownload,staffStatus,staffHistory,
     queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
     rememberAccessCode,reconnect,cachedIdentity,
     captureScope,mergeScope,meta:readMeta,deviceId,
@@ -686,6 +812,20 @@
       return cachedEmployeeReceiptTasks(credentialId||credential?.id);
     },
     cachedEmployeeReceiptTasks,
+    employeeInventoryTasks:(credentialId)=>{
+      if(employeeInventoryTasks!==null)return clone(employeeInventoryTasks);
+      return cachedEmployeeInventoryTasks(credentialId||credential?.id);
+    },
+    cachedEmployeeInventoryTasks,
+    inventoryCatalog:()=>{
+      const rows=[];
+      for(const sc of SCOPES){
+        const part=captureScope(sc.id);
+        Object.values(part.skus||{}).forEach(x=>rows.push(clone(x)));
+      }
+      return rows;
+    },
+    captureStaffScope,
     injectUi
   };
 })();
