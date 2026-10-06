@@ -154,7 +154,7 @@
       const raw=JSON.parse(localStorage.getItem('cassola_staff_v01')||'{}')||{};
       return{
         schemaVersion:1,scopeId:'staff',
-        people:Array.isArray(raw.people)?clone(raw.people):[],
+        people:Array.isArray(raw.people)?raw.people.map(p=>{const x=clone(p);delete x.avatarStamp;return x}):[],
         roles:Array.isArray(raw.roles)?clone(raw.roles):[],
         schedules:raw.schedules&&typeof raw.schedules==='object'?clone(raw.schedules):{},
         attendance:raw.attendance&&typeof raw.attendance==='object'?clone(raw.attendance):{},
