@@ -486,3 +486,33 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 @media(max-width:460px){
   .cassola-employee-receipt-status{grid-template-columns:repeat(2,1fr)}
 }
+
+/* Staff Published Count Tasks v0.1 */
+.cassola-employee-task-picker{
+  display:flex;
+  gap:8px;
+  overflow:auto;
+  padding:2px 0 10px;
+  scrollbar-width:none;
+}
+.cassola-employee-task-picker::-webkit-scrollbar{display:none}
+.cassola-employee-task-picker button{
+  flex:0 0 auto;
+  min-width:150px;
+  max-width:230px;
+  min-height:58px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:rgba(255,255,255,.025);
+  color:var(--text);
+  text-align:left;
+}
+.cassola-employee-task-picker button.active{
+  border-color:color-mix(in srgb,var(--accent) 38%,transparent);
+  background:color-mix(in srgb,var(--accent) 11%,rgba(255,255,255,.025));
+  box-shadow:0 10px 24px rgba(0,0,0,.12);
+}
+.cassola-employee-task-picker span{display:block;font-size:9.5px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cassola-employee-task-picker b{display:block;margin-top:5px;color:var(--muted);font-size:8px}
+:root[data-theme="light"] .cassola-employee-task-picker button{background:rgba(31,37,48,.035)}
