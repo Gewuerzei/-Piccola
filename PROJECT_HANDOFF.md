@@ -10,8 +10,8 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
-- Staff: **v0.4.3 · Staff Cloud + Personal / Role SKU Tasks**
-- Access: **v0.10 · Managed Role Tasks + Employee SKU Proposal Center**
+- Staff: **v0.4.4 · Staff Cloud + Shared Role Tasks**
+- Access: **v0.11 · Shared Role Tasks + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
@@ -347,7 +347,7 @@ Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v14；支持 Inventory/Staff lineage、managed Staff Access、personal + role-inherited task basket、employee count / expanded SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
+- `cassola-cloud`（当前生产 v15；支持 Inventory/Staff lineage、managed Staff Access、personal + shared first-wins role task basket、employee count / expanded SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
@@ -787,6 +787,12 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
 - Staff 设置 → Staff Cloud 提供 `↩️ 恢复下载前版本`。恢复时会保留当前设备名并提升本机 revision。
 - 手工“导出 Staff JSON / 完整备份”按钮仍然保留，只有用户主动点击时才触发文件导出。
 
+### Employee 收货提交按钮 / toast 层级
+- 2026-10-06 实机出现“员工收货点提交没反应”。Cloud 日志显示该时段没有 `receipt_submit` POST，任务仍为 `authorized`，说明请求在浏览器端校验阶段就停了。
+- 根因之一是 `.toast z-index:50`，而 Employee 全屏 shell 是 `z-index:250`；缺少收货状态 / 数量不合法时，校验 toast 实际弹了但被 Employee shell 完全盖住，看起来像按钮没反应。
+- toast 已提升到 `z-index:500`；收货提交按钮现在在网络请求期间显示 `⏳ 正在提交…` 并禁用，异常 / 失效会明确 alert。
+- 不要把“没看到提示”误判为 Cloud 没收到；先看 Edge 日志是否真的出现 `receipt_submit` 请求。
+
 ### Staff Cloud / Managed Employee Access / 盘货任务
 
 Staff v0.4 把原来的本地人员表提升为多 Supervisor 共用的 Staff 主数据层，但仍保持 local-first：
@@ -825,21 +831,27 @@ Employee 端盘货页会显示 Staff 发布的任务卡。存在多个任务时�
 - Supervisor 采用后才修改 canonical Inventory。
 - JSON 手工导入仍只信任公开 registry；动态 Staff credential 的 JSON 只有从 Cloud inbox 进入时才可按 Cloud 已验证 task scope 导入，避免任意本地 JSON 冒充动态员工。
 
-### Staff 岗位继承盘货任务
-- 除了“给某个人发布任务”，Staff 现在还可以在 **设置 → 岗位 → 📋** 给整个岗位发布一份 SKU task basket。
-- 例如：`Maki = 大兴 + 蔬果 + 单独 Wakame`。发布时仍冻结最终 `resolved_sku_ids + sku_snapshot`，同岗位所有员工拿到的是同一份冻结规则。
-- 岗位任务绑定的是人员档案里的 **`primaryRole`（主要岗位）**，不是某一天排岗板上的临时 lane。临时今天去帮别的岗位，不会自动换掉他的长期盘货责任。
-- managed credential 新增 `staff_role_id`。Staff 人员的主要岗位变化时：
+### Staff 岗位共享盘货任务
+- 除了“给某个人发布任务”，Staff 还可以在 **设置 → 岗位 → 📋** 给整个岗位发布一份 SKU task basket。
+- 例如：`Maki = 大兴 + 蔬果 + 单独 Wakame`。发布时冻结最终 `resolved_sku_ids + sku_snapshot`。
+- **v0.4.4 起岗位任务是真正的一张共享任务，不再给岗位里的每个人复制一张 task。**
+- 同一岗位所有 active managed employees 都能看到同一个 `rule_id` / task id；本机 draft 仍按 credential 分开，所以两个人可以各自盘，但 Cloud 只接受第一个完整提交。
+- **first-wins 语义**：第一个员工提交成功后，`staff_role_inventory_task_rules.status = completed`，记录 `completed_by_credential_id / completed_at / winning_submission_id`。其他岗位成员下一次刷新时任务消失；若他们同时或离线稍后提交，Cloud 返回 `inventory_task_not_active`，Outbox 把它标为失效，不会生成第二份有效 submission。
+- first-wins 由数据库事务函数 `cassola_submit_shared_role_count` + row lock 保证，不依赖前端“谁快一点”的猜测。
+- 岗位任务绑定人员档案的 **`primaryRole`（主要岗位）**，不是某一天排岗板上的临时 lane。临时去别的岗位帮忙不会改变长期盘货责任。
+- managed credential 的 `staff_role_id` 只表示岗位成员关系：
   - Cloud 已连接：保存人员时立即同步 role
-  - Staff canonical upload：会再次 batch 对齐当前 roster，补偿之前离线修改
-  - Staff upload 若只是 branch，则不会改员工 role task
-- 新加入某岗位的人，只要已经开通 Employee Access，就自动取得该岗位当前 active rule；先加入岗位、后开通 PIN 也会在开通时自动取得。
-- 离开岗位时，旧岗位生成的 active role tasks 会 revoke；进入新岗位时再创建新岗位 task。
-- **同一 role rule 不会因为每次 Staff 上传而反复重建 task**。如果 person 的 `staff_role_id` 和当前 rule 都没变化，Cloud 保留原 task id，避免员工做到一半的 draft 被 Staff 上传无故作废。
-- 一个岗位当前只允许一份 active role rule。要改岗位责任，先撤销旧岗位任务，再发布新版本；禁止原地偷偷改冻结任务。
-- 岗位任务和个人补充任务可以并存，但 SKU 不得重叠。若新岗位任务与该员工现有个人 task 重叠，岗位变更 / 岗位发布会被阻止，必须由 Supervisor 先处理冲突。
-- Supabase：`staff_role_inventory_task_rules` 保存岗位规则；`employee_inventory_tasks.source_kind='role'` 保存实际发到每个员工 credential 的任务实例。
-- migration：`cassola_cloud_v06_staff_role_inventory_tasks`。
+  - Staff canonical upload：再次 batch 对齐 roster，补偿离线修改
+  - Staff branch upload 不改变员工岗位
+- 新加入某岗位的人，只要有 active Employee Access，就立刻能看到该岗位当前 active shared rule；先入岗位、后生成 PIN 也一样。
+- 离开岗位后不再看到该岗位共享任务；进入新岗位后看到新岗位当前 active rule。
+- credential scope = **个人 active tasks + 当前岗位 active shared rule** 的 SKU 并集。岗位任务完成 / 撤销后会刷新成员 scope。
+- 一个岗位当前只允许一份 active shared rule。要改岗位责任，先撤销旧 rule，再发布新版本；禁止原地修改冻结任务。
+- 岗位共享任务与个人补充任务可以并存，但 SKU 不得重叠。若岗位 rule 与成员现有个人 task 重叠，岗位发布 / 岗位变更会被阻止。
+- Supabase：`staff_role_inventory_task_rules` 是共享岗位任务本体；个人任务仍在 `employee_inventory_tasks`。共享岗位 submission 通过 `employee_submissions.role_task_rule_id` 回指岗位 rule。
+- migrations：
+  - `cassola_cloud_v06_staff_role_inventory_tasks`：岗位绑定 / role rule 基础
+  - `cassola_cloud_v07_shared_role_tasks`：first-wins shared rule / atomic submission
 
 ### 可选岗位排班
 
