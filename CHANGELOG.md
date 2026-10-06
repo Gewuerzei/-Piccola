@@ -2,6 +2,47 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4 · Cloud + Managed Employee Tasks
+**2026-10-06**
+
+- Staff 正式接入 Cassola Cloud，新增独立 `staff` scope：
+  - 同步 people / roles / schedules / attendance / swaps / restMoves / weekPublications / history
+  - 继续 local-first + manual download
+  - 上传仍使用 parent lineage；分叉只生成 branch，不抢 canonical Head
+  - 周表 `📣 发布 vN` 在 Cloud 已连接时会显式尝试上传 Staff Head
+- Staff 头像继续本机化：
+  - Cloud capture 不写 `avatarStamp`
+  - 下载 Staff 时按 personId 保留本设备已有头像标记 / IndexedDB blob
+- Staff 设置页新增 **☁️ Staff Cloud** 卡：上传 Staff / 下载 Staff / 云端历史；下载前先导出本机 Staff JSON。
+- Staff 人员编辑新增 **🔐 Employee Access**：
+  - Supervisor 可生成随机 6 位 employee PIN
+  - 可再次查看 / 复制 PIN、重新生成、停用 / 启用
+  - managed credential 通过 `staff_person_id` 绑定稳定 Staff person id
+  - PIN verifier 继续 PBKDF2-SHA256；为满足 Supervisor “可再次查看 PIN”的产品需求，可恢复 PIN 只存在私有 Supabase service-role 表，不进入 GitHub / Staff JSON / audit
+  - 第一次成功联网登录后，该设备只缓存自己用过的 verifier 到 `cassola_access_offline_v01`，支持后续离线登录
+  - 在线 Cloud invalid / disabled 优先于旧本机 verifier；完全离线设备无法即时得知 PIN 已撤销
+- Staff 人员列表新增 **📋 发布盘货任务**，支持四种 selector：
+  - 供应商，例如大兴
+  - SKU 分类，例如蔬果
+  - 区域
+  - 单独 SKU
+- 任务发布瞬间冻结 `resolved_sku_ids + sku_snapshot`；以后新增同供应商 / 同分类 SKU 不会偷偷进入旧任务。
+- 同一员工的 active count tasks 禁止 SKU 重叠；任务可撤销。
+- Employee 盘货页现在可显示多个 Staff 发布任务并切换；managed employee 没任务时明确显示 **“无任务”**。
+- 每个任务拥有独立当日 draft；提交使用 `effectiveKey = task:<taskId>:<date>`，仍需 Supervisor 在原 Cloud employee inbox 人工采用后才修改 Inventory。
+- Cloud task submission 会重新验证 credential ownership、active task、完整 SKU snapshot 与 loss / conversion scope；动态 Staff credential 的本地 JSON 不被无条件信任，只有 Cloud inbox 已验证 submission 才能进入本机审核。
+- Supabase migration：`cassola_cloud_v04_staff_tasks_access`
+  - 新增 `staff` Cloud scope/head
+  - 新增 `employee_inventory_tasks`
+  - `employee_submissions` 新增 `inventory_task_id`
+  - `access_credentials` 新增 Staff person / managed PIN / last-login 字段
+  - Supervisor scope 加入 `staff`
+- Supabase Edge Function `cassola-cloud` 升级到 **ACTIVE v11**。
+- legacy `produce_a / produce_b` 继续兼容；没有清空 `cassola_inventory_v01`、`cassola_staff_v01`、Employee drafts 或 Staff avatar IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v079`。
+
+---
+
 ## Employee Ops v0.4 · Supervisor-authorized Receiving
 **2026-10-06**
 
