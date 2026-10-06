@@ -762,6 +762,12 @@
     const p=document.getElementById('cloudPendingCount');if(p)p.textContent=String(lastStatus?.pendingEmployeeSubmissions||0);
     const sp=document.getElementById('cloudProposalCount');if(sp)sp.textContent=String(lastStatus?.pendingSkuProposals||0);
     const rp=document.getElementById('cloudReceiptCount');if(rp)rp.textContent=String(lastStatus?.pendingEmployeeReceipts||0);
+    const rollback=document.querySelector('[data-cloud-inventory-rollback]');
+    if(rollback){
+      const info=inventoryRollbackInfo();
+      rollback.disabled=!info;
+      rollback.textContent=info?'↩️ 恢复下载前 Inventory':'↩️ 暂无 Inventory 回滚';
+    }
   }
 
   function injectUi(){
@@ -769,7 +775,7 @@
     const settings=document.getElementById('view-settings');
     if(settings){
       const card=document.createElement('div');card.id='cloudSyncCard';card.className='settings-card cloud-card';
-      card.innerHTML='<div class="cloud-card-head"><div><h2>☁️ Cassola Piccola Cloud</h2><p>自动检查 Head，上传 / 下载永远由 Supervisor 手动决定。</p></div><span id="cloudConnectionState" class="cloud-connection">☁️ 未连接</span></div><div id="cloudScopeRows" class="cloud-scope-rows"></div><label class="cloud-scope-select">操作区域<select id="cloudScopeSelect">'+SCOPES.map(s=>'<option value="'+s.id+'">'+s.label+'</option>').join('')+'</select></label><div class="cloud-actions"><button type="button" class="btn primary" data-cloud-upload-scope data-cloud-needs-session>☁️ 上传所选区域</button><button type="button" class="btn secondary" data-cloud-download-scope data-cloud-needs-session>⬇️ 下载所选区域</button><button type="button" class="btn primary" data-cloud-upload-all data-cloud-needs-session>☁️ 上传全店</button><button type="button" class="btn secondary" data-cloud-download-all data-cloud-needs-session>⬇️ 下载全店</button></div><div class="cloud-actions small"><button type="button" class="btn secondary" data-cloud-checkpoint data-cloud-needs-session>📸 手动 checkpoint</button><button type="button" class="btn secondary" data-cloud-history data-cloud-needs-session>🕰️ 版本历史</button><button type="button" class="btn secondary" data-cloud-pending data-cloud-needs-session>👷 盘货审核 <span id="cloudPendingCount">0</span></button><button type="button" class="btn secondary" data-cloud-receipts data-cloud-needs-session>🚚 收货审核 <span id="cloudReceiptCount">0</span></button><button type="button" class="btn secondary" data-cloud-refresh data-cloud-needs-session>↻ 检查云端</button></div><div class="cloud-rule">云端变化只提醒，不自动下载。分叉上传只生成 branch，不会自动覆盖正式 Head。下载前自动导出本机 JSON 安全备份。</div>';
+      card.innerHTML='<div class="cloud-card-head"><div><h2>☁️ Cassola Piccola Cloud</h2><p>自动检查 Head，上传 / 下载永远由 Supervisor 手动决定。</p></div><span id="cloudConnectionState" class="cloud-connection">☁️ 未连接</span></div><div id="cloudScopeRows" class="cloud-scope-rows"></div><label class="cloud-scope-select">操作区域<select id="cloudScopeSelect">'+SCOPES.map(s=>'<option value="'+s.id+'">'+s.label+'</option>').join('')+'</select></label><div class="cloud-actions"><button type="button" class="btn primary" data-cloud-upload-scope data-cloud-needs-session>☁️ 上传所选区域</button><button type="button" class="btn secondary" data-cloud-download-scope data-cloud-needs-session>⬇️ 下载所选区域</button><button type="button" class="btn primary" data-cloud-upload-all data-cloud-needs-session>☁️ 上传全店</button><button type="button" class="btn secondary" data-cloud-download-all data-cloud-needs-session>⬇️ 下载全店</button></div><div class="cloud-actions small"><button type="button" class="btn secondary" data-cloud-checkpoint data-cloud-needs-session>📸 手动 checkpoint</button><button type="button" class="btn secondary" data-cloud-history data-cloud-needs-session>🕰️ 版本历史</button><button type="button" class="btn secondary" data-cloud-inventory-rollback>↩️ 暂无 Inventory 回滚</button><button type="button" class="btn secondary" data-cloud-pending data-cloud-needs-session>👷 盘货审核 <span id="cloudPendingCount">0</span></button><button type="button" class="btn secondary" data-cloud-receipts data-cloud-needs-session>🚚 收货审核 <span id="cloudReceiptCount">0</span></button><button type="button" class="btn secondary" data-cloud-refresh data-cloud-needs-session>↻ 检查云端</button></div><div class="cloud-rule">云端变化只提醒，不自动下载。分叉上传只生成 branch，不会自动覆盖正式 Head。下载前在本设备保存回滚快照；JSON 只在你主动导出时生成。</div>';
       const handoff=document.getElementById('v31HandoffCard');if(handoff)settings.insertBefore(card,handoff);else settings.prepend(card);
     }
     const hub=document.getElementById('cassolaHub');
@@ -798,6 +804,7 @@
       if(e.target.closest('[data-cloud-download-all]')){await download(SCOPES.map(s=>s.id));return}
       if(e.target.closest('[data-cloud-checkpoint]')){await checkpoint([currentScopeSelection()]);return}
       if(e.target.closest('[data-cloud-history]')){await openHistory(currentScopeSelection());return}
+      if(e.target.closest('[data-cloud-inventory-rollback]')){restoreInventoryRollback();return}
       if(e.target.closest('[data-cloud-pending]')){await openPending();return}
       if(e.target.closest('[data-cloud-receipts]')){if(typeof v4OpenEmployeeReceiptInbox==='function')await v4OpenEmployeeReceiptInbox();else alert('员工收货审核模块没有加载。');return}
       if(e.target.closest('[data-cloud-refresh]')){await refreshStatus({silent:false});if(typeof showToast==='function')showToast('云端 Head 已检查');return}
@@ -827,6 +834,7 @@
     staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,
     inventoryTaskOptions,publishInventoryTask,listInventoryTasks,revokeInventoryTask,
     staffUpload,staffDownload,staffStatus,staffHistory,
+    inventoryRollbackInfo,restoreInventoryRollback,
     queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
     rememberAccessCode,reconnect,cachedIdentity,
     captureScope,mergeScope,meta:readMeta,deviceId,
