@@ -8,6 +8,7 @@
   const EMPLOYEE_CATALOG_KEY='cassola_employee_catalog_v01';
   const EMPLOYEE_RECEIPT_TASK_KEY='cassola_employee_receipt_tasks_v01';
   const EMPLOYEE_INVENTORY_TASK_KEY='cassola_employee_inventory_tasks_v01';
+  const INVENTORY_ROLLBACK_KEY='cassola_inventory_cloud_rollback_v01';
   const STAFF_SCOPE={id:'staff',label:'👥 Staff'};
   const SCOPES=[
     {id:'sushi',label:'🍣 Sushi'},
@@ -421,23 +422,42 @@
     return data;
   }
 
-  function exportSafetyBackup(){
+  function inventoryRollbackInfo(){
     try{
-      if(typeof saveState==='function')saveState();
-      const payload={...clone(state),format:'cassola-cloud-pre-download-backup-v1',exportedAt:new Date().toISOString(),cloudMeta:readMeta()};
-      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download='cassola-pre-cloud-'+new Date().toISOString().slice(0,10)+'-'+String(Date.now()).slice(-6)+'.json';
-      a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    }catch(_){}
+      const x=JSON.parse(localStorage.getItem(INVENTORY_ROLLBACK_KEY)||'null');
+      return x&&x.state?x:null;
+    }catch(_){return null}
+  }
+  function saveInventoryRollback(scopeIds){
+    if(typeof saveState==='function')saveState();
+    const payload={savedAt:new Date().toISOString(),scopeIds:[...scopeIds],state:clone(state),cloudMeta:readMeta()};
+    localStorage.setItem(INVENTORY_ROLLBACK_KEY,JSON.stringify(payload));
+    renderCloudUi();
+    return payload;
+  }
+  function restoreInventoryRollback(){
+    const backup=inventoryRollbackInfo();
+    if(!backup){if(typeof showToast==='function')showToast('没有 Inventory Cloud 下载前快照');return false}
+    if(!confirm('恢复 '+new Date(backup.savedAt).toLocaleString('zh-CN')+' 的 Inventory 本机快照？\n\n这会把整个 Inventory 恢复到上次 Cloud 下载前。'))return false;
+    const restored=clone(backup.state);
+    Object.keys(state).forEach(k=>delete state[k]);
+    Object.assign(state,restored);
+    if(typeof v3EnsureState==='function')v3EnsureState();
+    if(typeof v45EnsurePriceState==='function')v45EnsurePriceState();
+    if(typeof saveState==='function')saveState();
+    if(backup.cloudMeta)localStorage.setItem(META_KEY,JSON.stringify(backup.cloudMeta));
+    if(typeof renderAll==='function')renderAll();
+    renderCloudUi();
+    if(typeof showToast==='function')showToast('↩️ 已恢复 Inventory 下载前版本');
+    return true;
   }
   async function download(scopeIds){
     if(!token||role()!=='supervisor')throw new Error('cloud_not_connected');
-    if(!confirm('下载云端会覆盖所选区域的本机数据。\n\n系统会先导出一份本机完整 JSON 安全备份。继续？'))return;
-    exportSafetyBackup();
+    if(!confirm('下载云端会覆盖所选区域的本机数据。\n\n应用前会在本设备保存一份回滚快照，不会强制下载 JSON 文件。继续？'))return;
     const data=await api('download_scopes',{scopeIds},15000);
     const rows=(data.scopes||[]).filter(x=>x.head_version_id);
     if(!rows.length){if(typeof showToast==='function')showToast('所选区域云端还没有正式数据');return}
+    saveInventoryRollback(scopeIds);
     rows.forEach(row=>mergeScope(row.scope_id,row.state));
     if(typeof v3EnsureState==='function')v3EnsureState();
     if(typeof v45EnsurePriceState==='function')v45EnsurePriceState();
