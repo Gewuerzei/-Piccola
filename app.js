@@ -139,7 +139,7 @@ function initialState(){
     {id:'seed-arrival-strawberry',type:'arrival',skuId:'strawberry',skuName:'草莓',text:'+4 小盒（临时补货）',note:'10/02 临时补货',at:'2026-10-02T12:30:06+02:00'},
     {id:'seed-count-veg',type:'count',skuId:'salad',skuName:'蔬果盘货',text:'10/02 周五蔬果基线已预装',note:'Avocado：硬0 / 半硬5.5 / 软8；草莓现存3',at:'2026-10-02T12:31:47+02:00'}
   ];
-  return {version:2, skus, history, order, createdAt:new Date().toISOString()};
+  return {version:2, skus, history, order, customCategories:[], createdAt:new Date().toISOString()};
 }
 function loadState(){
   try{
@@ -158,9 +158,17 @@ function migrate(s){
   base.skus.push(...custom);
   base.history=Array.isArray(s.history)?s.history:[];
   base.order=s.order||{};
-  return {...base,...s,version:2,skus:base.skus,history:base.history,order:base.order};
+  base.customCategories=[...new Set((Array.isArray(s.customCategories)?s.customCategories:[]).map(x=>String(x||'').trim()).filter(Boolean))];
+  return {...base,...s,version:2,skus:base.skus,history:base.history,order:base.order,customCategories:base.customCategories};
 }
 function saveState(){localStorage.setItem(APP_KEY,JSON.stringify(state));}
+function inventoryCategories(){
+  return [...new Set([
+    ...categories,
+    ...(Array.isArray(state.customCategories)?state.customCategories:[]),
+    ...(Array.isArray(state.skus)?state.skus.map(s=>String(s.category||'').trim()).filter(Boolean):[])
+  ])];
+}
 function sku(id){return state.skus.find(x=>x.id===id)}
 function fmt(n){return Number.isInteger(Number(n))?String(Number(n)):String(Number(n).toFixed(2)).replace(/0+$/,'').replace(/\.$/,'')}
 function stamp(){return new Date().toISOString()}
@@ -172,7 +180,7 @@ function renderAll(){renderCategoryFilter();renderStock();renderCount();renderSu
 function renderCategoryFilter(){
   const sel=document.getElementById('categoryFilter');
   const cur=sel.value||'全部';
-  sel.innerHTML=['全部',...categories].map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join('');
+  sel.innerHTML=['全部',...inventoryCategories()].map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join('');
 }
 function renderStock(){
   const q=document.getElementById('searchInput').value.trim().toLowerCase();
@@ -210,7 +218,7 @@ function renderStock(){
 }
 function renderCount(){
   const root=document.getElementById('countList');
-  root.innerHTML=categories.map(cat=>{
+  root.innerHTML=inventoryCategories().map(cat=>{
     const rows=state.skus.filter(x=>x.category===cat);
     if(!rows.length) return '';
     return `<section class="count-group"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${cat}</div>${rows.map(x=>`
