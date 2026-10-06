@@ -16,6 +16,7 @@
   let taskPublisherPersonId=null;
   let taskOptionsCache=null;
   let taskRowsCache=[];
+  let taskBasketSelectors=[];
   let importCandidate=null;
   let suppressClickUntil=0;
   const avatarUrlCache=new Map();
@@ -418,18 +419,22 @@
         <form method="dialog">
           <div class="dialog-head"><div><div class="eyebrow">PUBLISH TASK</div><h3 id="staffTaskTitle">📋 发布盘货任务</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-task-note">任务按发布瞬间冻结 SKU 清单。以后新增同分类 / 同供应商 SKU，不会偷偷塞进已经发布的任务。</div>
-          <div class="staff-form-grid">
-            <label>发布方式
-              <select id="staffTaskSelectorType">
-                <option value="supplier">供应商</option>
-                <option value="category">SKU 分类</option>
-                <option value="area">区域</option>
-                <option value="sku">单独 SKU</option>
-              </select>
-            </label>
-            <label>选择<select id="staffTaskSelectorValue"></select></label>
+          <div class="staff-task-builder">
+            <div class="staff-form-grid">
+              <label>加入方式
+                <select id="staffTaskSelectorType">
+                  <option value="supplier">供应商</option>
+                  <option value="category">SKU 分类</option>
+                  <option value="area">区域</option>
+                  <option value="sku">单独 SKU</option>
+                </select>
+              </label>
+              <label>选择<select id="staffTaskSelectorValue"></select></label>
+            </div>
+            <button type="button" class="btn secondary large" id="staffTaskAddSelector">＋ 加入任务 SKU</button>
+            <div id="staffTaskBasket" class="staff-task-basket"></div>
           </div>
-          <label>任务名称（可空）<input id="staffTaskLabel" maxlength="120" placeholder="留空自动生成"></label>
+          <label>任务名称（可空）<input id="staffTaskLabel" maxlength="120" placeholder="留空自动生成，例如 大兴 + 补充品"></label>
           <div id="staffTaskPreview" class="staff-task-preview"></div>
           <button type="button" class="btn primary large" id="staffTaskPublish">📣 发布给员工</button>
           <div class="staff-task-existing">
@@ -1229,6 +1234,17 @@
     if(type==='sku')return skus.filter(x=>String(x.id)===String(value));
     return[];
   }
+  function taskSelectorText(item){
+    if(!item)return'';
+    if(item.type==='supplier')return'🏭 '+item.value;
+    if(item.type==='category')return'🏷️ '+item.value;
+    if(item.type==='area')return'🗂️ '+taskAreaLabel(item.value);
+    if(item.type==='sku'){
+      const sku=(taskOptionsCache?.skus||[]).find(x=>String(x.id)===String(item.value));
+      return'📦 '+(sku?.name||item.value);
+    }
+    return item.value||'';
+  }
   function fillTaskSelector(){
     const type=document.getElementById('staffTaskSelectorType')?.value||'supplier',sel=document.getElementById('staffTaskSelectorValue');if(!sel||!taskOptionsCache)return;
     let rows=[];
@@ -1237,28 +1253,52 @@
     else if(type==='area')rows=(taskOptionsCache.areas||[]).map(v=>({v,t:taskAreaLabel(v)}));
     else rows=(taskOptionsCache.skus||[]).map(x=>({v:x.id,t:x.name+(x.spec?' · '+x.spec:'')}));
     sel.innerHTML=rows.length?rows.map(x=>'<option value="'+esc(x.v)+'">'+esc(x.t)+'</option>').join(''):'<option value="">没有可选项</option>';
+  }
+  function taskBasketRows(){
+    const map=new Map();
+    taskBasketSelectors.forEach(item=>taskMatches(item.type,item.value).forEach(sku=>map.set(String(sku.id),sku)));
+    return [...map.values()].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN'));
+  }
+  function renderTaskBasket(){
+    const root=document.getElementById('staffTaskBasket');if(!root)return;
+    root.innerHTML=taskBasketSelectors.length?'<div class="staff-task-basket-head"><b>已加入 '+taskBasketSelectors.length+' 组条件</b><span>自动去重</span></div><div class="staff-task-basket-items">'+taskBasketSelectors.map((item,i)=>'<button type="button" data-staff-task-selector-remove="'+i+'"><span>'+esc(taskSelectorText(item))+'</span><b>✕</b></button>').join('')+'</div>':'<div class="staff-task-basket-empty">先加入供应商 / 分类 / 区域 / 单独 SKU。可以混着加。🗿☝️</div>';
     renderTaskPreview();
   }
+  function addTaskSelector(){
+    const type=document.getElementById('staffTaskSelectorType')?.value||'',value=document.getElementById('staffTaskSelectorValue')?.value||'';
+    if(!value){toast('先选一项');return}
+    if(taskBasketSelectors.some(x=>x.type===type&&String(x.value)===String(value))){toast('这组已经在任务里');return}
+    const rows=taskMatches(type,value);
+    if(!rows.length){toast('这个选择没有 SKU');return}
+    taskBasketSelectors.push({type,value});renderTaskBasket();
+  }
+  function removeTaskSelector(index){
+    taskBasketSelectors.splice(Number(index),1);renderTaskBasket();
+  }
   function renderTaskPreview(){
-    const box=document.getElementById('staffTaskPreview'),type=document.getElementById('staffTaskSelectorType')?.value||'',value=document.getElementById('staffTaskSelectorValue')?.value||'';if(!box)return;
-    const rows=taskMatches(type,value),dlg=document.getElementById('staffTaskDialog'),ready=!!dlg?._accessReady;
+    const box=document.getElementById('staffTaskPreview');if(!box)return;
+    const rows=taskBasketRows(),dlg=document.getElementById('staffTaskDialog'),ready=!!dlg?._accessReady;
     const warning=ready?'':'<div class="staff-task-access-warning">🔐 先给这个人员生成并启用 Employee PIN，预览可以看，但现在不能发布。</div>';
-    const content=rows.length?'<div class="staff-task-preview-head"><b>'+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,12).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>12?'<span>＋'+(rows.length-12)+'</span>':'')+'</div>':'<div class="empty">这个选择现在没有 SKU。</div>';
-    box.innerHTML=warning+content;
-    const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!ready;
+    const activeIds=new Set((taskRowsCache||[]).filter(x=>x.status==='active').flatMap(x=>x.resolved_sku_ids||[]).map(String));
+    const conflicts=rows.filter(x=>activeIds.has(String(x.id)));
+    const conflict=conflicts.length?'<div class="staff-task-conflict">⚠️ '+conflicts.length+' 个 SKU 已在这个员工的其他有效任务中。发布前要先撤销旧任务或从篮子移除重叠条件。</div>':'';
+    const content=rows.length?'<div class="staff-task-preview-head"><b>最终 '+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,16).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>16?'<span>＋'+(rows.length-16)+'</span>':'')+'</div>':'<div class="empty">任务篮子还是空的。</div>';
+    box.innerHTML=warning+conflict+content;
+    const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!ready||!!conflicts.length;
   }
   function renderTaskRows(){
     const box=document.getElementById('staffTaskList');if(!box)return;
     const active=(taskRowsCache||[]).filter(x=>x.status==='active');
     box.innerHTML=active.length?active.map(t=>'<div class="staff-task-row"><div><b>📋 '+esc(t.label)+'</b><small>'+((t.resolved_sku_ids||[]).length)+' SKU · '+esc(new Date(t.published_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><button type="button" class="btn danger ghost" data-staff-task-revoke="'+esc(t.task_id)+'">撤销</button></div>').join(''):'<div class="empty">还没有有效盘货任务。</div>';
+    renderTaskPreview();
   }
   async function openTaskPublisher(personId){
     const p=personById(personId);if(!p)return;
-    taskPublisherPersonId=personId;taskOptionsCache=null;taskRowsCache=[];
-    const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList');
+    taskPublisherPersonId=personId;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
+    const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList'),basket=document.getElementById('staffTaskBasket');
     document.getElementById('staffTaskTitle').textContent='📋 '+p.name+' · 发布盘货任务';
     document.getElementById('staffTaskLabel').value='';
-    preview.innerHTML='<div class="empty">正在读取 Cloud Inventory…</div>';list.innerHTML='<div class="empty">正在读取已有任务…</div>';
+    preview.innerHTML='<div class="empty">正在读取 Cloud Inventory…</div>';list.innerHTML='<div class="empty">正在读取已有任务…</div>';basket.innerHTML='';
     dlg._accessReady=false;document.getElementById('staffTaskPublish').disabled=true;if(!dlg.open)dlg.showModal();
     if(!cloudReady()){preview.innerHTML='<div class="empty">先连接 Supervisor Cloud 才能发布任务。</div>';list.innerHTML='';return}
     try{
@@ -1268,25 +1308,26 @@
         window.CassolaCloud.staffAccessGet(personId,p.name)
       ]);
       taskOptionsCache=opts;taskRowsCache=tasks.tasks||[];dlg._accessReady=!!access.credential?.active;
-      if(!dlg._accessReady)preview.innerHTML='<div class="empty">先在“编辑人员 → Employee Access”生成并启用员工 PIN。</div>';
-      fillTaskSelector();renderTaskRows();
+      fillTaskSelector();renderTaskBasket();renderTaskRows();
     }catch(err){preview.innerHTML='<div class="empty">读取任务资料失败：'+esc(err?.message||'未知错误')+'</div>'}
   }
   async function publishPersonTask(){
     if(!taskPublisherPersonId||!cloudReady())return;
-    const type=document.getElementById('staffTaskSelectorType').value,value=document.getElementById('staffTaskSelectorValue').value,label=document.getElementById('staffTaskLabel').value.trim();
-    if(!value){toast('先选要发布的 SKU 范围');return}
+    const label=document.getElementById('staffTaskLabel').value.trim(),rows=taskBasketRows();
+    if(!taskBasketSelectors.length||!rows.length){toast('先往任务里加入 SKU');return}
     try{
-      const data=await window.CassolaCloud.publishInventoryTask(taskPublisherPersonId,{type,value},label,'Published from Staff');
+      const selector={type:'basket',items:taskBasketSelectors.map(x=>({type:x.type,value:x.value}))};
+      const data=await window.CassolaCloud.publishInventoryTask(taskPublisherPersonId,selector,label,'Published from Staff SKU basket');
       toast('📣 已发布 '+(data.task?.resolved_sku_ids?.length||0)+' 个 SKU');
       taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];
-      renderTaskRows();
+      taskBasketSelectors=[];renderTaskBasket();renderTaskRows();
     }catch(err){
-      if(err?.data?.error==='inventory_task_overlap')alert('这些 SKU 与已有任务“'+(err.data.label||'盘货任务')+'”重叠。\n\n先撤销旧任务，或者改发不重叠的范围。');
+      if(err?.data?.error==='inventory_task_overlap')alert('这些 SKU 与已有任务“'+(err.data.label||'盘货任务')+'”重叠。\n\n已发布任务不会偷偷变形。请撤销旧任务，或把补充 SKU 单独组成一张新任务。');
       else if(err?.data?.error==='staff_access_required')alert('先给这个 Staff 人员开通 Employee Access。');
       else alert('发布任务失败：'+(err?.data?.detail||err?.message||'未知错误'));
     }
   }
+
   async function revokePersonTask(taskId){
     if(!confirm('撤销这份盘货任务？'))return;
     try{await window.CassolaCloud.revokeInventoryTask(taskId);taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];renderTaskRows();toast('任务已撤销')}
@@ -1738,7 +1779,8 @@
     document.getElementById('staffAccessToggle').addEventListener('click',togglePersonAccess);
     document.getElementById('staffOpenTaskPublisher').addEventListener('click',()=>{const id=editPersonId;document.getElementById('staffPersonDialog').close();if(id)openTaskPublisher(id)});
     document.getElementById('staffTaskSelectorType').addEventListener('change',fillTaskSelector);
-    document.getElementById('staffTaskSelectorValue').addEventListener('change',renderTaskPreview);
+    document.getElementById('staffTaskAddSelector').addEventListener('click',addTaskSelector);
+    document.getElementById('staffTaskBasket').addEventListener('click',e=>{const b=e.target.closest('[data-staff-task-selector-remove]');if(b)removeTaskSelector(b.dataset.staffTaskSelectorRemove)});
     document.getElementById('staffTaskPublish').addEventListener('click',publishPersonTask);
     document.getElementById('staffTaskList').addEventListener('click',e=>{const b=e.target.closest('[data-staff-task-revoke]');if(b)revokePersonTask(b.dataset.staffTaskRevoke)});
     document.getElementById('staffDeletePerson').addEventListener('click',deletePerson);
