@@ -2,6 +2,25 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.7 · Product Families + Packaging Reports
+**2026-10-06**
+
+- Inventory 新增 **商品卡 / 商品族** 层：`familyId / familyName / brand`。同商品不同规格、不同品牌仍是独立 SKU，但库存首页折叠在同一张商品卡。
+- 旧 SKU 非破坏迁移：没有 family 字段时自动按名称建立商品卡；现有明确变体补充 family defaults，包括 Burro、Panna、鹌鹑蛋、Gamberi rossi 大/小、Scampi 大/小、Ikura、Surimi / Surimi恒丰、白 M/L 手套。
+- Avocado 硬 / 半硬 / 软、芒果 硬 / 软继续保持独立，不因名称相近而折叠，保护熟化 / 内部转换语义。
+- SKU 显示顺序改为分类 → 商品卡 → 品牌 → 规格，相近 SKU 自动靠在一起；`state.skus` 本体和 SKU id 不重排、不合并。
+- 多规格商品卡优先计算展示层标准化总量，例如 `4×1kg + 3×500g = 5.5kg`；只对可明确解析且同维度的 kg/g/L/ml/颗/张/片/个求和，无法确认时回退为包装数量 / 混合规格，不写回正式库存。
+- Supervisor SKU Manager 新增 **商品卡 / 商品族** 与 **品牌** 字段；包装术语统一为 **库存规格 / 库存单位 / 订货单位 / 1订货单位=N库存单位**，删除“大包装 / 最小包装”的 UI 说法。
+- Employee 盘货与 **🚚 收货** 都可直接上报 **🧪 现场规格 / 包装不一致**。
+- SKU proposal 扩展 `familyName / brand`；Edge Function `cassola-cloud` 升级到 **ACTIVE v17**。
+- Supervisor 审核 `sku_change` 时现在可以二选一：
+  - **✓ 更新当前 SKU**
+  - **＋ 新建规格 SKU**：保留原 SKU，创建同商品卡的新 SKU，初始库存 0
+- 新规格 SKU 继续独立盘货、订货、收货、价格和历史；商品卡只负责显示折叠与汇总，不改变账务实体。
+- JSON / Cloud scope 自动携带 family / brand 字段；`state.version` 升级为 7，仍使用 `cassola_inventory_v01`，不清库。
+- Service Worker cache 更新为 `cassola-suite-v085`。
+
+---
 ## Staff v0.4.4 · Shared Role First-Wins + Receipt Submit Fix
 **2026-10-06**
 
