@@ -770,6 +770,13 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
 - Staff 历史记录
 - Staff JSON 版本交接
 
+### Staff Cloud iOS / PWA download rollback
+- **不要在 Staff Cloud 下载前强制触发浏览器文件下载。** iOS PWA 对 programmatic Blob download 可能直接弹 `Load Failed`，这不是 Cloud 数据坏了。
+- Staff Cloud 下载现在先向 Cloud 读取 Head，确认存在后，把当前 `cassola_staff_v01` 保存为本机 `cassola_staff_cloud_rollback_v01`，然后才应用 Cloud Staff。
+- 这个 rollback 是**本机快照**，不包含头像 blob；头像本来就在 Staff IndexedDB，Cloud 下载也不会删除它们。
+- Staff 设置 → Staff Cloud 提供 `↩️ 恢复下载前版本`。恢复时会保留当前设备名并提升本机 revision。
+- 手工“导出 Staff JSON / 完整备份”按钮仍然保留，只有用户主动点击时才触发文件导出。
+
 ### Staff Cloud / Managed Employee Access / 盘货任务
 
 Staff v0.4 把原来的本地人员表提升为多 Supervisor 共用的 Staff 主数据层，但仍保持 local-first：
