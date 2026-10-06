@@ -14,6 +14,8 @@
   }
   function session(){return window.CassolaHub?.session?.()||null}
   function catalog(){
+    const assigned=window.CassolaHub?.currentEmployeeCatalog?.();
+    if(Array.isArray(assigned)&&assigned.length)return assigned;
     const current=session(),cloud=window.CassolaCloud?.employeeCatalog?.(current?.id);
     if(Array.isArray(cloud))return cloud;
     return typeof v3Skus==='function'?v3Skus():((typeof state!=='undefined'&&Array.isArray(state.skus))?state.skus:[]);
