@@ -46,3 +46,88 @@
 .employee-review-current,.employee-review-proposed,.employee-review-qty{padding:10px 11px;border-radius:17px}
 .employee-review-actions{gap:9px}
 .employee-review-actions .btn{min-height:48px;border-radius:19px}
+
+/* Employee Movement v0.1 · loss / internal conversion facts */
+.employee-movement-card{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px;
+  border-radius:22px;
+  background:rgba(155,231,173,.035);
+  border:1px solid rgba(155,231,173,.12);
+}
+.employee-movement-card>strong{font-size:11px}
+.employee-movement-card>small{color:var(--muted);font-size:8.8px;line-height:1.45}
+.employee-movement-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.employee-movement-box{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:11px;
+  border-radius:18px;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+}
+.employee-movement-box>b{font-size:10.5px}
+.employee-movement-box label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:8.5px;font-weight:780}
+.employee-movement-box input,.employee-movement-box select{
+  min-height:44px;
+  border:1px solid var(--line);
+  border-radius:15px;
+  background:rgba(255,255,255,.035);
+  color:var(--text);
+  padding:0 10px;
+  font:inherit;
+  font-size:10.5px;
+}
+.employee-movement-box .btn{min-height:43px;border-radius:16px;font-size:9.5px;padding:9px 8px}
+.employee-movement-draft{display:flex;flex-direction:column;gap:7px}
+.employee-movement-title{font-size:8.5px;color:var(--muted);font-weight:850}
+.employee-movement-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 10px;
+  border-radius:16px;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+}
+.employee-movement-item>div{min-width:0}
+.employee-movement-item b{display:block;font-size:9.5px}
+.employee-movement-item small{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.35}
+.employee-movement-item button{
+  flex:0 0 auto;
+  width:32px;height:32px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(255,255,255,.035);
+  color:var(--muted);
+}
+.employee-movement-empty{
+  padding:9px 10px;
+  border-radius:15px;
+  background:rgba(255,255,255,.018);
+  color:var(--muted);
+  font-size:8.5px;
+  text-align:center;
+}
+:root[data-theme="light"] .employee-movement-card{
+  background:rgba(79,139,96,.05);
+  border-color:rgba(79,139,96,.14);
+}
+:root[data-theme="light"] .employee-movement-box,
+:root[data-theme="light"] .employee-movement-item,
+:root[data-theme="light"] .employee-movement-empty{
+  background:rgba(31,37,48,.035);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .employee-movement-box input,
+:root[data-theme="light"] .employee-movement-box select{
+  background:rgba(255,255,255,.92);
+}
+@media(max-width:520px){
+  .employee-movement-grid{grid-template-columns:1fr}
+}
+
