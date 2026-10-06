@@ -15,6 +15,7 @@
   let pendingAvatarBlob=null;
   let editPersonId=null;
   let taskPublisherPersonId=null;
+  let taskPublisherRoleId=null;
   let taskOptionsCache=null;
   let taskRowsCache=[];
   let taskBasketSelectors=[];
@@ -1208,7 +1209,7 @@
   async function createPersonAccess(){
     const p=editPersonId?personById(editPersonId):null;if(!p)return;
     if(!cloudReady()){toast('先连接 Cloud');return}
-    try{await window.CassolaCloud.staffAccessCreate(p.id,p.name);toast('🔐 已生成员工 PIN');await refreshPersonAccess()}
+    try{await window.CassolaCloud.staffAccessCreate(p.id,p.name,p.primaryRole||'');toast('🔐 已生成员工 PIN');await refreshPersonAccess()}
     catch(err){if(err?.data?.error==='staff_access_exists')await refreshPersonAccess();else alert('开通 Access 失败：'+(err?.data?.detail||err?.message||'未知错误'))}
   }
   async function regeneratePersonPin(){
@@ -1466,13 +1467,29 @@
     const name=document.getElementById('staffPersonName').value.trim();if(!name){toast('先写名字🗿');return}
     let p=editPersonId?personById(editPersonId):null;
     if(!p){p={id:uid('person'),name:'',nickname:'',primaryRole:'',note:'',active:true,avatarStamp:''};state.people.push(p)}
-    const wasNew=!editPersonId;
+    const wasNew=!editPersonId,oldRole=String(p.primaryRole||''),nextRole=document.getElementById('staffPersonRole').value;
+    if(!wasNew&&cloudReady()&&oldRole!==nextRole){
+      try{
+        const access=await window.CassolaCloud.staffAccessGet(p.id,name);
+        if(access.credential){
+          const sync=await window.CassolaCloud.staffAccessSetRole(p.id,nextRole,name);
+          if(sync?.ok===false&&sync?.error==='role_task_overlap')throw Object.assign(new Error('岗位任务与个人任务重叠'),{data:sync});
+        }
+      }catch(err){
+        if(err?.data?.error==='role_task_overlap'){
+          alert('这个人当前的个人盘货任务，与新岗位自动任务存在重复 SKU。\n\n先撤销冲突的个人任务，再更换主要岗位。');
+          return;
+        }
+        alert('岗位任务同步失败，人员资料暂未保存：'+(err?.data?.detail||err?.message||'未知错误'));
+        return;
+      }
+    }
     p.name=name;p.nickname=document.getElementById('staffPersonNickname').value.trim();
-    p.primaryRole=document.getElementById('staffPersonRole').value;p.note=document.getElementById('staffPersonNote').value.trim();
+    p.primaryRole=nextRole;p.note=document.getElementById('staffPersonNote').value.trim();
     if(pendingAvatarBlob==='remove'){await avatarDelete(p.id);p.avatarStamp=''}
     else if(pendingAvatarBlob instanceof Blob){await avatarPut(p.id,pendingAvatarBlob);p.avatarStamp=now()}
     log('person',(wasNew?'新增人员：':'更新人员：')+p.name);
-    save();document.getElementById('staffPersonDialog').close();renderPeople();renderBoard();renderHistory();toast('人员已保存');
+    save();document.getElementById('staffPersonDialog').close();renderPeople();renderBoard();renderHistory();toast(oldRole!==nextRole&&!wasNew?'人员已保存 · 岗位任务已同步':'人员已保存');
   }
   async function deletePerson(){
     const p=personById(editPersonId);if(!p)return;
