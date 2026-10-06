@@ -2,6 +2,36 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4.1 + Employee SKU Center
+**2026-10-06**
+
+- Staff 的 **📋 发布盘货任务** 从单一 selector 升级为 **SKU 任务篮子**：
+  - 可连续加入多个供应商
+  - 可加入分类 / 区域
+  - 可追加单独 SKU
+  - 最终 SKU 自动并集去重
+  - 因此一张任务可以跨供应商，也可以“大兴整组 + Wakame + Ikura”
+- 发布后仍冻结 `resolved_sku_ids + sku_snapshot`。员工已经做到一半的任务不会因为 Supervisor 后来新增 SKU 而变形；临时补货式任务应另发一张“补充盘货”。
+- task basket 在发布前会检测与该员工其他 active task 的 SKU 重叠；Edge v12 仍做最终服务端 overlap guard。
+- Employee Mode 新增第三个页签 **📦 SKU**，作为现有 Inventory SKU Manager 的额外功能口，不删除 / 迁移 Supervisor 原有 SKU 功能。
+- 员工 SKU Center 支持：
+  - ＋ 新 SKU
+  - 🏷️ 新分类
+  - 🏷️ 已有 SKU 重新归类
+  - 原有规格 / 单位异常与 SKU issue 继续保留
+- 所有员工 SKU 操作继续是 proposal。Supervisor 必须在 `🧪 SKU 提议`中批准后才修改本机 Inventory；不会因为员工写了奇怪名称或现场口语数量就自动污染 canonical 数据。
+- `new_sku` 现在可携带 category / supplier；数量仍必须是可解析非负数字。
+- 新增 proposal types：`new_category`、`sku_reclassify`；Supabase migration：`cassola_cloud_v05_employee_sku_proposal_types`。
+- Inventory 新增向后兼容的 `customCategories[]`：
+  - 原有 Inventory SKU 新建 / 编辑 / 删除功能完整保留
+  - 分类筛选与 SKU Manager datalist 动态读取 builtin + custom + 当前 SKU categories
+  - standalone custom category 通过 `common` Cloud scope 同步
+- Supabase Edge Function `cassola-cloud` 升级到 **ACTIVE v12**，支持 task basket selector union / dedupe 与扩展 SKU proposal 验证。
+- 不清空 `cassola_inventory_v01`、`cassola_staff_v01`、Employee drafts、Outbox 或 Staff avatar IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v080`。
+
+---
+
 ## Staff v0.4 · Cloud + Managed Employee Tasks
 **2026-10-06**
 
