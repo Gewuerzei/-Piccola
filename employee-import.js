@@ -169,12 +169,11 @@
       }
     });
     v.rows.forEach(({s,qty,old})=>{
-      if(old===qty)return;
       s.qty=qty;
       addHistory('count',s.id,`${fmt(old)} → ${fmt(qty)} ${s.unit}`,`员工盘货 · ${v.scope.label||v.scope.id} · ${pending.data.credentialId}`,{
         batch,employeeSubmissionId:submissionId,employeeScopeId:v.scope.id,employeeCredentialId:pending.data.credentialId
       });
-      changed++;
+      if(old!==qty)changed++;
     });
     state.employeeSubmissions.push({
       submissionId,
