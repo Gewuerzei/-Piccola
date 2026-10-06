@@ -1572,9 +1572,10 @@
   function applyCloudState(cloud){
     if(!cloud||typeof cloud!=='object')throw new Error('invalid_staff_cloud_state');
     const device=state?.syncMeta?.deviceName||'本设备',oldRev=num(state?.syncMeta?.revision)||1;
+    const localAvatars=new Map((state?.people||[]).map(p=>[String(p.id),p.avatarStamp||'']));
     state=normalize({
       version:1,
-      people:Array.isArray(cloud.people)?cloneJson(cloud.people):[],
+      people:Array.isArray(cloud.people)?cloneJson(cloud.people).map(p=>({...p,avatarStamp:localAvatars.get(String(p.id))||''})):[],
       roles:Array.isArray(cloud.roles)?cloneJson(cloud.roles):[],
       schedules:cloud.schedules&&typeof cloud.schedules==='object'?cloneJson(cloud.schedules):{},
       attendance:cloud.attendance&&typeof cloud.attendance==='object'?cloneJson(cloud.attendance):{},
