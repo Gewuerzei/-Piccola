@@ -372,7 +372,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.4.3</h3><p>Staff Cloud · managed access · personal / role SKU tasks · weekly publication history</p>
+              <h3>Staff v0.4.4</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
             </div>
           </div>
         </section>
@@ -1349,7 +1349,7 @@
       if(taskPublisherRoleId){
         const role=roleById(taskPublisherRoleId);if(!role)return;
         const data=await window.CassolaCloud.publishRoleInventoryTask(role.id,role.name,selector,label,'Published from Staff role SKU basket');
-        toast('📣 岗位任务已发布 · '+(data.rule?.resolved_sku_ids?.length||0)+' SKU · 同步 '+(data.memberCount||0)+' 人');
+        toast('📣 岗位共享任务已发布 · '+(data.rule?.resolved_sku_ids?.length||0)+' SKU · 当前 '+(data.memberCount||0)+' 人可见');
         taskRowsCache=(await window.CassolaCloud.listRoleInventoryTasks(role.id)).tasks||[];
       }else{
         const data=await window.CassolaCloud.publishInventoryTask(taskPublisherPersonId,selector,label,'Published from Staff SKU basket');
@@ -1372,7 +1372,7 @@
       if(taskPublisherRoleId){
         await window.CassolaCloud.revokeRoleInventoryTask(taskId);
         taskRowsCache=(await window.CassolaCloud.listRoleInventoryTasks(taskPublisherRoleId)).tasks||[];
-        toast('岗位任务已撤销，成员下次 Cloud 刷新后会同步');
+        toast('岗位共享任务已撤销，成员下次 Cloud 刷新后会消失');
       }else{
         await window.CassolaCloud.revokeInventoryTask(taskId);
         taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];
