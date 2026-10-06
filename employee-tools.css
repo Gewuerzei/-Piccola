@@ -131,3 +131,48 @@
   .employee-movement-grid{grid-template-columns:1fr}
 }
 
+/* Employee SKU Center v0.1 */
+.employee-sku-center{
+  display:flex;flex-direction:column;gap:11px;padding-bottom:calc(18px + env(safe-area-inset-bottom))
+}
+.employee-sku-center-intro{
+  padding:15px;border:1px solid var(--line);border-radius:28px;
+  background:linear-gradient(145deg,rgba(31,36,48,.98),rgba(23,27,36,.98));
+  box-shadow:0 14px 34px rgba(0,0,0,.14)
+}
+.employee-sku-center-intro h2{margin:4px 0 5px;font-size:18px}
+.employee-sku-center-intro p{margin:0;color:var(--muted);font-size:9px;line-height:1.5}
+.employee-sku-center-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.employee-sku-center-actions .btn{min-height:48px;border-radius:19px}
+.employee-sku-center-list{display:flex;flex-direction:column;gap:8px}
+.employee-sku-center-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:12px 13px;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.025)
+}
+.employee-sku-center-row>div{min-width:0}
+.employee-sku-center-row strong{display:block;font-size:10.5px}
+.employee-sku-center-row small{display:block;margin-top:4px;color:var(--muted);font-size:8px;line-height:1.35}
+.employee-sku-center-row .btn{flex:0 0 auto;min-height:38px;border-radius:14px;padding:8px 10px;font-size:8.5px}
+.employee-sku-center-foot{
+  padding:11px 12px;border:1px dashed var(--line);border-radius:18px;
+  color:var(--muted);font-size:8.5px;line-height:1.5;text-align:center
+}
+:root[data-theme="light"] .employee-sku-center-intro{
+  background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(246,243,237,.98));
+  box-shadow:0 12px 30px rgba(73,65,52,.10)
+}
+:root[data-theme="light"] .employee-sku-center-row{background:rgba(31,37,48,.035)}
+:root[data-theme="light"] .employee-tool-dialog{
+  background:linear-gradient(145deg,#ffffff,#f6f3ed);border-color:var(--line);color:var(--text)
+}
+:root[data-theme="light"] .employee-tool-dialog input,
+:root[data-theme="light"] .employee-tool-dialog select{background:rgba(255,255,255,.94);border-color:var(--line);color:var(--text)}
+:root[data-theme="light"] .employee-standard-card>div,
+:root[data-theme="light"] .employee-proposal-card,
+:root[data-theme="light"] .employee-review-card,
+:root[data-theme="light"] .employee-proposal-banner{background:rgba(31,37,48,.035);border-color:var(--line)}
+@media(max-width:460px){
+  .employee-sku-center-actions{grid-template-columns:1fr 1fr}
+  .employee-sku-center-row{align-items:flex-start}
+}
+
