@@ -85,10 +85,35 @@
   function loadEmployeeDraft(){
     try{
       const x=JSON.parse(localStorage.getItem(draftKey())||'null');
-      return x&&x.date===todayKey()?x:{version:1,date:todayKey(),counts:{},exportRevision:0};
-    }catch(_){return{version:1,date:todayKey(),counts:{},exportRevision:0}}
+      if(x&&x.date===todayKey()){
+        if(!x.counts||typeof x.counts!=='object')x.counts={};
+        if(!Array.isArray(x.events))x.events=[];
+        return x;
+      }
+      return{version:2,date:todayKey(),counts:{},events:[],exportRevision:0};
+    }catch(_){return{version:2,date:todayKey(),counts:{},events:[],exportRevision:0}}
   }
-  function saveEmployeeDraft(x){localStorage.setItem(draftKey(),JSON.stringify(x))}
+  function saveEmployeeDraft(x){
+    if(!x.counts||typeof x.counts!=='object')x.counts={};
+    if(!Array.isArray(x.events))x.events=[];
+    x.version=2;
+    localStorage.setItem(draftKey(),JSON.stringify(x));
+  }
+  function employeeEventsForSku(id){
+    return loadEmployeeDraft().events.filter(e=>String(e.skuId)===String(id));
+  }
+  function addEmployeeEvent(event){
+    if(!isEmployee())return null;
+    const draft=loadEmployeeDraft();
+    const row={...event,id:event.id||crypto.randomUUID?.()||String(Date.now()+Math.random()),recordedAt:event.recordedAt||new Date().toISOString()};
+    draft.events.push(row);saveEmployeeDraft(draft);return row;
+  }
+  function removeEmployeeEvent(id){
+    if(!isEmployee())return false;
+    const draft=loadEmployeeDraft(),before=draft.events.length;
+    draft.events=draft.events.filter(e=>String(e.id)!==String(id));
+    saveEmployeeDraft(draft);return draft.events.length!==before;
+  }
   function scopeSkus(scope){
     const cloudRows=window.CassolaCloud?.employeeCatalog?.(accessSession?.id);
     let rows=isEmployee()&&Array.isArray(cloudRows)
@@ -121,8 +146,8 @@
       '<div class="cassola-employee-note">数量可以离线填写。规格 / 单位异常不要直接改正式 SKU，点“查看详情”提交给 Supervisor 审核。</div>'+
       '<div class="cassola-employee-counts">'+
       (rows.length?rows.map(s=>{
-        const v=draft.counts?.[s.id];
-        return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">查看详情</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></div>';
+        const v=draft.counts?.[s.id],eventCount=employeeEventsForSku(s.id).length;
+        return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">查看详情'+(eventCount?' · 变动 '+eventCount:'')+'</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></div>';
       }).join(''):'<div class="empty">这个责任区没有可盘 SKU。</div>')+
       '</div>'+
       '<div class="cassola-employee-foot">'+(queued?('📵 本机还有 '+queued+' 份待发送 · 点底部“待'+queued+'”手动提交'):'联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用')+'</div>'+
@@ -186,7 +211,16 @@
       latestRule:'submittedAt',
       deviceRevision:draft.exportRevision,
       scopeSkuIds:rows.map(s=>s.id),
-      counts:filled
+      counts:filled,
+      events:(draft.events||[]).map(e=>({
+        id:String(e.id||''),
+        type:String(e.type||''),
+        skuId:String(e.skuId||''),
+        qty:Number(e.qty),
+        targetId:e.targetId?String(e.targetId):null,
+        note:String(e.note||'').slice(0,300),
+        recordedAt:e.recordedAt||draft.lastExportedAt
+      }))
     };
   }
   function exportEmployeeCount(){
@@ -357,6 +391,11 @@
     openInventory:function(){if(isSupervisor())showMode('inventory');else showMode('gate')},
     openStaff:function(){if(isSupervisor())showMode('staff');else showMode('gate')},
     logout,
-    session:function(){return accessSession?JSON.parse(JSON.stringify(accessSession)):null}
+    session:function(){return accessSession?JSON.parse(JSON.stringify(accessSession)):null},
+    employeeDraft:function(){return isEmployee()?JSON.parse(JSON.stringify(loadEmployeeDraft())):null},
+    employeeEventsForSku:function(id){return isEmployee()?JSON.parse(JSON.stringify(employeeEventsForSku(id))):[]},
+    addEmployeeEvent,
+    removeEmployeeEvent,
+    refreshEmployee:function(){if(isEmployee())renderEmployee()}
   };
 })();
