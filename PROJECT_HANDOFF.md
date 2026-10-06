@@ -11,7 +11,7 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
-- Access: **v0.5 · Named Employee UI + Offline Outbox + SKU Proposals**
+- Access: **v0.6 · Employee Count + Loss / Conversion Facts**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
@@ -72,6 +72,24 @@ Employee Mode 当前：
 - Supervisor 在本地明确“采用到本机”后才修改 Inventory；采用后仍需 Supervisor 自己上传 Cloud。
 - 新 SKU 由员工提议采用后默认 `supplier = 待确认`、`autoOrder = false`，避免未经核对就进入自动订货。
 - 单位输入提供常用建议，但允许自定义文本；所有自定义值都必须经过 Supervisor proposal review 才能进入正式 SKU。
+
+### Employee loss / conversion facts
+- 员工 SKU “查看详情”可记录两类**今日库存事实**：
+  - `loss`：🗑️ 报损，必须填写数量与原因
+  - `transfer`：🔄 内部转化 / 熟化，只允许已配置的 SKU 对
+- 当前内置转化关系：
+  - `avocado_hard → avocado_half / avocado_soft`
+  - `avocado_half → avocado_soft`
+  - `mango_hard → mango_soft`
+  - SKU 若未来存在 `conversionTargets[]`，优先使用该配置。
+- 员工事件保存在自己的 `cassola_employee_count_v01` 当日草稿 `events[]`，与完整责任区 count snapshot 一起上传 / JSON 备用；**事件本身不会直接修改 Supervisor Inventory**。
+- Supervisor 采用员工 submission 时：
+  1. 先把 loss / transfer 写入标准 Inventory `history`
+  2. 再以员工完整 count snapshot 作为最终现场库存
+  3. 因此不会出现“盘货数字已经包含报损，又额外再减一次库存”的双扣问题。
+- 周耗算法继续使用原公式区分 arrival / loss / transfer；员工报损不是正常消耗，员工内部转化也不是正常消耗。
+- 同责任区同一天的新 submission supersede 旧 active submission 时，旧 submission 对应的 history 保留审计但标记 `employeeSuperseded=true`；`v3WeeklyUse` 必须忽略这些旧记录，避免重复计算事件。
+- Cloud Edge 会再次验证事件 source / target scope、数量、库存单位与允许的 conversion pair；浏览器提交不能绕过责任区。
 
 ### Employee submission import invariant
 
@@ -272,7 +290,7 @@ Cloud v0.1 的核心规则：
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`
+- `cassola-cloud`（当前生产 v7；employee submission 支持可选 loss / transfer events，并由 Edge 再验证）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
