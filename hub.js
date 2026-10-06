@@ -204,7 +204,10 @@
   }
   function employeeTaskPickerHtml(tasks,selectedId){
     if(!tasks.length)return'';
-    return '<div class="cassola-employee-task-picker">'+tasks.map(t=>'<button type="button" data-employee-count-task="'+escapeHtml(t.task_id)+'" class="'+(String(t.task_id)===String(selectedId)?'active':'')+'"><span>📋 '+escapeHtml(t.label||'盘货任务')+'</span><b>'+((t.resolved_sku_ids||[]).length)+' SKU</b></button>').join('')+'</div>';
+    return '<div class="cassola-employee-task-picker">'+tasks.map(t=>{
+      const shared=t.source_kind==='role'||t.shared_role_task===true;
+      return '<button type="button" data-employee-count-task="'+escapeHtml(t.task_id)+'" class="'+(String(t.task_id)===String(selectedId)?'active':'')+'"><span>'+(shared?'👥 ':'📋 ')+escapeHtml(t.label||'盘货任务')+(shared?'<small>岗位共享 · 谁先提交谁生效</small>':'')+'</span><b>'+((t.resolved_sku_ids||[]).length)+' SKU</b></button>';
+    }).join('')+'</div>';
   }
   function employeeCountPanelHtml(rows,draft,filled,queued){
     return '<div class="cassola-employee-summary"><div><span>责任区 SKU</span><b>'+rows.length+'</b></div><div><span>今日已填</span><b id="cassolaEmployeeFilled">'+filled+'/'+rows.length+'</b></div></div>'+
@@ -317,26 +320,37 @@
     };
   }
   async function submitEmployeeReceiptTask(taskId){
-    const task=receiptTaskById(taskId);if(!task)return;
+    const task=receiptTaskById(taskId);
+    if(!task){alert('这份收货任务已经失效或还没刷新。请重新打开“收货”。');return}
     if(window.CassolaCloud?.employeeReceiptQueued?.(taskId,accessSession.id)){showToast('这份收货已经在待发送队列里');return}
-    const payload=buildEmployeeReceiptPayload(task);if(!payload)return;
-    if(!window.CassolaCloud?.connected?.()){
-      window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload);
-      showToast('📵 收货已保存到待发送队列');renderEmployee();return;
-    }
+    const btn=document.querySelector('[data-employee-receipt-submit="'+CSS.escape(String(taskId))+'"]');
+    const oldText=btn?.textContent||'📤 提交本次收货';
     try{
+      const payload=buildEmployeeReceiptPayload(task);
+      if(!payload)return;
+      if(btn){btn.disabled=true;btn.textContent='⏳ 正在提交…'}
+      if(!window.CassolaCloud?.connected?.()){
+        window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload);
+        showToast('📵 收货已保存到待发送队列');renderEmployee();return;
+      }
       await window.CassolaCloud.submitEmployeeReceipt(taskId,payload);
       localStorage.removeItem(receiptDraftKey(taskId));
       showToast('🚚 收货事实已提交给 Supervisor');
+      await window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{});
       renderEmployee();
     }catch(err){
       if(!navigator.onLine||!err?.status||err.status>=500){
-        window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload);
+        try{window.CassolaCloud?.queueEmployeeReceipt?.(taskId,buildEmployeeReceiptPayload(task)||{})}catch(_){}
         showToast('📵 Cloud 没接住，收货已保存待发送');renderEmployee();return;
       }
       alert('提交收货失败：'+(err?.data?.detail||err?.message||'未知错误'));
+    }finally{
+      const live=document.querySelector('[data-employee-receipt-submit="'+CSS.escape(String(taskId))+'"]');
+      if(live&&!live.disabled){live.textContent=oldText}
+      else if(live&&receiptTaskById(taskId)){live.disabled=false;live.textContent=oldText}
     }
   }
+
   async function switchEmployeePanel(mode){
     employeePanel=mode==='receipt'?'receipt':mode==='sku'?'sku':'count';
     if((employeePanel==='receipt'||employeePanel==='sku')&&window.CassolaCloud?.connected?.()){
@@ -432,6 +446,12 @@
       saveEmployeeDraft(draft);
       renderEmployee();
     }catch(err){
+      if(err?.data?.error==='inventory_task_not_active'){
+        await window.CassolaCloud?.refreshStatus?.({silent:true}).catch(()=>{});
+        renderEmployee();
+        alert('这份岗位 / 个人盘货任务已经失效。\n\n如果它是岗位共享任务，说明同岗位已经有人先提交了。你的本机草稿不会被删除。');
+        return;
+      }
       if(!navigator.onLine||!err?.status||err?.status>=500){
         window.CassolaCloud?.queueEmployeeSubmission?.(payload);
         if(typeof showToast==='function')showToast('📵 Cloud 没接住，已保存待发送');
