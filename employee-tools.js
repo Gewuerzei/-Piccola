@@ -493,7 +493,7 @@
           (p.qty!==null&&p.qty!==undefined?'<div class="employee-review-qty">现场数量：<b>'+esc(p.qty)+' '+esc(p.proposed?.unit||'')+'</b></div>':'')+
           (p.note?'<p>'+esc(p.note)+'</p>':'')+
           '<div class="employee-review-actions">'+
-            '<button type="button" class="btn primary" data-proposal-accept="'+esc(p.id)+'">'+(p.proposal_type==='sku_issue'?'✓ 标记已处理':'✓ 更新当前 SKU')+'</button>'+
+            '<button type="button" class="btn primary" data-proposal-accept="'+esc(p.id)+'">'+(p.proposal_type==='sku_issue'?'✓ 标记已处理':p.proposal_type==='sku_change'?'✓ 更新当前 SKU':'✓ 采用到本机')+'</button>'+
             variantBtn+
             '<button type="button" class="btn danger ghost" data-proposal-reject="'+esc(p.id)+'">拒绝 · 重新盘点 🗿</button>'+
           '</div>'+
