@@ -1,4 +1,4 @@
-/* Cassola Employee Tools v0.1 · SKU proposals + Supervisor review */
+/* Cassola Employee Tools v0.2 · SKU proposals + loss / conversion facts */
 (function(){
   const UNITS=['个','颗','包','盒','袋','箱','瓶','罐','kg','g','L','ml','份','把','托','件'];
 
@@ -27,6 +27,26 @@
           <input type="hidden" id="employeeSkuDetailId" />
           <div id="employeeSkuCurrent" class="employee-standard-card"></div>
           <datalist id="employeeUnitOptions">${unitOptions()}</datalist>
+          <div class="employee-movement-card">
+            <strong>📉 今日库存变动</strong>
+            <small>和今日盘货一起上传。Supervisor 采用后写入报损 / 内部转换历史；这里不会单独修改正式库存数量。</small>
+            <div class="employee-movement-grid">
+              <div class="employee-movement-box loss">
+                <b>🗑️ 报损</b>
+                <label>数量<input id="employeeLossQty" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 2" /></label>
+                <label>原因<input id="employeeLossNote" maxlength="300" placeholder="例如 内部氧化 / 腐坏 / 发霉" /></label>
+                <button type="button" class="btn danger ghost" id="employeeLossAdd">记入今日报损</button>
+              </div>
+              <div class="employee-movement-box transfer">
+                <b>🔄 转化</b>
+                <label>转成<select id="employeeTransferTarget"></select></label>
+                <label>数量<input id="employeeTransferQty" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 2" /></label>
+                <label>备注<input id="employeeTransferNote" maxlength="300" placeholder="例如 熟化：硬 → 软" /></label>
+                <button type="button" class="btn secondary" id="employeeTransferAdd">记入今日转化</button>
+              </div>
+            </div>
+            <div id="employeeMovementDraft" class="employee-movement-draft"></div>
+          </div>
           <div class="employee-proposal-card">
             <strong>🧪 现场规格 / 单位不一致</strong>
             <small>这里只提交提议，不会直接修改正式 SKU。</small>
@@ -121,7 +141,68 @@
     document.getElementById('employeeSkuFactor').value='';
     document.getElementById('employeeSkuNote').value='';
     document.getElementById('employeeSkuIssueNote').value='';
+    document.getElementById('employeeLossQty').value='';
+    document.getElementById('employeeLossNote').value='';
+    document.getElementById('employeeTransferQty').value='';
+    document.getElementById('employeeTransferNote').value='';
+    const targets=catalog().filter(x=>String(x.id)!==String(sku.id)&&String(x.unit||'')===String(sku.unit||''));
+    const targetSelect=document.getElementById('employeeTransferTarget');
+    targetSelect.innerHTML=targets.length?targets.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · '+esc(x.unit||'')+'</option>').join(''):'<option value="">没有同单位可转化 SKU</option>';
+    const preferred={avocado_hard:'avocado_soft',avocado_half:'avocado_soft',mango_hard:'mango_soft'}[String(sku.id)];
+    if(preferred&&targets.some(x=>String(x.id)===preferred))targetSelect.value=preferred;
+    targetSelect.disabled=!targets.length;
+    document.getElementById('employeeTransferAdd').disabled=!targets.length;
+    renderMovementDraft();
     document.getElementById('employeeSkuDetailDialog').showModal();
+  }
+
+  function parseMovementQty(id){
+    const raw=document.getElementById(id)?.value||'';
+    const n=typeof parseLocaleDecimal==='function'?parseLocaleDecimal(raw):Number(String(raw).replace(',','.'));
+    return Number.isFinite(n)?n:NaN;
+  }
+  function movementSku(){return findSku(document.getElementById('employeeSkuDetailId')?.value)}
+  function renderMovementDraft(){
+    const root=document.getElementById('employeeMovementDraft');if(!root)return;
+    const source=movementSku();if(!source){root.innerHTML='';return}
+    const events=window.CassolaHub?.employeeEventsForSku?.(source.id)||[];
+    root.innerHTML=events.length?'<div class="employee-movement-title">今日已记录 '+events.length+' 条</div>'+events.map(e=>{
+      const target=e.targetId?findSku(e.targetId):null;
+      const label=e.type==='loss'
+        ?('🗑️ 报损 '+esc(e.qty)+' '+esc(source.unit||''))
+        :('🔄 '+esc(source.name)+' → '+esc(target?.name||e.targetId||'目标')+' · '+esc(e.qty)+' '+esc(source.unit||''));
+      return '<div class="employee-movement-item"><div><b>'+label+'</b>'+(e.note?'<small>'+esc(e.note)+'</small>':'')+'</div><button type="button" data-employee-event-remove="'+esc(e.id)+'">✕</button></div>';
+    }).join(''):'<div class="employee-movement-empty">今天还没有报损 / 转化记录。</div>';
+  }
+  function addLossEvent(){
+    const source=movementSku();if(!source)return;
+    const qty=parseMovementQty('employeeLossQty'),note=document.getElementById('employeeLossNote').value.trim();
+    if(!(qty>0)){if(typeof showToast==='function')showToast('报损数量要大于 0');return}
+    if(!note){if(typeof showToast==='function')showToast('写一下报损原因');return}
+    window.CassolaHub?.addEmployeeEvent?.({type:'loss',skuId:source.id,qty,note});
+    document.getElementById('employeeLossQty').value='';
+    document.getElementById('employeeLossNote').value='';
+    renderMovementDraft();window.CassolaHub?.refreshEmployee?.();
+    if(typeof showToast==='function')showToast('🗑️ 已记入今日报损');
+  }
+  function addTransferEvent(){
+    const source=movementSku();if(!source)return;
+    const targetId=document.getElementById('employeeTransferTarget').value,target=findSku(targetId);
+    const qty=parseMovementQty('employeeTransferQty'),note=document.getElementById('employeeTransferNote').value.trim();
+    if(!target){if(typeof showToast==='function')showToast('先选择转化目标');return}
+    if(String(target.unit||'')!==String(source.unit||'')){if(typeof showToast==='function')showToast('转化目标必须和来源使用同一库存单位');return}
+    if(!(qty>0)){if(typeof showToast==='function')showToast('转化数量要大于 0');return}
+    window.CassolaHub?.addEmployeeEvent?.({type:'transfer',skuId:source.id,targetId:target.id,qty,note});
+    document.getElementById('employeeTransferQty').value='';
+    document.getElementById('employeeTransferNote').value='';
+    renderMovementDraft();window.CassolaHub?.refreshEmployee?.();
+    if(typeof showToast==='function')showToast('🔄 已记入今日转化');
+  }
+  function removeMovementEvent(id){
+    if(window.CassolaHub?.removeEmployeeEvent?.(id)){
+      renderMovementDraft();window.CassolaHub?.refreshEmployee?.();
+      if(typeof showToast==='function')showToast('已移除这条今日变动');
+    }
   }
 
   async function submitChange(){
@@ -329,6 +410,9 @@
   document.addEventListener('click',e=>{
     const detail=e.target.closest('[data-employee-detail]');if(detail){openDetail(detail.dataset.employeeDetail);return}
     if(e.target.closest('[data-employee-new-sku]')){openNewSku();return}
+    if(e.target.closest('#employeeLossAdd')){e.preventDefault();addLossEvent();return}
+    if(e.target.closest('#employeeTransferAdd')){e.preventDefault();addTransferEvent();return}
+    const movementRemove=e.target.closest('[data-employee-event-remove]');if(movementRemove){e.preventDefault();removeMovementEvent(movementRemove.dataset.employeeEventRemove);return}
     if(e.target.closest('#employeeSkuChangeSubmit')){e.preventDefault();submitChange();return}
     if(e.target.closest('#employeeSkuIssueSubmit')){e.preventDefault();submitIssue();return}
     if(e.target.closest('#employeeNewSkuSubmit')){e.preventDefault();submitNewSku();return}
