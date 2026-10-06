@@ -349,3 +349,23 @@
 @media(max-width:520px){
   .v4-employee-receipt-review-actions{grid-template-columns:1fr}
 }
+
+/* Employee Receipt Existing Tasks v0.1 */
+.v4-employee-receipt-existing{display:flex;flex-direction:column;gap:7px}
+.v4-existing-title{color:var(--muted);font-size:8.5px;font-weight:850}
+.v4-existing-task{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 11px;
+  border:1px solid rgba(255,194,102,.16);
+  border-radius:17px;
+  background:rgba(255,194,102,.045);
+}
+.v4-existing-task b{display:block;font-size:9.5px}
+.v4-existing-task small{display:block;margin-top:2px;color:var(--muted);font-size:8px}
+.v4-existing-task>span{color:var(--muted);font-size:8px}
+.v4-existing-task .btn{min-height:38px;border-radius:14px;padding:8px 10px;font-size:8.5px}
+:root[data-theme="light"] .v4-existing-task{background:rgba(155,117,37,.06)}
+
