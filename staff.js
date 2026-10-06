@@ -369,7 +369,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.4</h3><p>Staff Cloud · managed employee access · published inventory tasks · weekly publication history</p>
+              <h3>Staff v0.4.1</h3><p>Staff Cloud · managed access · SKU task basket · weekly publication history</p>
             </div>
           </div>
         </section>
