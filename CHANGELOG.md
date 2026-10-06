@@ -12,11 +12,12 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 报损 / 转化写入员工当日草稿 `events[]`，和完整盘货 snapshot 一起 Cloud 上传 / JSON 备用；员工端不会直接改 Supervisor Inventory。
 - Supervisor 审核员工盘货时会先写标准 `loss / transfer` history，再用 count snapshot 落最终库存，避免报损或熟化被重复扣库存。
 - 同责任区同日新版 submission 会把旧 submission history 标记为 `employeeSuperseded`；周耗算法忽略 superseded employee history，避免重复事件污染平均周耗。
+- 员工 submission 即使库存数字未变化，也继续写标准 `count` history，保留真实盘点采样点供周耗计算使用。
 - Cloud pending API 现在返回 submission payload 中的 events，审核页显示“库存变动”数量并在差异预览中逐条展示。
 - Supabase Edge Function `cassola-cloud` 升级到 **ACTIVE v7**：重新验证 event 类型、数量、source/target scope、单位和允许的 conversion pair。
 - 没有新增 Cloud 表 / schema；`employee_submissions.payload` 继续保存完整提交，`employee_submission_items` 仍只保存 count snapshot 行。
 - 不清空任何 localStorage / IndexedDB，也不修改 canonical Head。
-- Service Worker cache 更新为 `cassola-suite-v075`。
+- Service Worker cache 更新为 `cassola-suite-v076`。
 
 ---
 
