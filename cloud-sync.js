@@ -317,6 +317,7 @@
       if(employeeCatalog!==null&&credential?.id)cacheEmployeeCatalog(credential.id,employeeCatalog);
       employeeReceiptTasks=Array.isArray(data.receiptTasks)?clone(data.receiptTasks):[];
       if(credential?.id)cacheEmployeeReceiptTasks(credential.id,employeeReceiptTasks);
+      window.dispatchEvent(new CustomEvent('cassola-cloud-employee-tasks-change',{detail:{count:employeeReceiptTasks.length}}));
     }
     renderCloudUi();
     if(!silent)maybeNotice(data);
@@ -511,7 +512,7 @@
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
     const id=credential?.id,all=readOutbox(),mine=all.filter(x=>x.credentialId===id);
     if(!mine.length)return{sent:0,failed:0};
-    let sent=0,failed=0,remaining=all.slice();
+    let sent=0,failed=0,expired=0,remaining=all.slice();
     for(const row of mine){
       try{
         if(row.type==='employee_submission')await api('employee_submit',{payload:row.payload},12000);
@@ -523,13 +524,16 @@
         if(err?.data?.error==='duplicate_submission'||err?.data?.error==='duplicate_proposal'||err?.data?.error==='duplicate_receipt_submission'){
           remaining=remaining.filter(x=>x.id!==row.id);sent++;continue;
         }
+        if(row.type==='employee_receipt'&&err?.data?.error==='receipt_task_not_authorized'){
+          remaining=remaining.filter(x=>x.id!==row.id);expired++;continue;
+        }
         failed++;
       }
     }
     writeOutbox(remaining);
     window.dispatchEvent(new CustomEvent('cassola-cloud-outbox-change',{detail:{count:outboxCount(id)}}));
     await refreshStatus({silent:true}).catch(()=>{});
-    return{sent,failed};
+    return{sent,failed,expired};
   }
   async function reviewEmployee(id,decision,note=''){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
