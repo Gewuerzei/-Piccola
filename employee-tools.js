@@ -1,4 +1,4 @@
-/* Cassola Employee Tools v0.2 · SKU proposals + loss / conversion facts */
+/* Cassola Employee Tools v0.3 · SKU proposal center + loss / conversion facts */
 (function(){
   const UNITS=['个','颗','包','盒','袋','箱','瓶','罐','kg','g','L','ml','份','把','托','件'];
   const EMPLOYEE_CONVERSION_TARGETS={
@@ -482,10 +482,11 @@
     if(p.proposal_type==='new_category'){
       const name=String(proposed.category||'').trim();if(!name)throw new Error('分类名称为空');
       state.customCategories=Array.isArray(state.customCategories)?state.customCategories:[];
+      const existed=(typeof v3Cats==='function'?v3Cats():[]).includes(name);
       if(!state.customCategories.includes(name)&&!(typeof categories!=='undefined'&&categories.includes(name)))state.customCategories.push(name);
       if(typeof saveState==='function')saveState();
       if(typeof renderAll==='function')renderAll();
-      return{changed:true,message:'已登记分类 · '+name};
+      return{changed:!existed,message:(existed?'分类已经存在 · ':'已登记分类 · ')+name};
     }
     if(p.proposal_type==='sku_reclassify'){
       const s=localSku(p.sku_id);if(!s)throw new Error('本机找不到这个 SKU，请先下载对应区域云端');
@@ -518,7 +519,7 @@
       if(Number(s.qty)>0&&typeof addHistory==='function')addHistory('count',s.id,'0 → '+fmt(s.qty)+' '+s.unit,'员工新 SKU 提议 · '+(p.display_name||p.credential_id),{employeeSkuProposalId:p.proposal_id});
       if(typeof saveState==='function')saveState();
       if(typeof renderAll==='function')renderAll();
-      return{changed:true,message:'已新建 SKU · 供应商保持待确认'};
+      return{changed:true,message:'已新建 SKU · '+s.category+' · '+s.supplier};
     }
     throw new Error('unknown_proposal_type');
   }
