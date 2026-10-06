@@ -247,6 +247,7 @@ function v4EnsureEmployeeReceiptDialogs(){
       <form method="dialog">
         <div class="dialog-head"><div><div class="eyebrow">EMPLOYEE RECEIVING</div><h3>👷 授权员工收货</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
         <div class="v4-employee-receipt-note">只有 Supervisor 明确授权后，员工“收货”页才会出现任务。员工提交后仍需 Supervisor 确认才会正式入库。</div>
+        <div id="v4ReceiptExisting" class="v4-employee-receipt-existing"></div>
         <label>授权给<select id="v4ReceiptEmployeeSelect"></select></label>
         <div id="v4ReceiptAuthPreview" class="v4-employee-receipt-preview"></div>
         <button type="button" class="btn primary large" id="v4ReceiptAuthorizeBtn">授权这次收货</button>
@@ -266,6 +267,15 @@ function v4EnsureEmployeeReceiptDialogs(){
   }
 }
 function v4EmployeeReceiptName(e){return e?.displayName||e?.label||e?.id||'员工'}
+function v4RenderReceiptExisting(){
+  const dlg=document.getElementById('v4EmployeeReceiptAuthDialog'),box=document.getElementById('v4ReceiptExisting');
+  if(!dlg||!box)return;
+  const tasks=dlg._existingTasks||[];
+  box.innerHTML=tasks.length?'<div class="v4-existing-title">当前授权 / 待审核</div>'+tasks.map(t=>{
+    const count=t.order_snapshot?.items?.length||0;
+    return '<div class="v4-existing-task"><div><b>'+escapeHtml(t.displayName||t.credential_id)+'</b><small>'+count+' 项 · '+escapeHtml(t.status==='submitted'?'已提交待审核':'已授权未提交')+'</small></div>'+(t.status==='authorized'?'<button type="button" class="btn danger ghost" data-v4-receipt-revoke-task="'+escapeHtml(t.task_id)+'">撤销</button>':'<span>等待审核</span>')+'</div>';
+  }).join(''):'';
+}
 function v4RenderReceiptAuthPreview(){
   const dlg=document.getElementById('v4EmployeeReceiptAuthDialog'),sel=document.getElementById('v4ReceiptEmployeeSelect'),box=document.getElementById('v4ReceiptAuthPreview');
   if(!dlg||!sel||!box)return;
@@ -289,14 +299,17 @@ async function v4OpenEmployeeReceiptAuthorize(orderId){
   if(!window.CassolaCloud?.connected?.()||window.CassolaCloud?.role?.()!=='supervisor'){showToast('先连接 Cloud 才能授权员工收货');return}
   const dlg=document.getElementById('v4EmployeeReceiptAuthDialog'),sel=document.getElementById('v4ReceiptEmployeeSelect'),box=document.getElementById('v4ReceiptAuthPreview');
   box.innerHTML='<div class="empty">正在读取员工…</div>';
-  dlg._orderId=o.id;dlg._employees=[];dlg.showModal();
+  dlg._orderId=o.id;dlg._employees=[];dlg._existingTasks=[];if(!dlg.open)dlg.showModal();
   try{
-    const data=await window.CassolaCloud.listEmployeeDirectory();
-    const employees=(data.employees||[]).filter(e=>v4ReceiptTaskLinesForEmployee(o,e.scope).length>0);
-    dlg._employees=employees;
+    const [directory,existing]=await Promise.all([
+      window.CassolaCloud.listEmployeeDirectory(),
+      window.CassolaCloud.listReceiptTasks(['authorized','submitted'],o.id)
+    ]);
+    const employees=(directory.employees||[]).filter(e=>v4ReceiptTaskLinesForEmployee(o,e.scope).length>0);
+    dlg._employees=employees;dlg._existingTasks=existing.tasks||[];
     sel.innerHTML=employees.length?employees.map(e=>`<option value="${escapeHtml(e.id)}">${escapeHtml(v4EmployeeReceiptName(e))} · ${escapeHtml(e.scope?.label||e.id)}</option>`).join(''):'<option value="">没有符合责任区的员工</option>';
     document.getElementById('v4ReceiptAuthorizeBtn').disabled=!employees.length;
-    v4RenderReceiptAuthPreview();
+    v4RenderReceiptExisting();v4RenderReceiptAuthPreview();
   }catch(err){
     box.innerHTML='<div class="empty">读取员工失败：'+escapeHtml(err?.message||'未知错误')+'</div>';
   }
@@ -325,7 +338,7 @@ async function v4AuthorizeEmployeeReceipt(){
     dlg.close();
     showToast('🚚 已授权 '+v4EmployeeReceiptName(emp)+' 收货 · '+lines.length+' 项');
   }catch(err){
-    if(err?.data?.error==='receipt_task_exists')alert('这名员工已经有这张订单的未完成收货授权。先等提交 / 审核，或撤销旧授权。');
+    if(err?.data?.error==='receipt_task_exists'||err?.data?.error==='receipt_lines_already_assigned')alert('这张订单里的部分 SKU 已经有未完成的员工收货授权。可在上方“当前授权”里撤销旧任务，或等员工提交 / Supervisor 审核后再授权。');
     else alert('授权失败：'+(err?.data?.detail||err?.message||'未知错误'));
   }finally{btn.disabled=false}
 }
@@ -337,7 +350,7 @@ async function v4OpenEmployeeReceiptInbox(){
   v4EnsureEmployeeReceiptDialogs();
   if(!window.CassolaCloud?.connected?.()||window.CassolaCloud?.role?.()!=='supervisor'){showToast('先连接 Cloud');return}
   const dlg=document.getElementById('v4EmployeeReceiptInboxDialog'),box=document.getElementById('v4EmployeeReceiptInbox');
-  box.innerHTML='<div class="empty">正在读取员工收货…</div>';dlg.showModal();
+  box.innerHTML='<div class="empty">正在读取员工收货…</div>';if(!dlg.open)dlg.showModal();
   try{
     const data=await window.CassolaCloud.listReceiptPending(),tasks=data.tasks||[];
     dlg._tasks=tasks;
@@ -366,6 +379,7 @@ async function v4ApplyEmployeeReceiptTask(taskId){
   }
   const o=(state.placedOrders||[]).find(x=>String(x.id)===String(task.order_id));
   if(!o){alert('本机找不到这张订单。先把对应订单同步到这台 Supervisor 设备，再审核。');return}
+  if(v4OrderDone(o)){alert('这张订单已经在本机结案。为避免重复入库，请拒绝这份员工提交，必要时重新开任务或手动调整。');return}
   if(v4OrderDirty(o).length){showToast('先保存当前 Supervisor 的收货编辑，再审核员工收货');return}
   const baseMap=new Map((task.order_snapshot?.items||[]).map(i=>[String(i.skuId),i]));
   const reports=task.submission_payload?.lines||[];
@@ -419,6 +433,13 @@ async function v4ApplyEmployeeReceiptTask(taskId){
   }
   await v4OpenEmployeeReceiptInbox();
 }
+async function v4RevokeEmployeeReceiptTask(taskId){
+  if(!confirm('撤销这份员工收货授权？\n\n员工端任务会在下次联网刷新后消失。'))return;
+  await window.CassolaCloud.revokeReceiptTask(taskId,'Supervisor revoked receipt authorization');
+  showToast('已撤销员工收货授权');
+  const dlg=document.getElementById('v4EmployeeReceiptAuthDialog');
+  if(dlg?._orderId)await v4OpenEmployeeReceiptAuthorize(dlg._orderId);
+}
 async function v4RejectEmployeeReceiptTask(taskId){
   if(!confirm('拒绝这份员工收货？\n\n不会修改本机库存。'))return;
   await window.CassolaCloud.reviewReceiptTask(taskId,'rejected','Supervisor rejected employee receipt');
@@ -432,6 +453,7 @@ document.addEventListener('change',e=>{
 document.addEventListener('click',async e=>{
   const auth=e.target.closest('[data-v4-authorize-receipt]');if(auth){await v4OpenEmployeeReceiptAuthorize(auth.dataset.v4AuthorizeReceipt);return}
   if(e.target.closest('#v4ReceiptAuthorizeBtn')){await v4AuthorizeEmployeeReceipt();return}
+  const revoke=e.target.closest('[data-v4-receipt-revoke-task]');if(revoke){await v4RevokeEmployeeReceiptTask(revoke.dataset.v4ReceiptRevokeTask);return}
   const accept=e.target.closest('[data-v4-receipt-accept]');if(accept){await v4ApplyEmployeeReceiptTask(accept.dataset.v4ReceiptAccept);return}
   const mark=e.target.closest('[data-v4-receipt-mark]');if(mark){await window.CassolaCloud.reviewReceiptTask(mark.dataset.v4ReceiptMark,'accepted','Local receipt batch was already applied');await v4OpenEmployeeReceiptInbox();return}
   const reject=e.target.closest('[data-v4-receipt-reject]');if(reject){await v4RejectEmployeeReceiptTask(reject.dataset.v4ReceiptReject);return}
