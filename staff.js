@@ -1555,7 +1555,7 @@
 
   function renderRoles(){
     const box=document.getElementById('staffRoleList');if(!box)return;
-    box.innerHTML=state.roles.map(r=>'<div class="staff-role-row" data-role-row="'+esc(r.id)+'"><input class="staff-role-emoji" value="'+esc(r.icon)+'" maxlength="4" aria-label="岗位图标"><input class="staff-role-name" value="'+esc(r.name)+'" aria-label="岗位名称"><button class="staff-icon-btn" data-role-delete="'+esc(r.id)+'">✕</button></div>').join('');
+    box.innerHTML=state.roles.map(r=>'<div class="staff-role-row" data-role-row="'+esc(r.id)+'"><input class="staff-role-emoji" value="'+esc(r.icon)+'" maxlength="4" aria-label="岗位图标"><input class="staff-role-name" value="'+esc(r.name)+'" aria-label="岗位名称"><button class="staff-icon-btn" data-role-task="'+esc(r.id)+'" title="岗位盘货任务">📋</button><button class="staff-icon-btn" data-role-delete="'+esc(r.id)+'">✕</button></div>').join('');
     box.querySelectorAll('[data-role-row]').forEach(row=>{
       const id=row.dataset.roleRow;
       const inputs=row.querySelectorAll('input');
@@ -1566,12 +1566,21 @@
         log('role','更新岗位：'+r.name);save();renderBoard();fillRoleOptions();toast('岗位已更新');
       }));
     });
-    box.querySelectorAll('[data-role-delete]').forEach(btn=>btn.addEventListener('click',()=>{
+    box.querySelectorAll('[data-role-task]').forEach(btn=>btn.addEventListener('click',()=>openRoleTaskPublisher(btn.dataset.roleTask)));
+    box.querySelectorAll('[data-role-delete]').forEach(btn=>btn.addEventListener('click',async()=>{
       const r=roleById(btn.dataset.roleDelete);if(!r)return;
-      if(!confirm('删除岗位 '+r.name+'？已经排在这里的人会回到待安排。'))return;
+      if(!confirm('删除岗位 '+r.name+'？\n\n这个岗位的自动盘货任务也会撤销，人员会回到“未指定主要岗位”。'))return;
+      const members=state.people.filter(p=>p.primaryRole===r.id);
+      if(cloudReady()){
+        try{
+          const rules=(await window.CassolaCloud.listRoleInventoryTasks(r.id)).tasks||[];
+          for(const rule of rules.filter(x=>x.status==='active'))await window.CassolaCloud.revokeRoleInventoryTask(rule.rule_id);
+          for(const p of members)await window.CassolaCloud.staffAccessSetRole(p.id,'',p.name);
+        }catch(err){alert('云端岗位任务撤销失败，岗位暂未删除：'+(err?.message||'未知错误'));return}
+      }
       for(const day of Object.values(state.schedules))for(const sh of Object.values(day||{}))if(sh?.assignments)delete sh.assignments[r.id];
       state.people.forEach(p=>{if(p.primaryRole===r.id)p.primaryRole=''});
-      state.roles=state.roles.filter(x=>x.id!==r.id);log('role','删除岗位：'+r.name);save();renderRoles();renderBoard();toast('岗位已删除');
+      state.roles=state.roles.filter(x=>x.id!==r.id);log('role','删除岗位：'+r.name);save();renderRoles();renderBoard();renderPeople();toast('岗位已删除');
     }));
   }
   function renderSettings(){renderRoles();refreshSyncUi();renderStaffCloudState()}
