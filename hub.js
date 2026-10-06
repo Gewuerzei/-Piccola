@@ -2,12 +2,33 @@
 (function(){
   const FAIL_KEY='cassola_access_fail_v02';
   const EMPLOYEE_DRAFT_PREFIX='cassola_employee_count_v01';
+  const OFFLINE_ACCESS_KEY='cassola_access_offline_v01';
   let accessSession=null;
   let employeePanel='count';
+  let employeeCountTaskId=null;
 
+  function readOfflineCredentials(){
+    try{
+      const x=JSON.parse(localStorage.getItem(OFFLINE_ACCESS_KEY)||'{}')||{};
+      return Object.values(x).filter(r=>r&&r.id&&r.salt&&r.hash);
+    }catch(_){return[]}
+  }
+  function cacheOfflineCredential(record){
+    if(!record?.id||!record?.offlineVerifier?.salt||!record?.offlineVerifier?.hash)return;
+    let all={};try{all=JSON.parse(localStorage.getItem(OFFLINE_ACCESS_KEY)||'{}')||{}}catch(_){}
+    all[record.id]={
+      id:record.id,role:record.role,label:record.label||'',displayName:record.displayName||null,
+      staffPersonId:record.staffPersonId||null,scope:record.scope?JSON.parse(JSON.stringify(record.scope)):null,
+      salt:record.offlineVerifier.salt,hash:record.offlineVerifier.hash,iterations:Number(record.offlineVerifier.iterations)||200000,
+      cachedAt:new Date().toISOString(),dynamic:true
+    };
+    localStorage.setItem(OFFLINE_ACCESS_KEY,JSON.stringify(all));
+  }
   function registry(){
-    const r=window.CassolaAccessRegistry;
-    return r&&Array.isArray(r.credentials)?r:{version:0,credentials:[]};
+    const r=window.CassolaAccessRegistry,staticRows=r&&Array.isArray(r.credentials)?r.credentials:[];
+    const byId=new Map(staticRows.map(x=>[String(x.id),x]));
+    readOfflineCredentials().forEach(x=>{if(!byId.has(String(x.id)))byId.set(String(x.id),x)});
+    return{version:r?.version||0,credentials:[...byId.values()]};
   }
   function bytesFromB64(s){
     const raw=atob(s),out=new Uint8Array(raw.length);
@@ -79,8 +100,28 @@
     const d=new Date();
     return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
   }
+  function employeeInventoryTasks(){
+    return window.CassolaCloud?.employeeInventoryTasks?.(accessSession?.id)||[];
+  }
+  function employeeCountContext(){
+    const tasks=employeeInventoryTasks();
+    if(tasks.length){
+      let task=tasks.find(t=>String(t.task_id)===String(employeeCountTaskId));
+      if(!task){task=tasks[0];employeeCountTaskId=task.task_id}
+      const rows=Array.isArray(task.sku_snapshot)?task.sku_snapshot:[];
+      const ids=Array.isArray(task.resolved_sku_ids)?task.resolved_sku_ids.map(String):rows.map(x=>String(x.id));
+      return{
+        task,
+        scope:{id:'task:'+task.task_id,kind:'skuIds',skuIds:ids,label:task.label||'盘货任务'},
+        rows:rows.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN')),
+        managed:true
+      };
+    }
+    const scope=accessSession?.scope||{};
+    return{task:null,scope,rows:scopeSkus(scope),managed:!!accessSession?.staffPersonId};
+  }
   function draftKey(){
-    const scope=accessSession?.scope?.id||'none',cred=accessSession?.id||'none';
+    const ctx=employeeCountContext(),scope=ctx.scope?.id||'none',cred=accessSession?.id||'none';
     return `${EMPLOYEE_DRAFT_PREFIX}:${scope}:${cred}:${todayKey()}`;
   }
   function loadEmployeeDraft(){
@@ -130,7 +171,7 @@
     return rows.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'zh-CN'));
   }
   function employeeProgress(){
-    const draft=loadEmployeeDraft(),rows=scopeSkus(accessSession?.scope);
+    const draft=loadEmployeeDraft(),rows=employeeCountContext().rows;
     const filled=rows.filter(s=>draft.counts?.[s.id]!==undefined&&draft.counts?.[s.id]!==null&&draft.counts?.[s.id]!=='').length;
     return{filled,total:rows.length};
   }
@@ -160,6 +201,10 @@
       received:['✅','收齐'],later:['🕒','晚到'],other:['👥','待他人'],
       out:['❌','缺货'],short:['⬇️','少到'],over:['⬆️','多到']
     }[status]||['·','未选择'];
+  }
+  function employeeTaskPickerHtml(tasks,selectedId){
+    if(!tasks.length)return'';
+    return '<div class="cassola-employee-task-picker">'+tasks.map(t=>'<button type="button" data-employee-count-task="'+escapeHtml(t.task_id)+'" class="'+(String(t.task_id)===String(selectedId)?'active':'')+'"><span>📋 '+escapeHtml(t.label||'盘货任务')+'</span><b>'+((t.resolved_sku_ids||[]).length)+' SKU</b></button>').join('')+'</div>';
   }
   function employeeCountPanelHtml(rows,draft,filled,queued){
     return '<div class="cassola-employee-summary"><div><span>责任区 SKU</span><b>'+rows.length+'</b></div><div><span>今日已填</span><b id="cassolaEmployeeFilled">'+filled+'/'+rows.length+'</b></div></div>'+
@@ -205,16 +250,17 @@
   }
   function renderEmployee(){
     const box=document.getElementById('cassolaEmployee');if(!box||!isEmployee())return;
-    const scope=accessSession.scope||{},rows=scopeSkus(scope),draft=loadEmployeeDraft();
+    const ctx=employeeCountContext(),scope=ctx.scope||{},rows=ctx.rows||[],draft=loadEmployeeDraft();
     const filled=rows.filter(s=>draft.counts?.[s.id]!==undefined&&draft.counts?.[s.id]!==null&&draft.counts?.[s.id]!=='').length;
     const cached=window.CassolaCloud?.cachedIdentity?.(accessSession.id);
     const responsible=accessSession.displayName||cached?.displayName||'责任区员工';
-    const queued=window.CassolaCloud?.outboxCount?.(accessSession.id)||0,tasks=employeeReceiptTasks();
+    const queued=window.CassolaCloud?.outboxCount?.(accessSession.id)||0,receiptTasks=employeeReceiptTasks(),inventoryTasks=employeeInventoryTasks();
     const receiptMode=employeePanel==='receipt';
+    const noManagedCountTask=!receiptMode&&ctx.managed&&!inventoryTasks.length;
     box.innerHTML='<div class="cassola-employee-shell '+(receiptMode?'receipt-mode':'count-mode')+'">'+
-      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(scope.label||'责任区盘货')+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
-      '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(!receiptMode?'active':'')+'">📋 盘货</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+'">🚚 收货'+(tasks.length?' <b>'+tasks.length+'</b>':'')+'</button></div>'+
-      (receiptMode?employeeReceiptPanelHtml(tasks):employeeCountPanelHtml(rows,draft,filled,queued))+
+      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(receiptMode?'收货任务':(scope.label||'责任区盘货'))+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
+      '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(!receiptMode?'active':'')+'">📋 盘货'+(inventoryTasks.length?' <b>'+inventoryTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+'">🚚 收货'+(receiptTasks.length?' <b>'+receiptTasks.length+'</b>':'')+'</button></div>'+
+      (receiptMode?employeeReceiptPanelHtml(receiptTasks):(noManagedCountTask?'<div class="cassola-employee-no-task"><span>📋</span><h2>无任务</h2><p>Supervisor 还没有从 Staff 给你发布盘货 SKU。</p></div>':employeeTaskPickerHtml(inventoryTasks,ctx.task?.task_id)+employeeCountPanelHtml(rows,draft,filled,queued)))+
       '</div>';
     window.CassolaEmployeeTools?.enhance?.();
   }
@@ -314,7 +360,8 @@
   }
   function buildEmployeePayload(){
     if(!isEmployee())return null;
-    const scope=accessSession.scope||{},rows=scopeSkus(scope),draft=loadEmployeeDraft(),filled=[];
+    const ctx=employeeCountContext(),scope=ctx.scope||{},rows=ctx.rows||[],draft=loadEmployeeDraft(),filled=[];
+    if(ctx.managed&&!ctx.task){if(typeof showToast==='function')showToast('当前没有 Supervisor 发布的盘货任务');return null}
     rows.forEach(s=>{
       const v=draft.counts?.[s.id];
       if(v===undefined||v===null||v==='')return;
@@ -334,8 +381,9 @@
       submissionId:crypto.randomUUID?.()||String(Date.now()+Math.random()),
       credentialId:accessSession.id,
       role:'employee',
-      scope:{id:scope.id,kind:scope.kind,value:scope.value,label:scope.label},
-      effectiveKey:`${scope.id}:${todayKey()}`,
+      scope:{id:scope.id,kind:scope.kind,value:scope.value,label:scope.label,skuIds:Array.isArray(scope.skuIds)?scope.skuIds.slice():undefined},
+      inventoryTaskId:ctx.task?.task_id||null,
+      effectiveKey:ctx.task?`task:${ctx.task.task_id}:${todayKey()}`:`${scope.id}:${todayKey()}`,
       latestRule:'submittedAt',
       deviceRevision:draft.exportRevision,
       scopeSkuIds:rows.map(s=>s.id),
@@ -353,7 +401,7 @@
   }
   function exportEmployeeCount(){
     const payload=buildEmployeePayload();if(!payload)return;
-    const scope=accessSession.scope||{};
+    const scope=employeeCountContext().scope||{};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
     const hh=String(new Date().getHours()).padStart(2,'0'),mm=String(new Date().getMinutes()).padStart(2,'0');
@@ -416,30 +464,34 @@
     if(!code){err.textContent='请输入 Access Code。';err.classList.remove('hidden');return}
     btn.disabled=true;
     try{
-      const record=await verifyAccessCode(code);
+      const localRecord=await verifyAccessCode(code);
+      let cloudConnected=false,cloudRecord=null,cloudError=null;
+      if(navigator.onLine&&window.CassolaCloud?.login){
+        try{
+          cloudRecord=await window.CassolaCloud.login(code);
+          cloudConnected=!!cloudRecord;
+          if(cloudRecord)cacheOfflineCredential(cloudRecord);
+        }catch(ex){cloudError=ex;console.warn('Cassola Cloud login unavailable',ex)}
+      }
+      const authoritativeReject=!!cloudError&&(cloudError.status===401||cloudError.status===429||['invalid_code','cooldown'].includes(cloudError?.data?.error));
+      const record=cloudRecord||(!authoritativeReject?localRecord:null);
       if(!record){
         const f=registerFailure(),cool=Math.max(0,Math.ceil(((Number(f.until)||0)-Date.now())/1000));
-        err.textContent=cool>0?`Code 不正确。已冷却 ${cool} 秒。`:'Code 不正确。';
+        const serverCool=Number(cloudError?.data?.retryAfterSeconds)||0;
+        err.textContent=(serverCool||cool)>0?`Code 不正确。已冷却 ${Math.max(serverCool,cool)} 秒。`:'Code 不正确。';
         err.classList.remove('hidden');input.value='';input.focus();return;
       }
       clearFailures();
       window.CassolaCloud?.rememberAccessCode?.(code);
       const cachedIdentity=window.CassolaCloud?.cachedIdentity?.(record.id);
-      let cloudConnected=false,cloudRecord=null;
-      if(navigator.onLine&&window.CassolaCloud?.login){
-        try{
-          cloudRecord=await window.CassolaCloud.login(code);
-          cloudConnected=!!cloudRecord&&cloudRecord.id===record.id;
-        }catch(cloudErr){
-          console.warn('Cassola Cloud login unavailable',cloudErr);
-        }
-      }
       accessSession={
         id:record.id,role:record.role,label:record.label,
-        displayName:cloudRecord?.displayName||cachedIdentity?.displayName||null,
+        displayName:record.displayName||record.display_name||cachedIdentity?.displayName||null,
+        staffPersonId:record.staffPersonId||record.staff_person_id||cachedIdentity?.staffPersonId||null,
         scope:record.scope?JSON.parse(JSON.stringify(record.scope)):null,
         cloudConnected
       };
+      employeeCountTaskId=null;
       input.value='';
       showMode(record.role==='supervisor'?'hub':'employee');
       if(!cloudConnected&&navigator.onLine&&typeof showToast==='function')showToast('已进入本地模式 · Cloud 暂未连接');
@@ -450,7 +502,7 @@
   }
   function logout(){
     window.CassolaCloud?.logout?.().catch?.(()=>{});
-    accessSession=null;employeePanel='count';
+    accessSession=null;employeePanel='count';employeeCountTaskId=null;
     showMode('gate');
     setTimeout(()=>document.getElementById('cassolaGateCode')?.focus(),80);
   }
@@ -499,6 +551,7 @@
     document.getElementById('cassolaEmployee').addEventListener('click',e=>{
       if(e.target.closest('[data-cassola-logout]')){logout();return}
       const panel=e.target.closest('[data-employee-panel]');if(panel){switchEmployeePanel(panel.dataset.employeePanel);return}
+      const countTask=e.target.closest('[data-employee-count-task]');if(countTask){employeeCountTaskId=countTask.dataset.employeeCountTask;renderEmployee();return}
       const receiptStatus=e.target.closest('[data-employee-receipt-status]');if(receiptStatus){setEmployeeReceiptStatus(receiptStatus.dataset.taskId,receiptStatus.dataset.skuId,receiptStatus.dataset.employeeReceiptStatus);return}
       const receiptSubmit=e.target.closest('[data-employee-receipt-submit]');if(receiptSubmit){submitEmployeeReceiptTask(receiptSubmit.dataset.employeeReceiptSubmit);return}
       if(e.target.closest('[data-employee-clear]')){clearEmployeeDraft();return}
@@ -516,7 +569,14 @@
     renderEmployee();
   });
   window.addEventListener('cassola-cloud-outbox-change',()=>{if(isEmployee())renderEmployee()});
-  window.addEventListener('cassola-cloud-employee-tasks-change',()=>{if(isEmployee())renderEmployee()});
+  window.addEventListener('cassola-cloud-employee-tasks-change',e=>{
+    if(!isEmployee())return;
+    if(e.detail?.scope)accessSession.scope=JSON.parse(JSON.stringify(e.detail.scope));
+    if(e.detail?.staffPersonId)accessSession.staffPersonId=e.detail.staffPersonId;
+    const tasks=employeeInventoryTasks();
+    if(employeeCountTaskId&&!tasks.some(t=>String(t.task_id)===String(employeeCountTaskId)))employeeCountTaskId=null;
+    renderEmployee();
+  });
 
   document.addEventListener('DOMContentLoaded',function(){
     accessSession=null;
@@ -530,7 +590,13 @@
     openInventory:function(){if(isSupervisor())showMode('inventory');else showMode('gate')},
     openStaff:function(){if(isSupervisor())showMode('staff');else showMode('gate')},
     logout,
-    session:function(){return accessSession?JSON.parse(JSON.stringify(accessSession)):null},
+    session:function(){
+      if(!accessSession)return null;
+      const out=JSON.parse(JSON.stringify(accessSession));
+      if(isEmployee()){const ctx=employeeCountContext();if(ctx?.scope)out.scope=JSON.parse(JSON.stringify(ctx.scope))}
+      return out;
+    },
+    currentEmployeeCatalog:function(){return isEmployee()?JSON.parse(JSON.stringify(employeeCountContext().rows||[])):[]},
     employeeDraft:function(){return isEmployee()?JSON.parse(JSON.stringify(loadEmployeeDraft())):null},
     employeeEventsForSku:function(id){return isEmployee()?JSON.parse(JSON.stringify(employeeEventsForSku(id))):[]},
     addEmployeeEvent,
