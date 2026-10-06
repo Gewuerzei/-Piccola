@@ -21,6 +21,16 @@
     return typeof v3Skus==='function'?v3Skus():((typeof state!=='undefined'&&Array.isArray(state.skus))?state.skus:[]);
   }
   function findSku(id){return catalog().find(x=>String(x.id)===String(id))||null}
+  function proposalCatalog(){
+    const current=session(),cloud=window.CassolaCloud?.employeeCatalog?.(current?.id);
+    if(Array.isArray(cloud))return cloud;
+    const tasks=window.CassolaCloud?.employeeInventoryTasks?.(current?.id)||[],map=new Map();
+    tasks.forEach(t=>(t.sku_snapshot||[]).forEach(x=>{if(x?.id)map.set(String(x.id),x)}));
+    if(map.size)return[...map.values()];
+    return catalog();
+  }
+  function proposalCategories(){return [...new Set(proposalCatalog().map(x=>String(x.category||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'))}
+  function proposalSuppliers(){return [...new Set(proposalCatalog().map(x=>String(x.supplier||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'))}
   function unitOptions(){return UNITS.map(x=>'<option value="'+esc(x)+'"></option>').join('')}
   function ensureDialogs(){
     if(!document.getElementById('employeeSkuDetailDialog')){
@@ -86,6 +96,8 @@
           </div>
           <div class="employee-proposal-banner">🟠 新 SKU 只会进入待审核区。Supervisor 接受以后才会进入正式库存。</div>
           <datalist id="employeeNewUnitOptions">${unitOptions()}</datalist>
+          <datalist id="employeeCategoryOptions"></datalist>
+          <datalist id="employeeSupplierOptions"></datalist>
           <label>名称<input id="employeeNewName" maxlength="80" required placeholder="例如 硬芒果" /></label>
           <div class="employee-proposal-grid">
             <label>规格<input id="employeeNewSpec" maxlength="100" placeholder="例如 6kg / 箱" /></label>
@@ -94,6 +106,8 @@
             <label>1 大包装 = 几个最小包装<input id="employeeNewFactor" type="text" inputmode="decimal" autocomplete="off" value="1" /></label>
           </div>
           <div class="employee-proposal-grid">
+            <label>分类<input id="employeeNewCategory" list="employeeCategoryOptions" maxlength="60" placeholder="例如 蔬果 / 冷冻" /></label>
+            <label>供应商<input id="employeeNewSupplier" list="employeeSupplierOptions" maxlength="120" placeholder="例如 大兴 / 米兰" /></label>
             <label>区域<select id="employeeNewArea"><option value="sushi">🍣 Sushi</option><option value="cucina">🔪 Cucina</option><option value="bar">🍸 Bar / Sala</option><option value="common">📦 Comune</option></select></label>
             <label>现场数量<input id="employeeNewQty" type="text" inputmode="decimal" autocomplete="off" placeholder="可空" /></label>
           </div>
