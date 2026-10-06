@@ -1,6 +1,11 @@
 /* Cassola Employee Tools v0.2 · SKU proposals + loss / conversion facts */
 (function(){
   const UNITS=['个','颗','包','盒','袋','箱','瓶','罐','kg','g','L','ml','份','把','托','件'];
+  const EMPLOYEE_CONVERSION_TARGETS={
+    avocado_hard:['avocado_half','avocado_soft'],
+    avocado_half:['avocado_soft'],
+    mango_hard:['mango_soft']
+  };
 
   function esc(v){return typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'')}
   function today(){
@@ -145,7 +150,9 @@
     document.getElementById('employeeLossNote').value='';
     document.getElementById('employeeTransferQty').value='';
     document.getElementById('employeeTransferNote').value='';
-    const targets=catalog().filter(x=>String(x.id)!==String(sku.id)&&String(x.unit||'')===String(sku.unit||''));
+    const configured=Array.isArray(sku.conversionTargets)&&sku.conversionTargets.length?sku.conversionTargets:EMPLOYEE_CONVERSION_TARGETS[String(sku.id)]||[];
+    const allowedIds=new Set(configured.map(String));
+    const targets=catalog().filter(x=>allowedIds.has(String(x.id))&&String(x.unit||'')===String(sku.unit||''));
     const targetSelect=document.getElementById('employeeTransferTarget');
     targetSelect.innerHTML=targets.length?targets.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · '+esc(x.unit||'')+'</option>').join(''):'<option value="">没有同单位可转化 SKU</option>';
     const preferred={avocado_hard:'avocado_soft',avocado_half:'avocado_soft',mango_hard:'mango_soft'}[String(sku.id)];
