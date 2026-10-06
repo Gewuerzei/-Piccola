@@ -340,3 +340,31 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
   color:var(--warn);font-size:8px;line-height:1.4
 }
 
+/* Staff Task Basket v0.2 */
+.staff-task-builder{
+  display:flex;flex-direction:column;gap:9px;padding:12px;
+  border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.025)
+}
+.staff-task-basket{display:flex;flex-direction:column;gap:7px}
+.staff-task-basket-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.staff-task-basket-head b{font-size:9.5px}
+.staff-task-basket-head span{font-size:8px;color:var(--muted)}
+.staff-task-basket-items{display:flex;flex-wrap:wrap;gap:6px}
+.staff-task-basket-items button{
+  display:inline-flex;align-items:center;gap:7px;max-width:100%;
+  padding:7px 9px;border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));
+  border-radius:999px;background:color-mix(in srgb,var(--accent) 7%,transparent);color:var(--text)
+}
+.staff-task-basket-items button span{font-size:8.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.staff-task-basket-items button b{font-size:8px;color:var(--muted)}
+.staff-task-basket-empty{
+  padding:9px 10px;border:1px dashed var(--line);border-radius:16px;
+  color:var(--muted);font-size:8.5px;line-height:1.45
+}
+.staff-task-conflict{
+  margin-bottom:8px;padding:8px 9px;border-radius:14px;
+  border:1px solid rgba(255,141,145,.18);background:rgba(255,141,145,.05);
+  color:var(--danger);font-size:8px;line-height:1.4
+}
+:root[data-theme="light"] .staff-task-builder{background:rgba(31,37,48,.035)}
+
