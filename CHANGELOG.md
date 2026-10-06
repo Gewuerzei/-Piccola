@@ -27,7 +27,7 @@ All notable changes to the Cassola PWA suite are recorded here.
   - toast 提升为 `z-index:500`
   - 点击提交后按钮显示 `⏳ 正在提交…`，防止重复点击，并在任务失效 / 请求错误时明确反馈
 - 不清空 Inventory / Staff / Employee drafts / Outbox / IndexedDB。
-- Service Worker cache 更新为 `cassola-suite-v083`。
+- Service Worker cache 更新为 `cassola-suite-v084`。
 
 ---
 
