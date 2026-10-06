@@ -14,20 +14,28 @@
   }
   function session(){return window.CassolaHub?.session?.()||null}
   function catalog(){
-    const assigned=window.CassolaHub?.currentEmployeeCatalog?.();
-    if(Array.isArray(assigned)&&assigned.length)return assigned;
-    const current=session(),cloud=window.CassolaCloud?.employeeCatalog?.(current?.id);
-    if(Array.isArray(cloud))return cloud;
+    const current=session(),map=new Map();
+    const add=rows=>(Array.isArray(rows)?rows:[]).forEach(x=>{if(x?.id&&!map.has(String(x.id)))map.set(String(x.id),x)});
+    add(window.CassolaHub?.currentEmployeeCatalog?.());
+    add(window.CassolaCloud?.employeeCatalog?.(current?.id));
+    const receipts=window.CassolaCloud?.employeeReceiptTasks?.(current?.id)||[];
+    receipts.forEach(t=>add((t?.order_snapshot?.items||[]).map(x=>({
+      id:x.skuId,name:x.skuName||x.skuId,spec:x.spec||'',unit:x.unit||'',orderUnit:x.orderUnit||x.unit||'',
+      unitsPerOrder:Number(x.unitsPerOrder)>0?Number(x.unitsPerOrder):1,area:x.area||'',supplier:t.supplier||'',category:x.category||''
+    }))));
+    if(map.size)return[...map.values()];
     return typeof v3Skus==='function'?v3Skus():((typeof state!=='undefined'&&Array.isArray(state.skus))?state.skus:[]);
   }
   function findSku(id){return catalog().find(x=>String(x.id)===String(id))||null}
   function proposalCatalog(){
-    const current=session(),cloud=window.CassolaCloud?.employeeCatalog?.(current?.id);
-    if(Array.isArray(cloud))return cloud;
-    const tasks=window.CassolaCloud?.employeeInventoryTasks?.(current?.id)||[],map=new Map();
-    tasks.forEach(t=>(t.sku_snapshot||[]).forEach(x=>{if(x?.id)map.set(String(x.id),x)}));
-    if(map.size)return[...map.values()];
-    return catalog();
+    const current=session(),map=new Map(),add=rows=>(Array.isArray(rows)?rows:[]).forEach(x=>{if(x?.id)map.set(String(x.id),x)});
+    add(window.CassolaCloud?.employeeCatalog?.(current?.id));
+    (window.CassolaCloud?.employeeInventoryTasks?.(current?.id)||[]).forEach(t=>add(t.sku_snapshot||[]));
+    (window.CassolaCloud?.employeeReceiptTasks?.(current?.id)||[]).forEach(t=>add((t?.order_snapshot?.items||[]).map(x=>({
+      id:x.skuId,name:x.skuName||x.skuId,spec:x.spec||'',unit:x.unit||'',orderUnit:x.orderUnit||x.unit||'',
+      unitsPerOrder:Number(x.unitsPerOrder)>0?Number(x.unitsPerOrder):1,area:x.area||'',supplier:t.supplier||'',category:x.category||''
+    }))));
+    return map.size?[...map.values()]:catalog();
   }
   function proposalCategories(){return [...new Set(proposalCatalog().map(x=>String(x.category||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'))}
   function proposalSuppliers(){return [...new Set(proposalCatalog().map(x=>String(x.supplier||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'))}
@@ -44,7 +52,7 @@
           <input type="hidden" id="employeeSkuDetailId" />
           <div id="employeeSkuCurrent" class="employee-standard-card"></div>
           <datalist id="employeeUnitOptions">${unitOptions()}</datalist>
-          <div class="employee-movement-card">
+          <div class="employee-movement-card" id="employeeMovementCard">
             <strong>📉 今日库存变动</strong>
             <small>和今日盘货一起上传。Supervisor 采用后写入报损 / 内部转换历史；这里不会单独修改正式库存数量。</small>
             <div class="employee-movement-grid">
@@ -65,13 +73,14 @@
             <div id="employeeMovementDraft" class="employee-movement-draft"></div>
           </div>
           <div class="employee-proposal-card">
-            <strong>🧪 现场规格 / 单位不一致</strong>
-            <small>这里只提交提议，不会直接修改正式 SKU。</small>
+            <strong>🧪 现场规格 / 包装不一致</strong>
+            <small>记录现场真正看到的包装。这里只提交提议，不会直接修改正式 SKU；Supervisor 可以更新原 SKU，也可以把它新建成同商品的另一个规格 SKU。</small>
             <div class="employee-proposal-grid">
-              <label>现场规格<input id="employeeSkuSpec" maxlength="100" placeholder="例如 6kg / 箱" /></label>
-              <label>库存单位<input id="employeeSkuUnit" list="employeeUnitOptions" maxlength="24" placeholder="保持原单位 / 可自定义" /></label>
-              <label>订货单位<input id="employeeSkuOrderUnit" list="employeeUnitOptions" maxlength="24" placeholder="保持原单位 / 可自定义" /></label>
-              <label>1 大包装 = 几个最小包装<input id="employeeSkuFactor" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 10" /></label>
+              <label>现场库存规格<input id="employeeSkuSpec" maxlength="100" placeholder="例如 500g / 1kg / 20张" /></label>
+              <label>现场品牌（可选）<input id="employeeSkuBrand" maxlength="80" placeholder="例如 Kikkoman / 恒丰" /></label>
+              <label>现场库存单位<input id="employeeSkuUnit" list="employeeUnitOptions" maxlength="24" placeholder="包 / 盒 / 瓶" /></label>
+              <label>现场订货单位<input id="employeeSkuOrderUnit" list="employeeUnitOptions" maxlength="24" placeholder="箱 / 件；不换算时同库存单位" /></label>
+              <label>换算：1 订货单位 = 几个库存单位<input id="employeeSkuFactor" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 10" /></label>
             </div>
             <label>备注<input id="employeeSkuNote" maxlength="300" placeholder="例如：今天到的是整箱，标签写 6kg" /></label>
             <button type="button" class="btn primary large" id="employeeSkuChangeSubmit">提交给 Supervisor</button>
@@ -98,12 +107,14 @@
           <datalist id="employeeNewUnitOptions">${unitOptions()}</datalist>
           <datalist id="employeeCategoryOptions"></datalist>
           <datalist id="employeeSupplierOptions"></datalist>
-          <label>名称<input id="employeeNewName" maxlength="80" required placeholder="例如 硬芒果" /></label>
+          <label>名称<input id="employeeNewName" maxlength="80" required placeholder="例如 Ikura / Surimi" /></label>
           <div class="employee-proposal-grid">
-            <label>规格<input id="employeeNewSpec" maxlength="100" placeholder="例如 6kg / 箱" /></label>
+            <label>商品卡 / 商品族<input id="employeeNewFamilyName" maxlength="80" placeholder="同商品不同规格填同一个，例如 Ikura" /></label>
+            <label>品牌（可选）<input id="employeeNewBrand" maxlength="80" placeholder="例如 Kikkoman / 恒丰" /></label>
+            <label>库存规格<input id="employeeNewSpec" maxlength="100" placeholder="例如 500g / 1kg / 20张" /></label>
             <label>库存单位<input id="employeeNewUnit" list="employeeNewUnitOptions" maxlength="24" required placeholder="个 / 包 / 箱 / 其他" /></label>
             <label>订货单位<input id="employeeNewOrderUnit" list="employeeNewUnitOptions" maxlength="24" placeholder="与库存单位相同" /></label>
-            <label>1 大包装 = 几个最小包装<input id="employeeNewFactor" type="text" inputmode="decimal" autocomplete="off" value="1" /></label>
+            <label>换算：1 订货单位 = 几个库存单位<input id="employeeNewFactor" type="text" inputmode="decimal" autocomplete="off" value="1" /></label>
           </div>
           <div class="employee-proposal-grid">
             <label>分类<input id="employeeNewCategory" list="employeeCategoryOptions" maxlength="60" placeholder="例如 蔬果 / 冷冻" /></label>
@@ -203,16 +214,20 @@
     return{queued:true};
   }
 
-  function openDetail(id){
+  function openDetail(id,opts={}){
     ensureDialogs();
     const sku=findSku(id);if(!sku){alert('找不到这个 SKU。');return}
     document.getElementById('employeeSkuDetailId').value=sku.id;
-    document.getElementById('employeeSkuDetailTitle').textContent=sku.name||'SKU 详情';
+    document.getElementById('employeeSkuDetailTitle').textContent=(opts.specOnly?'现场规格上报 · ':'')+(sku.name||'SKU 详情');
+    const orderUnit=String(sku.orderUnit||sku.unit||'未填写'),stockUnit=String(sku.unit||'未填写'),factor=Number(sku.unitsPerOrder)>0?Number(sku.unitsPerOrder):1;
     document.getElementById('employeeSkuCurrent').innerHTML=
-      '<div><span>正式规格</span><b>'+esc(sku.spec||'未填写')+'</b></div>'+
-      '<div><span>库存单位</span><b>'+esc(sku.unit||'未填写')+'</b></div>'+
-      '<div><span>订货包装</span><b>'+esc(sku.orderUnit||sku.unit||'未填写')+(Number(sku.unitsPerOrder)>1?' · 1='+esc(sku.unitsPerOrder):'')+'</b></div>';
+      '<div><span>库存规格</span><b>'+esc(sku.spec||'未填写')+'</b></div>'+
+      '<div><span>品牌</span><b>'+esc(sku.brand||'未填写')+'</b></div>'+
+      '<div><span>库存单位</span><b>'+esc(stockUnit)+'</b></div>'+
+      '<div><span>订货单位 / 换算</span><b>'+esc(orderUnit)+' · 1 '+esc(orderUnit)+' = '+esc(factor)+' '+esc(stockUnit)+'</b></div>';
+    document.getElementById('employeeMovementCard')?.classList.toggle('hidden',!!opts.specOnly);
     document.getElementById('employeeSkuSpec').value='';
+    document.getElementById('employeeSkuBrand').value='';
     document.getElementById('employeeSkuUnit').value='';
     document.getElementById('employeeSkuOrderUnit').value='';
     document.getElementById('employeeSkuFactor').value='';
@@ -289,11 +304,12 @@
     const proposed={
       name:sku.name||'',
       spec:document.getElementById('employeeSkuSpec').value.trim(),
+      brand:document.getElementById('employeeSkuBrand').value.trim(),
       unit:document.getElementById('employeeSkuUnit').value,
       orderUnit:document.getElementById('employeeSkuOrderUnit').value,
       unitsPerOrder:parseFloat(String(document.getElementById('employeeSkuFactor').value||'').replace(',','.'))||0
     };
-    if(!proposed.spec&&!proposed.unit&&!proposed.orderUnit&&!proposed.unitsPerOrder){
+    if(!proposed.spec&&!proposed.brand&&!proposed.unit&&!proposed.orderUnit&&!proposed.unitsPerOrder){
       if(typeof showToast==='function')showToast('先填写一个现场变化');return;
     }
     const p={
@@ -332,7 +348,7 @@
 
   function openNewSku(){
     ensureDialogs();refreshProposalOptions();
-    ['employeeNewName','employeeNewSpec','employeeNewQty','employeeNewNote','employeeNewCategory','employeeNewSupplier'].forEach(id=>document.getElementById(id).value='');
+    ['employeeNewName','employeeNewFamilyName','employeeNewBrand','employeeNewSpec','employeeNewQty','employeeNewNote','employeeNewCategory','employeeNewSupplier'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('employeeNewUnit').value='';
     document.getElementById('employeeNewOrderUnit').value='';
     document.getElementById('employeeNewFactor').value='1';
@@ -356,6 +372,8 @@
       businessDate:today(),
       proposed:{
         name,
+        familyName:document.getElementById('employeeNewFamilyName').value.trim(),
+        brand:document.getElementById('employeeNewBrand').value.trim(),
         spec:document.getElementById('employeeNewSpec').value.trim(),
         unit,
         orderUnit:document.getElementById('employeeNewOrderUnit').value||unit,
