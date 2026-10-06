@@ -1,6 +1,11 @@
 /* Cassola Employee Count Import v0.2 · counts + loss / conversion review */
 (function(){
   let pending=null;
+  const EMPLOYEE_CONVERSION_TARGETS={
+    avocado_hard:['avocado_half','avocado_soft'],
+    avocado_half:['avocado_soft'],
+    mango_hard:['mango_soft']
+  };
 
   function esc(v){return escapeHtml(String(v??''))}
   function ensureState(){
@@ -80,6 +85,8 @@
       if(!target||String(target.id)===String(source.id))throw new Error(source.name+' 的转化目标无效');
       if(!scopeAllows(record.scope,target))throw new Error(target.name+' 不属于该员工责任区');
       if(String(target.unit||'')!==String(source.unit||''))throw new Error(source.name+' → '+target.name+' 的库存单位不一致');
+      const configured=Array.isArray(source.conversionTargets)&&source.conversionTargets.length?source.conversionTargets:EMPLOYEE_CONVERSION_TARGETS[String(source.id)]||[];
+      if(!configured.map(String).includes(String(target.id)))throw new Error(source.name+' → '+target.name+' 不是已配置的内部转化关系');
       events.push({id,type,source,qty,note,recordedAt,target});
     }
     const active=activeFor(expectedKey);
