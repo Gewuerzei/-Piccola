@@ -334,7 +334,7 @@
         <section class="staff-view" id="staff-view-settings">
           <div class="staff-settings-stack">
             <div class="staff-settings-card">
-              <h3>岗位</h3><p>岗位可随时增删改。删除岗位后，原来排在这个岗位的人会回到“待安排”。</p>
+              <h3>岗位</h3><p>岗位可随时增删改。点 📋 可以给整个岗位发布盘货任务；人员的“主要岗位”变化后会自动同步岗位任务。</p>
               <div class="staff-role-list" id="staffRoleList"></div>
               <div class="staff-settings-actions"><button class="btn secondary" id="staffAddRole">＋ 岗位</button></div>
             </div>
