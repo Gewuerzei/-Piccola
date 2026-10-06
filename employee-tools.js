@@ -448,7 +448,7 @@
             <div><strong>${esc(proposalTypeLabel(p.proposal_type))} · ${esc(p.current_snapshot?.name||p.proposed?.name||p.sku_id||'SKU')}</strong><small>负责人：${esc(p.display_name||p.credential_id)} · ${esc(p.business_date)}</small></div>
             <span>待审核</span>
           </div>
-          ${p.current_snapshot?'<div class="employee-review-current">当前：'+esc(p.current_snapshot.spec||'无规格')+' · '+esc(p.current_snapshot.unit||'')+'</div>':''}
+          ${p.current_snapshot?'<div class="employee-review-current">当前：'+esc(p.current_snapshot.spec||'无规格')+' · '+esc(p.current_snapshot.unit||'')+' · '+esc(p.current_snapshot.category||'未分类')+'</div>':''}
           <div class="employee-review-proposed">提议：<b>${esc(proposalSummary(p))}</b></div>
           ${p.qty!==null&&p.qty!==undefined?'<div class="employee-review-qty">现场数量：<b>'+esc(p.qty)+' '+esc(p.proposed?.unit||'')+'</b></div>':''}
           ${p.note?'<p>'+esc(p.note)+'</p>':''}
