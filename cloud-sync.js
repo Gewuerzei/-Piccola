@@ -483,7 +483,8 @@
       const localImported=new Set((state.employeeSubmissions||[]).map(x=>String(x.submissionId)));
       box.innerHTML=(data.submissions||[]).length?(data.submissions||[]).map(s=>{
         const already=localImported.has(String(s.submission_id));
-        return '<article class="cloud-submission"><div class="cloud-version-top"><div><strong>'+esc(s.scope_definition?.label||s.responsibility_scope_id)+'</strong><small>'+esc(s.business_date)+' · '+esc(s.credential_id)+' · '+esc(new Date(s.submitted_at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cloud-pending-pill">'+(already?'本机已采用':'待审核')+'</span></div><div class="cloud-sub-items">'+(s.items||[]).slice(0,6).map(i=>'<span>'+esc(i.sku_name||i.sku_id)+' '+esc(i.qty)+' '+esc(i.unit||'')+'</span>').join('')+((s.items||[]).length>6?'<span>＋'+((s.items||[]).length-6)+' 项</span>':'')+'</div><div class="cloud-sub-actions">'+(already?'<button type="button" class="btn primary" data-cloud-mark-accepted="'+esc(s.id)+'">补记为已采用</button>':'<button type="button" class="btn primary" data-cloud-review="'+esc(s.id)+'">查看差异</button>')+'<button type="button" class="btn danger ghost" data-cloud-reject="'+esc(s.id)+'">拒绝</button></div></article>';
+        const eventCount=Array.isArray(s.payload?.events)?s.payload.events.length:0;
+        return '<article class="cloud-submission"><div class="cloud-version-top"><div><strong>'+esc(s.scope_definition?.label||s.responsibility_scope_id)+'</strong><small>'+esc(s.business_date)+' · '+esc(s.credential_id)+' · '+esc(new Date(s.submitted_at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cloud-pending-pill">'+(already?'本机已采用':'待审核')+'</span></div><div class="cloud-sub-items">'+(s.items||[]).slice(0,6).map(i=>'<span>'+esc(i.sku_name||i.sku_id)+' '+esc(i.qty)+' '+esc(i.unit||'')+'</span>').join('')+((s.items||[]).length>6?'<span>＋'+((s.items||[]).length-6)+' 项</span>':'')+(eventCount?'<span>📉 '+eventCount+' 条变动</span>':'')+'</div><div class="cloud-sub-actions">'+(already?'<button type="button" class="btn primary" data-cloud-mark-accepted="'+esc(s.id)+'">补记为已采用</button>':'<button type="button" class="btn primary" data-cloud-review="'+esc(s.id)+'">查看差异</button>')+'<button type="button" class="btn danger ghost" data-cloud-reject="'+esc(s.id)+'">拒绝</button></div></article>';
       }).join(''):'<div class="empty">没有待审核员工盘货 🗿☕</div>';
       dlg._cloudSubs=data.submissions||[];
     }catch(e){box.innerHTML='<div class="empty">读取失败：'+esc(e.message)+'</div>'}
@@ -501,7 +502,8 @@
       latestRule:'submittedAt',
       deviceRevision:s.device_revision||0,
       scopeSkuIds:(s.items||[]).map(i=>i.sku_id),
-      counts:(s.items||[]).map(i=>({skuId:i.sku_id,name:i.sku_name,qty:Number(i.qty),unit:i.unit||'',spec:i.spec||''}))
+      counts:(s.items||[]).map(i=>({skuId:i.sku_id,name:i.sku_name,qty:Number(i.qty),unit:i.unit||'',spec:i.spec||''})),
+      events:Array.isArray(s.payload?.events)?s.payload.events:[]
     };
   }
   async function reviewPending(id){
