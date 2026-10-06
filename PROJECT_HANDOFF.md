@@ -9,9 +9,9 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.6.2 · Week / Quarter / Year Archive**
+- Inventory: **v0.7 · Product Families + Week / Quarter / Year Archive**
 - Staff: **v0.4.4 · Staff Cloud + Shared Role Tasks**
-- Access: **v0.11 · Shared Role Tasks + Employee SKU Proposal Center**
+- Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
@@ -50,7 +50,7 @@ Employee Mode 当前：
 - 当前 `produce` scope 依据 `category = 蔬果`
 - 员工界面有三个页签：`📋 盘货` / `🚚 收货` / `📦 SKU`
 - 盘货继续填写完整责任区 / published task 现场数量；收货页只有在 Supervisor 明确授权后才显示任务，否则固定显示“无任务”
-- `📦 SKU` 是额外功能口，不替代 Supervisor Inventory 的 SKU Manager。员工可以提议新 SKU、新分类、重新归类和规格/单位异常；全部必须 Supervisor 审核后才进入 canonical Inventory。
+- `📦 SKU` 是额外功能口，不替代 Supervisor Inventory 的 SKU Manager。员工可以提议新 SKU、新分类、重新归类和规格 / 包装异常；全部必须 Supervisor 审核后才进入 canonical Inventory。盘货 SKU 与已授权收货 SKU 都可以直接打开“🧪 现场规格 / 包装不一致”。
 - 员工草稿使用独立 localStorage 前缀 `cassola_employee_count_v01`，**不得写入 `cassola_inventory_v01`**
 - 导出格式：`cassola-employee-count-v1`
 - scoped JSON 只包含该责任区已填写 SKU，不得夹带其他 scope SKU
@@ -74,13 +74,13 @@ Employee Mode 当前：
   - `employee_receipt`
 - 恢复网络后 Cloud session 可自动重连，但**Outbox 不静默自动提交**；员工必须自己点击“上传待发送”。
 - 员工可对 scope 内 SKU 提交：
-  - `sku_change`：规格 / 库存单位 / 订货单位 / 包装倍率提议
+  - `sku_change`：库存规格 / 品牌 / 库存单位 / 订货单位 / 包装倍率提议
   - `sku_issue`：只报告问题
-  - `new_sku`：现场发现新 SKU，可带规格、单位、区域和现场数量
+  - `new_sku`：现场发现新 SKU，可带商品卡 / 商品族、品牌、库存规格、单位、区域和现场数量
 - 员工提议永远不能直接修改 canonical Inventory。Supabase 表：`employee_sku_proposals`。
 - Supervisor 在本地明确“采用到本机”后才修改 Inventory；采用后仍需 Supervisor 自己上传 Cloud。
 - 新 SKU 由员工提议采用后默认 `supplier = 待确认`、`autoOrder = false`，避免未经核对就进入自动订货。
-- 单位输入提供常用建议，但允许自定义文本；所有自定义值都必须经过 Supervisor proposal review 才能进入正式 SKU。
+- 单位输入提供常用建议，但允许自定义文本；所有自定义值都必须经过 Supervisor proposal review 才能进入正式 SKU。Supervisor 审核 `sku_change` 时有两条明确路径：**更新当前 SKU**，或 **＋ 新建规格 SKU**。后者保留原 SKU 不动，新 SKU 继承同一 `familyId / familyName`，初始库存为 0。
 
 ### Employee loss / conversion facts
 - 员工 SKU “查看详情”可记录两类**今日库存事实**：
@@ -113,6 +113,7 @@ Employee Mode 当前：
   - `short` 少到结案
   - `over` 多到结案
 - 员工提交格式：`cassola-employee-receipt-v1`。提交后 Cloud task 从 `authorized → submitted`，员工任务立即消失；**仍然不会直接修改 Supervisor Inventory / placedOrders**。
+- 收货现场每个 SKU 行都有 **🧪 现场规格 / 包装不一致**。它复用 SKU proposal 流程，只提交事实，不会修改本次收货换算或 canonical SKU；若包装倍率与授权快照不一致，Supervisor 必须先核对，不能拿新包装偷偷套旧倍率入库。
 - Supervisor 在 `☁️ Cloud → 🚚 收货审核`里明确“✓ 确认入账”后，才会：
   1. 把 employee reported quantity 按授权时冻结的 `unitsPerOrder` 换回 stock unit
   2. 增加 SKU qty
@@ -347,7 +348,7 @@ Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v15；支持 Inventory/Staff lineage、managed Staff Access、personal + shared first-wins role task basket、employee count / expanded SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
+- `cassola-cloud`（当前生产 v17；支持 Inventory/Staff lineage、managed Staff Access、personal + shared first-wins role task basket、employee count / packaging + brand SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
@@ -583,18 +584,43 @@ SKU 可使用手动阈值或历史周耗。
 - 订单与时间节点都按新到旧显示
 - 不改变 `cassola_inventory_v01`
 
+### Product Family / SKU Card Layer
+
+Inventory v0.7 把“商品卡”和“具体库存 SKU”分开，但**没有合并或改写任何 SKU 库存账**：
+
+```js
+sku.familyId      // 同商品卡的稳定分组 key
+sku.familyName    // 卡面名称，例如 Ikura / Burro / Surimi
+sku.brand         // 可选品牌，例如 恒丰 / Kikkoman
+sku.spec          // 库存规格，例如 500g / 1kg / 20张
+sku.unit          // 库存单位，例如 盒 / 包 / 瓶
+```
+
+规则：
+- **卡 = 商品族，展开行 = 具体 SKU**。同一 `familyId` 的不同规格 / 品牌 SKU 在库存首页折叠进同一张卡；展开后每个 SKU 仍有自己独立的库存、订货、价格、预警、历史与收货。
+- 旧数据不清库迁移：`v3NormalizeSku()` 为没有 family 字段的 SKU 自动补 `familyName = name`、`familyId = v6FamilyKey(familyName)`；因此原本同名的 Burro、Panna、Ikura 等不同规格会自然归到同卡。
+- 名字不同但业务上属于同商品的现有 SKU 有显式 family defaults，例如 Gamberi rossi 大 / 小、Scampi 大 / 小、Surimi / Surimi恒丰、白 M / L 手套；Surimi恒丰的“恒丰”进入 `brand`。
+- **不要**把状态转换 SKU 折叠成一个库存实体。Avocado 硬 / 半硬 / 软、芒果 硬 / 软继续保持独立，因为它们参与内部转化 / 熟化语义。
+- `v3Skus()` 只改变显示排序，不改变 `state.skus` 本体顺序 / id；同分类内按商品卡、品牌、规格邻近显示。
+- 多规格卡面优先显示可可靠换算的**标准化总量**，例如 `1kg/包 × 4 + 500g/包 × 3 → 5.5 kg`；同时保留实际包装数量摘要。
+- 标准化总量只是展示层计算，不写回库存。只有 kg/g/L/ml/颗/张/片/个 等能明确解析且同维度时才求和；范围规格或无法确认的规格宁可显示混合规格 / 包装数，不能猜。
+- Supervisor SKU Manager 可手动编辑“商品卡 / 商品族”和“品牌”。把两个 SKU 填成同一个商品卡名，会得到同一个 family key 并折叠显示。
+- 员工现场规格提议若代表真正的新包装，Supervisor 可选择 **＋ 新建规格 SKU**。新 SKU 继承原商品卡，原 SKU / 历史不变。
+- family / brand 字段随普通 Inventory scope Cloud snapshot / JSON 同步，不另建独立 Cloud Head。
+- `state.version = 7`；仍使用原 `cassola_inventory_v01`，禁止为这个功能清库重建。
 ### Purchase Unit Layer
 
 库存单位和采购单位是两个不同维度，不能再共用一个 `unit`：
 
 ```js
-sku.unit           // 库存 / 最小包装，例如 包、盒、瓶
-sku.orderUnit      // 采购 / 大包装，例如 箱、件
-sku.unitsPerOrder  // 1 个采购包装 = 几个库存包装
+sku.spec           // 库存规格，例如 500g / 1kg / 20张
+sku.unit           // 库存单位，例如 包、盒、瓶
+sku.orderUnit      // 订货单位，例如 箱、件
+sku.unitsPerOrder  // 1 个订货单位 = 几个库存单位
 ```
 
 规则：
-- 例如 `unit = "包"`、`orderUnit = "箱"`、`unitsPerOrder = 10` → 1箱 = 10包
+- UI 术语固定为 **库存规格 / 库存单位 / 订货单位 / 1订货单位=N库存单位**。不要再写“最小包装 / 大包装”。例如 `unit = "包"`、`orderUnit = "箱"`、`unitsPerOrder = 10` → 1箱 = 10包
 - 旧 SKU 自动兼容为 `orderUnit = unit`、`unitsPerOrder = 1`
 - `state.order` 内部继续保存**库存单位数量**，避免已有草稿在后来补箱规后被错误重解释
 - 草稿 UI / 手动订货输入显示采购单位；输入后先换算成库存单位再写入 `state.order`
