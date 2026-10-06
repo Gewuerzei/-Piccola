@@ -1241,9 +1241,11 @@
   }
   function renderTaskPreview(){
     const box=document.getElementById('staffTaskPreview'),type=document.getElementById('staffTaskSelectorType')?.value||'',value=document.getElementById('staffTaskSelectorValue')?.value||'';if(!box)return;
-    const rows=taskMatches(type,value);
-    box.innerHTML=rows.length?'<div class="staff-task-preview-head"><b>'+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,12).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>12?'<span>＋'+(rows.length-12)+'</span>':'')+'</div>':'<div class="empty">这个选择现在没有 SKU。</div>';
-    const btn=document.getElementById('staffTaskPublish'),dlg=document.getElementById('staffTaskDialog');if(btn)btn.disabled=!rows.length||!dlg?._accessReady;
+    const rows=taskMatches(type,value),dlg=document.getElementById('staffTaskDialog'),ready=!!dlg?._accessReady;
+    const warning=ready?'':'<div class="staff-task-access-warning">🔐 先给这个人员生成并启用 Employee PIN，预览可以看，但现在不能发布。</div>';
+    const content=rows.length?'<div class="staff-task-preview-head"><b>'+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,12).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>12?'<span>＋'+(rows.length-12)+'</span>':'')+'</div>':'<div class="empty">这个选择现在没有 SKU。</div>';
+    box.innerHTML=warning+content;
+    const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!ready;
   }
   function renderTaskRows(){
     const box=document.getElementById('staffTaskList');if(!box)return;
