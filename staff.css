@@ -334,3 +334,9 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
   .staff-access-actions{grid-template-columns:1fr 1fr}
   .staff-pin-row code{font-size:17px}
 }
+.staff-task-access-warning{
+  margin-bottom:9px;padding:8px 9px;border-radius:14px;
+  border:1px solid rgba(255,194,102,.18);background:rgba(255,194,102,.05);
+  color:var(--warn);font-size:8px;line-height:1.4
+}
+
