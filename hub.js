@@ -143,7 +143,7 @@
     box.innerHTML='<div class="cassola-employee-shell">'+
       '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(scope.label||'责任区盘货')+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
       '<div class="cassola-employee-summary"><div><span>责任区 SKU</span><b>'+rows.length+'</b></div><div><span>今日已填</span><b id="cassolaEmployeeFilled">'+filled+'/'+rows.length+'</b></div></div>'+
-      '<div class="cassola-employee-note">数量可以离线填写。规格 / 单位异常不要直接改正式 SKU，点“查看详情”提交给 Supervisor 审核。</div>'+
+      '<div class="cassola-employee-note">数量可以离线填写。报损 / 熟化转化在“查看详情”记录，会和今日盘货一起交给 Supervisor；规格 / 单位异常仍走提议审核。</div>'+
       '<div class="cassola-employee-counts">'+
       (rows.length?rows.map(s=>{
         const v=draft.counts?.[s.id],eventCount=employeeEventsForSku(s.id).length;
@@ -180,7 +180,7 @@
   }
   function clearEmployeeDraft(){
     if(!isEmployee())return;
-    if(!confirm('清空今天已经填写的盘货数字？'))return;
+    if(!confirm('清空今天已经填写的盘货数字和报损 / 转化记录？'))return;
     localStorage.removeItem(draftKey());
     renderEmployee();
   }
