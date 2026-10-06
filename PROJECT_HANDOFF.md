@@ -113,13 +113,13 @@ Employee Mode 当前：
   3. 写标准 `arrival` history
   4. 生成正式 `receiptBatches[]`
   5. 更新 `creditedQty / lineStatus / order status`
-- 正式 receipt batch 写入 `employeeReceiptTaskId / employeeReceiptSubmissionId / employeeCredentialId`，保证本机重复审核时可检测“本机已入账”，Cloud 标记失败时只补记 review，不能二次加库存。
+- 正式 receipt batch 写入 `employeeReceiptTaskId / employeeReceiptSubmissionId / employeeCredentialId`，保证本机重复审核时可检测“本机已入账”，Cloud 标记失败时只补记 review，不能二次加库存。**不要把私有 display_name 写入 Inventory history / receiptBatches**；正式账只保存匿名 credential id，Supervisor review UI 运行时再从私有 Cloud directory 显示真实负责人名。
 - 如果授权以后 Supervisor 本机又发生其他收货，审核时必须显示 drift 警告；员工 report 仍按“本次新增”追加，Supervisor 必须人工确认不是同一批货重复记录。
 - 如果授权后订单包装换算发生变化，员工提交不得直接应用，必须拒绝并重新授权。
 - 收货授权 / submission 使用 Supabase `employee_receipt_tasks` 表；生命周期：
   `authorized → submitted → accepted / rejected`，另有 `revoked`。
 - 收货任务不是 canonical Inventory Head；它属于 Cloud 协作 / inbox 层。Supervisor 确认到本机后，仍需按原规则由 Supervisor 自己上传 Inventory Cloud。
-- 离线 receipt submission 进入 `cassola_cloud_outbox_v01`，恢复网络后仍然必须员工主动点“上传待发送”，禁止静默提交。
+- 离线 receipt submission 进入 `cassola_cloud_outbox_v01`，恢复网络后仍然必须员工主动点“上传待发送”，禁止静默提交。若任务在离线期间被 Supervisor 撤销，员工下一次**手动** flush 时该 receipt outbox 行会标记为失效并移除，不会偷偷入库。
 
 ### Employee submission import invariant
 
