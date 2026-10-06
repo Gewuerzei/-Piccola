@@ -1513,7 +1513,7 @@
     const wasNew=!editPersonId,oldRole=String(p.primaryRole||''),nextRole=document.getElementById('staffPersonRole').value;
     if(!wasNew&&cloudReady()&&oldRole!==nextRole){
       try{
-        const access=await window.CassolaCloud.staffAccessGet(p.id,name);
+        const access=await window.CassolaCloud.staffAccessGet(p.id,p.name||name);
         if(access.credential){
           const sync=await window.CassolaCloud.staffAccessSetRole(p.id,nextRole,name);
           if(sync?.ok===false&&sync?.error==='role_task_overlap')throw Object.assign(new Error('岗位任务与个人任务重叠'),{data:sync});
