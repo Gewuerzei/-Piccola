@@ -69,13 +69,14 @@ function v3EnsureState(){
   state.placedOrders=Array.isArray(state.placedOrders)?state.placedOrders:[];
   state.hiddenSkuIds=Array.isArray(state.hiddenSkuIds)?state.hiddenSkuIds:[];
   state.priceRecords=Array.isArray(state.priceRecords)?state.priceRecords:[];
+  state.customCategories=[...new Set((Array.isArray(state.customCategories)?state.customCategories:[]).map(x=>String(x||'').trim()).filter(Boolean))];
   state.skus=(Array.isArray(state.skus)?state.skus:[]).map(v3NormalizeSku);
   state.placedOrders=state.placedOrders.map(v4NormalizeOrder);
   state.version=6;
 }
 v3EnsureState(); saveState();
 function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id))}
-function v3Cats(){return [...new Set([...categories,...v3Skus().map(s=>s.category).filter(Boolean)])]}
+function v3Cats(){return typeof inventoryCategories==='function'?inventoryCategories():[...new Set([...categories,...(state.customCategories||[]),...v3Skus().map(s=>s.category).filter(Boolean)])]}
 function v3Suppliers(){return ['全部',...new Set([...suppliers.filter(s=>s!=='全部'),...v3Skus().map(s=>s.supplier).filter(Boolean)])]}
 function v3Icon(s){return s?.icon||skuIcons[s?.id]||categoryIcons[s?.category]||'📦'}
 function v3ParseCount(h){const m=String(h.text||'').match(/(-?\d+(?:\.\d+)?)\s*→\s*(-?\d+(?:\.\d+)?)/);return m?{old:Number(m[1]),next:Number(m[2])}:null}
