@@ -10,8 +10,8 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
-- Staff: **v0.4 · Staff Cloud + Managed Employee Tasks**
-- Access: **v0.8 · Managed Staff Access + Published Tasks**
+- Staff: **v0.4.1 · Staff Cloud + SKU Task Basket**
+- Access: **v0.9 · Managed Tasks + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
@@ -48,8 +48,9 @@ Cassola 从 Pietro 单人工具扩展为 **Supervisor 总账 + Staff 人员 + �
 Employee Mode 当前：
 - 只显示 scope 允许的 SKU，不能进入 Inventory / Staff 管理界面
 - 当前 `produce` scope 依据 `category = 蔬果`
-- 员工界面有两个页签：`📋 盘货` / `🚚 收货`
-- 盘货继续填写完整责任区现场数量；收货页只有在 Supervisor 明确授权后才显示任务，否则固定显示“无任务”
+- 员工界面有三个页签：`📋 盘货` / `🚚 收货` / `📦 SKU`
+- 盘货继续填写完整责任区 / published task 现场数量；收货页只有在 Supervisor 明确授权后才显示任务，否则固定显示“无任务”
+- `📦 SKU` 是额外功能口，不替代 Supervisor Inventory 的 SKU Manager。员工可以提议新 SKU、新分类、重新归类和规格/单位异常；全部必须 Supervisor 审核后才进入 canonical Inventory。
 - 员工草稿使用独立 localStorage 前缀 `cassola_employee_count_v01`，**不得写入 `cassola_inventory_v01`**
 - 导出格式：`cassola-employee-count-v1`
 - scoped JSON 只包含该责任区已填写 SKU，不得夹带其他 scope SKU
@@ -125,6 +126,21 @@ Employee Mode 当前：
   `authorized → submitted → accepted / rejected`，另有 `revoked`。
 - 收货任务不是 canonical Inventory Head；它属于 Cloud 协作 / inbox 层。Supervisor 确认到本机后，仍需按原规则由 Supervisor 自己上传 Inventory Cloud。
 - 离线 receipt submission 进入 `cassola_cloud_outbox_v01`，恢复网络后仍然必须员工主动点“上传待发送”，禁止静默提交。若任务在离线期间被 Supervisor 撤销，员工下一次**手动** flush 时该 receipt outbox 行会标记为失效并移除，不会偷偷入库。
+
+### Employee SKU proposal center
+- Employee `📦 SKU` 页是 **Inventory SKU Manager 的额外入口**，不是迁移 / 剪切。Supervisor 原有 Inventory → 新建 / 编辑 / 删除 SKU 功能继续是 canonical 管理入口。
+- 员工当前可提交：
+  - `new_sku`：新 SKU，包含名称 / 规格 / 单位 / 分类 / 供应商 / 区域 / 可选现场数量
+  - `new_category`：独立新分类提议
+  - `sku_reclassify`：把已有 SKU 建议改到已有或新分类
+  - `sku_change`：规格 / 单位 / 订货包装异常
+  - `sku_issue`：只报告问题
+- proposal 只是事实 / 建议。Edge Function 只做结构、scope、数值合法性验证；**业务上是否采用由 Supervisor 决定**。例如员工把 SKU 名写成胡话，Cloud 可以接收为待审核文本，但不会自动创建 canonical SKU。
+- 新分类批准后进入 Inventory `state.customCategories[]`；Inventory 分类筛选和 SKU Manager datalist 会动态显示它。自定义分类随普通 Inventory JSON 保存，并通过 `common` Cloud scope 同步 standalone category registry。
+- `sku_reclassify` 批准后才改 `sku.category`，并写标准 adjust history。
+- 新 SKU 批准后才创建本机 SKU；employee-provided category / supplier 会进入本机记录，仍由 Supervisor 在采用前负责核对。
+- 动态 Staff employee 的 proposal 可来自其当前 active task scope。新 SKU / 新分类允许提出“现场发现”；已有 SKU 的 reclassify / sku_change 仍必须是该 credential 当前 scope 内可见 SKU。
+- migration `cassola_cloud_v05_employee_sku_proposal_types` 将 proposal type check 扩展为 `new_category / sku_reclassify`。
 
 ### Employee submission import invariant
 
@@ -330,7 +346,7 @@ Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v11；支持 Inventory/Staff lineage、managed Staff Access、Staff-published count tasks、employee count / SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
+- `cassola-cloud`（当前生产 v12；支持 Inventory/Staff lineage、managed Staff Access、multi-selector Staff task basket、employee count / expanded SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
@@ -774,14 +790,15 @@ Staff 人员与 Access 分层：
 - 删除 Staff 人员时，若 Cloud 可用，会先停用其 managed credential；停用 managed credential 也会 revoke 其 active inventory tasks。
 - legacy `produce_a / produce_b` 继续兼容，不强制迁移。
 
-Staff 人员页可直接 **📋 发布盘货任务**。当前 selector：
+Staff 人员页可直接 **📋 发布盘货任务**。v0.4.1 起不再把“供应商 / 分类 / 区域 / 单独 SKU”当成互斥发布方式，而是一个 **SKU 任务篮子**：
 
-1. `supplier`：例如“大兴”，发布瞬间匹配所有 `sku.supplier === 大兴`
-2. `category`：例如“蔬果”
-3. `area`：Sushi / Cucina / Bar-Sala / Comune
-4. `sku`：单独发布一个具体 SKU
+1. 可连续加入一个或多个 `supplier`，例如“大兴 + 米兰”
+2. 可加入一个或多个 `category`
+3. 可加入 `area`
+4. 可补充任意单独 `sku`
+5. 最终 SKU 集合自动去重，一次发布成为一张 task
 
-任务发布时会冻结 `resolved_sku_ids + sku_snapshot`。之后新建同分类 / 同供应商 SKU **不会自动加入旧任务**；要重新发布才会进入。一个员工的 active count tasks 不能互相覆盖同一 SKU，避免同一人看到重复盘货实体。
+因此单次 task 可以跨供应商，也可以“供应商整组 + 几个单独 SKU”。任务发布后仍冻结 `resolved_sku_ids + sku_snapshot`。之后新增同分类 / 同供应商 SKU **不会自动加入旧任务**；员工做到一半时也不会被偷偷塞 SKU。临时补充 SKU 应发布第二张补充任务。一个员工的 active count tasks 仍禁止 SKU 重叠，避免同一实体出现在两张同时有效的盘货快照中。
 
 Employee 端盘货页会显示 Staff 发布的任务卡。存在多个任务时可切换；每个任务有独立当日 draft / `effectiveKey = task:<taskId>:<date>`。managed employee 没有任何 active count task 时，盘货页明确显示 **“无任务”**。
 
@@ -990,7 +1007,8 @@ Staff：
 - 暂无工时统计、工资、打卡。
 - Staff Cloud 当前仍是**手动 Working Head 同步**，不是多人实时协同编辑器；同时编辑会按 lineage 进入 branch / diverged，而不是 last-write-wins。
 - managed employee PIN 是店内分流权限，不按国防级凭证设计；6 位 PIN + verifier 缓存的离线暴力破解风险属于已接受的内部工具威胁模型。
-- Staff task 第一版 selector 支持供应商 / 分类 / 区域 / 单独 SKU；尚未做任意布尔组合条件。
+- Staff task basket 当前是“多个 selector 的并集 + 去重”，不支持 NOT / AND 交集等任意布尔表达式。
+- 已发布任务不可原地追加 SKU；这是保护员工半成品 draft / Offline Outbox / complete snapshot 语义的刻意不变量。
 
 ---
 
