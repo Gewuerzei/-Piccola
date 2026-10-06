@@ -10,8 +10,8 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
-- Staff: **v0.4.1 · Staff Cloud + SKU Task Basket**
-- Access: **v0.9 · Managed Tasks + Employee SKU Proposal Center**
+- Staff: **v0.4.3 · Staff Cloud + Personal / Role SKU Tasks**
+- Access: **v0.10 · Managed Role Tasks + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
@@ -336,6 +336,7 @@ Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自
 - `employee_submission_items`
 - `employee_receipt_tasks`
 - `employee_inventory_tasks`
+- `staff_role_inventory_task_rules`
 
 关键 RPC：
 - `cassola_apply_upload_batch`
@@ -346,7 +347,7 @@ Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v12；支持 Inventory/Staff lineage、managed Staff Access、multi-selector Staff task basket、employee count / expanded SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
+- `cassola-cloud`（当前生产 v14；支持 Inventory/Staff lineage、managed Staff Access、personal + role-inherited task basket、employee count / expanded SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
@@ -369,6 +370,15 @@ Inventory scope snapshot 包含：
 - placedOrders 中属于该 scope 的 item 与 receipt batch lines
 
 跨区域供应商订单在 Cloud 层按 item 所属 area 拆分后，再按 order id 合并回本机。**把 SKU 从一个 area 移到另一个 area 属于跨 scope 变更，完成此类操作后优先使用“上传全店”。**
+
+### Inventory Cloud iOS / PWA download rollback
+- Inventory Cloud 下载与 Staff Cloud 一样，**不再在下载前强制触发 Blob / JSON 文件导出**。iOS PWA 对 programmatic download 可能弹 `Load Failed`，这不是 Cloud Head 损坏。
+- Inventory 下载流程：
+  1. 先读取所选 Cloud Head
+  2. 确认存在正式数据后，把当前完整 Inventory + `cassola_cloud_meta_v01` 存为 `cassola_inventory_cloud_rollback_v01`
+  3. 再应用所选 scope
+- Cloud 设置卡新增 `↩️ 恢复下载前 Inventory`。这是整套 Inventory 的本机回滚点，适合下载后立刻发现不对时恢复。
+- 原手工 JSON 导出能力不删除，只是不再作为 Cloud 下载前置步骤。
 
 ### Cloud UI / 交互
 
@@ -814,6 +824,22 @@ Employee 端盘货页会显示 Staff 发布的任务卡。存在多个任务时�
 - submission 继续落入 `employee_submissions / employee_submission_items`，并带 `inventory_task_id`。
 - Supervisor 采用后才修改 canonical Inventory。
 - JSON 手工导入仍只信任公开 registry；动态 Staff credential 的 JSON 只有从 Cloud inbox 进入时才可按 Cloud 已验证 task scope 导入，避免任意本地 JSON 冒充动态员工。
+
+### Staff 岗位继承盘货任务
+- 除了“给某个人发布任务”，Staff 现在还可以在 **设置 → 岗位 → 📋** 给整个岗位发布一份 SKU task basket。
+- 例如：`Maki = 大兴 + 蔬果 + 单独 Wakame`。发布时仍冻结最终 `resolved_sku_ids + sku_snapshot`，同岗位所有员工拿到的是同一份冻结规则。
+- 岗位任务绑定的是人员档案里的 **`primaryRole`（主要岗位）**，不是某一天排岗板上的临时 lane。临时今天去帮别的岗位，不会自动换掉他的长期盘货责任。
+- managed credential 新增 `staff_role_id`。Staff 人员的主要岗位变化时：
+  - Cloud 已连接：保存人员时立即同步 role
+  - Staff canonical upload：会再次 batch 对齐当前 roster，补偿之前离线修改
+  - Staff upload 若只是 branch，则不会改员工 role task
+- 新加入某岗位的人，只要已经开通 Employee Access，就自动取得该岗位当前 active rule；先加入岗位、后开通 PIN 也会在开通时自动取得。
+- 离开岗位时，旧岗位生成的 active role tasks 会 revoke；进入新岗位时再创建新岗位 task。
+- **同一 role rule 不会因为每次 Staff 上传而反复重建 task**。如果 person 的 `staff_role_id` 和当前 rule 都没变化，Cloud 保留原 task id，避免员工做到一半的 draft 被 Staff 上传无故作废。
+- 一个岗位当前只允许一份 active role rule。要改岗位责任，先撤销旧岗位任务，再发布新版本；禁止原地偷偷改冻结任务。
+- 岗位任务和个人补充任务可以并存，但 SKU 不得重叠。若新岗位任务与该员工现有个人 task 重叠，岗位变更 / 岗位发布会被阻止，必须由 Supervisor 先处理冲突。
+- Supabase：`staff_role_inventory_task_rules` 保存岗位规则；`employee_inventory_tasks.source_kind='role'` 保存实际发到每个员工 credential 的任务实例。
+- migration：`cassola_cloud_v06_staff_role_inventory_tasks`。
 
 ### 可选岗位排班
 
