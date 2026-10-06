@@ -1,6 +1,7 @@
 /* Cassola Staff Board v0.1 */
 (function(){
   const KEY='cassola_staff_v01';
+  const CLOUD_ROLLBACK_KEY='cassola_staff_cloud_rollback_v01';
   const DB_NAME='cassola_staff_assets_v01';
   const DB_STORE='avatars';
   let state=null;
@@ -343,6 +344,7 @@
                 <button class="btn primary" id="staffCloudUpload">☁️ 上传 Staff</button>
                 <button class="btn secondary" id="staffCloudDownload">⬇️ 下载 Staff</button>
                 <button class="btn secondary" id="staffCloudHistory">🕘 云端历史</button>
+                <button class="btn secondary" id="staffCloudRollback">↩️ 恢复下载前版本</button>
               </div>
             </div>
             <div class="staff-settings-card">
@@ -1163,7 +1165,9 @@
   function renderStaffCloudState(){
     const badge=document.getElementById('staffCloudBadge'),detail=document.getElementById('staffCloudDetail');
     const buttons=['staffCloudUpload','staffCloudDownload','staffCloudHistory'].map(id=>document.getElementById(id)).filter(Boolean);
+    const rollback=document.getElementById('staffCloudRollback');
     const ready=cloudReady();buttons.forEach(b=>b.disabled=!ready);
+    if(rollback){const info=cloudRollbackInfo();rollback.disabled=!info;rollback.textContent=info?'↩️ 恢复下载前版本':'↩️ 暂无回滚快照'}
     if(!badge||!detail)return;
     if(!ready){badge.textContent='☁️ 未连接';badge.className='';detail.textContent='输入 Supervisor Access Code 并连接 Cloud 后可同步。';return}
     const st=window.CassolaCloud?.staffStatus?.()||{icon:'☁️',text:'等待检查',cls:'empty'};
@@ -1609,7 +1613,32 @@
     renderAll();toast(force?'已强制采用，现为 #'+state.syncMeta.revision:'已导入 #'+state.syncMeta.revision);
   }
 
-  async function exportCloudBackup(){return exportJson(false)}
+  function saveCloudRollback(){
+    const payload={savedAt:now(),state:cloneJson(state)};
+    localStorage.setItem(CLOUD_ROLLBACK_KEY,JSON.stringify(payload));
+    renderStaffCloudState();
+    return payload;
+  }
+  function cloudRollbackInfo(){
+    try{
+      const x=JSON.parse(localStorage.getItem(CLOUD_ROLLBACK_KEY)||'null');
+      return x&&x.state?x:null;
+    }catch(_){return null}
+  }
+  function restoreCloudRollback(){
+    const backup=cloudRollbackInfo();
+    if(!backup){toast('没有 Staff Cloud 下载前快照');return false}
+    if(!confirm('恢复 '+new Date(backup.savedAt).toLocaleString('zh-CN')+' 的 Staff 本机快照？\n\n当前 Staff 会被替换；头像文件仍保留在本设备。'))return false;
+    const device=state?.syncMeta?.deviceName||'本设备';
+    state=normalize(cloneJson(backup.state));
+    state.syncMeta.deviceName=device;
+    state.syncMeta.revision=Math.max(1,num(state.syncMeta.revision))+1;
+    state.syncMeta.updatedAt=now();
+    state.syncMeta.contentHash=fingerprint(state);
+    localStorage.setItem(KEY,JSON.stringify(state));
+    renderAll();toast('↩️ 已恢复 Staff 下载前版本');
+    return true;
+  }
   function applyCloudState(cloud){
     if(!cloud||typeof cloud!=='object')throw new Error('invalid_staff_cloud_state');
     const device=state?.syncMeta?.deviceName||'本设备',oldRev=num(state?.syncMeta?.revision)||1;
@@ -1799,6 +1828,7 @@
     document.getElementById('staffCloudUpload').addEventListener('click',async()=>{try{await window.CassolaCloud.staffUpload('Manual Staff upload');renderStaffCloudState()}catch(err){alert('Staff Cloud 上传失败：'+(err?.message||'未知错误'))}});
     document.getElementById('staffCloudDownload').addEventListener('click',async()=>{try{await window.CassolaCloud.staffDownload();renderStaffCloudState()}catch(err){alert('Staff Cloud 下载失败：'+(err?.message||'未知错误'))}});
     document.getElementById('staffCloudHistory').addEventListener('click',async()=>{try{await window.CassolaCloud.staffHistory()}catch(err){alert('读取 Staff Cloud 历史失败：'+(err?.message||'未知错误'))}});
+    document.getElementById('staffCloudRollback').addEventListener('click',restoreCloudRollback);
     document.getElementById('staffExportBtn').addEventListener('click',()=>exportJson(false));
     document.getElementById('staffExportFullBtn').addEventListener('click',()=>exportJson(true));
     document.getElementById('staffImportInput').addEventListener('change',e=>{
@@ -1823,5 +1853,5 @@
   window.addEventListener('cassola-cloud-staff-change',()=>{if(state){renderStaffCloudState();renderPeople()}});
   document.addEventListener('cassola-cloud-reconnected',()=>{if(state)renderStaffCloudState()});
   document.addEventListener('DOMContentLoaded',init);
-  window.CassolaStaff={show,hide,render:renderAll,applyCloudState,exportCloudBackup,cloudSnapshot:()=>snapshot(state)};
+  window.CassolaStaff={show,hide,render:renderAll,applyCloudState,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
 })();
