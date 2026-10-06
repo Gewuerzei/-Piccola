@@ -552,9 +552,9 @@
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
   }
-  async function staffAccessGet(personId){
+  async function staffAccessGet(personId,personName=''){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
-    return api('staff_access_get',{personId},8000);
+    return api('staff_access_get',{personId,personName},8000);
   }
   async function staffAccessCreate(personId,personName){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
