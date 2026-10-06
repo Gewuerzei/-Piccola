@@ -21,7 +21,12 @@ const v6FamilyDefaults={
   scampi_s800:{familyName:'Scampi'},scampi_l800:{familyName:'Scampi'},
   ikura1:{familyName:'Ikura'},ikura500:{familyName:'Ikura'},
   surimi1:{familyName:'Surimi'},surimi_hf1:{familyName:'Surimi',brand:'恒丰'},
-  glove_m:{familyName:'白手套'},glove_l:{familyName:'白手套'}
+  glove_m:{familyName:'白手套'},glove_l:{familyName:'白手套'},
+  ponzu1:{familyName:'Ponzu',brand:'Kikkoman'},
+  chili450:{familyName:'辣椒酱',brand:'仙女牌'},
+  yuzu1:{familyName:'芥末柚子汁',brand:'食研'},
+  sala_prugne_ciemme:{familyName:'Prugne',brand:'Ciemme'},
+  sala_prugne_poli:{familyName:'Prugne',brand:'Poli'}
 };
 function v6FamilyKey(name){
   const x=String(name||'SKU').normalize?.('NFKC')||String(name||'SKU');
