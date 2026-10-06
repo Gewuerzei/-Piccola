@@ -3,6 +3,7 @@
   const FAIL_KEY='cassola_access_fail_v02';
   const EMPLOYEE_DRAFT_PREFIX='cassola_employee_count_v01';
   let accessSession=null;
+  let employeePanel='count';
 
   function registry(){
     const r=window.CassolaAccessRegistry;
@@ -133,16 +134,35 @@
     const filled=rows.filter(s=>draft.counts?.[s.id]!==undefined&&draft.counts?.[s.id]!==null&&draft.counts?.[s.id]!=='').length;
     return{filled,total:rows.length};
   }
-  function renderEmployee(){
-    const box=document.getElementById('cassolaEmployee');if(!box||!isEmployee())return;
-    const scope=accessSession.scope||{},rows=scopeSkus(scope),draft=loadEmployeeDraft();
-    const filled=rows.filter(s=>draft.counts?.[s.id]!==undefined&&draft.counts?.[s.id]!==null&&draft.counts?.[s.id]!=='').length;
-    const cached=window.CassolaCloud?.cachedIdentity?.(accessSession.id);
-    const responsible=accessSession.displayName||cached?.displayName||'责任区员工';
-    const queued=window.CassolaCloud?.outboxCount?.(accessSession.id)||0;
-    box.innerHTML='<div class="cassola-employee-shell">'+
-      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(scope.label||'责任区盘货')+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
-      '<div class="cassola-employee-summary"><div><span>责任区 SKU</span><b>'+rows.length+'</b></div><div><span>今日已填</span><b id="cassolaEmployeeFilled">'+filled+'/'+rows.length+'</b></div></div>'+
+  function receiptDraftKey(taskId){
+    const cred=accessSession?.id||'none';
+    return `cassola_employee_receipt_v01:${cred}:${String(taskId||'none')}`;
+  }
+  function loadReceiptDraft(task){
+    try{
+      const x=JSON.parse(localStorage.getItem(receiptDraftKey(task?.task_id))||'null');
+      return x&&x.taskId===task?.task_id?x:{version:1,taskId:task?.task_id,lines:{}};
+    }catch(_){return{version:1,taskId:task?.task_id,lines:{}}}
+  }
+  function saveReceiptDraft(task,draft){
+    draft.version=1;draft.taskId=task.task_id;draft.lines=draft.lines||{};
+    localStorage.setItem(receiptDraftKey(task.task_id),JSON.stringify(draft));
+  }
+  function receiptRemainingOrder(line){
+    const factor=Number(line?.unitsPerOrder)>0?Number(line.unitsPerOrder):1;
+    return Math.max(0,((Number(line?.orderedQty)||0)-(Number(line?.creditedQty)||0))/factor);
+  }
+  function employeeReceiptTasks(){
+    return window.CassolaCloud?.employeeReceiptTasks?.(accessSession?.id)||[];
+  }
+  function employeeReceiptStatusMeta(status){
+    return {
+      received:['✅','收齐'],later:['🕒','晚到'],other:['👥','待他人'],
+      out:['❌','缺货'],short:['⬇️','少到'],over:['⬆️','多到']
+    }[status]||['·','未选择'];
+  }
+  function employeeCountPanelHtml(rows,draft,filled,queued){
+    return '<div class="cassola-employee-summary"><div><span>责任区 SKU</span><b>'+rows.length+'</b></div><div><span>今日已填</span><b id="cassolaEmployeeFilled">'+filled+'/'+rows.length+'</b></div></div>'+
       '<div class="cassola-employee-note">数量可以离线填写。报损 / 熟化转化在“查看详情”记录，会和今日盘货一起交给 Supervisor；规格 / 单位异常仍走提议审核。</div>'+
       '<div class="cassola-employee-counts">'+
       (rows.length?rows.map(s=>{
@@ -156,13 +176,121 @@
         '<button type="button" class="btn secondary employee-dock-btn" data-employee-new-sku><span>＋</span><small>新 SKU</small></button>'+
         '<div class="cassola-employee-dock-cell"><button type="button" class="btn primary employee-dock-btn employee-dock-upload" data-employee-cloud><span>☁️</span><small>上传</small></button>'+(queued?'<button type="button" class="employee-outbox-badge" data-employee-outbox aria-label="上传待发送 '+queued+'">待'+queued+'</button>':'')+'</div>'+
         '<button type="button" class="btn secondary employee-dock-btn" data-employee-export><span>📄</span><small>JSON</small></button>'+
-      '</div>'+
+      '</div>';
+  }
+  function employeeReceiptTaskHtml(task){
+    const lines=Array.isArray(task.order_snapshot?.items)?task.order_snapshot.items:[],draft=loadReceiptDraft(task);
+    const queued=window.CassolaCloud?.employeeReceiptQueued?.(task.task_id,accessSession?.id);
+    return '<article class="cassola-employee-receipt-task" data-employee-receipt-task="'+escapeHtml(task.task_id)+'">'+
+      '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">AUTHORIZED RECEIVING</span><h2>🚚 '+escapeHtml(task.supplier||'收货任务')+'</h2><small>Supervisor 授权 · '+escapeHtml(new Date(task.authorized_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cassola-role-pill">'+(queued?'📵 待发送':'👷 已授权')+'</span></div>'+
+      '<div class="cassola-employee-note">只记录这次现场实际收到的货。提交后不会直接入库，仍要 Supervisor 确认。</div>'+
+      '<div class="cassola-employee-receipt-lines">'+lines.map(line=>{
+        const d=draft.lines?.[line.skuId]||{},remaining=receiptRemainingOrder(line),factor=Number(line.unitsPerOrder)>0?Number(line.unitsPerOrder):1;
+        const pack=(factor!==1||String(line.orderUnit||line.unit||'')!==String(line.unit||''))?(' · 1'+escapeHtml(line.orderUnit||line.unit||'')+' = '+escapeHtml(String(factor))+escapeHtml(line.unit||'')):'';
+        const meta=employeeReceiptStatusMeta(d.status);
+        return '<div class="cassola-employee-receipt-line" data-receipt-line="'+escapeHtml(line.skuId)+'">'+
+          '<div class="cassola-employee-receipt-line-head"><div><strong>'+escapeHtml(line.skuName||line.skuId)+'</strong><small>'+escapeHtml(line.spec||'无规格')+pack+'</small></div><b>待收 '+escapeHtml(String(remaining))+' '+escapeHtml(line.orderUnit||line.unit||'')+'</b></div>'+
+          '<div class="cassola-employee-receipt-qty"><label>本次到货<input type="text" inputmode="decimal" autocomplete="off" data-employee-receipt-qty="'+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.qty??'')+'" placeholder="0"></label><span>'+escapeHtml(line.orderUnit||line.unit||'')+'</span></div>'+
+          '<div class="cassola-employee-receipt-status">'+['received','later','other','out','short','over'].map(st=>{const m=employeeReceiptStatusMeta(st);return '<button type="button" class="'+(d.status===st?'active':'')+'" data-employee-receipt-status="'+st+'" data-task-id="'+escapeHtml(task.task_id)+'" data-sku-id="'+escapeHtml(line.skuId)+'">'+m[0]+' '+m[1]+'</button>'}).join('')+'</div>'+
+          '<label class="cassola-employee-receipt-note">备注<input type="text" maxlength="300" data-employee-receipt-note="'+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.note||'')+'" placeholder="可空"></label>'+
+          '<div class="cassola-employee-receipt-current">'+meta[0]+' '+meta[1]+'</div>'+
+        '</div>';
+      }).join('')+'</div>'+
+      '<button type="button" class="btn primary large cassola-employee-receipt-submit" data-employee-receipt-submit="'+escapeHtml(task.task_id)+'" '+(queued?'disabled':'')+'>'+(queued?'📵 已保存待发送':'📤 提交本次收货')+'</button>'+
+    '</article>';
+  }
+  function employeeReceiptPanelHtml(tasks){
+    if(!tasks.length)return '<div class="cassola-employee-no-task"><span>🚚</span><h2>无任务</h2><p>只有 Supervisor 明确“授权员工收货”后，这里才会出现订单。</p></div>';
+    return '<div class="cassola-employee-receipt-summary"><span>当前授权</span><b>'+tasks.length+' 个收货任务</b></div>'+tasks.map(employeeReceiptTaskHtml).join('');
+  }
+  function renderEmployee(){
+    const box=document.getElementById('cassolaEmployee');if(!box||!isEmployee())return;
+    const scope=accessSession.scope||{},rows=scopeSkus(scope),draft=loadEmployeeDraft();
+    const filled=rows.filter(s=>draft.counts?.[s.id]!==undefined&&draft.counts?.[s.id]!==null&&draft.counts?.[s.id]!=='').length;
+    const cached=window.CassolaCloud?.cachedIdentity?.(accessSession.id);
+    const responsible=accessSession.displayName||cached?.displayName||'责任区员工';
+    const queued=window.CassolaCloud?.outboxCount?.(accessSession.id)||0,tasks=employeeReceiptTasks();
+    const receiptMode=employeePanel==='receipt';
+    box.innerHTML='<div class="cassola-employee-shell '+(receiptMode?'receipt-mode':'count-mode')+'">'+
+      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(scope.label||'责任区盘货')+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
+      '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(!receiptMode?'active':'')+'">📋 盘货</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+'">🚚 收货'+(tasks.length?' <b>'+tasks.length+'</b>':'')+'</button></div>'+
+      (receiptMode?employeeReceiptPanelHtml(tasks):employeeCountPanelHtml(rows,draft,filled,queued))+
       '</div>';
     window.CassolaEmployeeTools?.enhance?.();
   }
   function parseEmployeeQty(raw){
     if(typeof parseLocaleDecimal==='function')return parseLocaleDecimal(raw);
     const n=Number(String(raw??'').trim().replace(',','.'));return Number.isFinite(n)?n:NaN;
+  }
+  function receiptTaskById(taskId){return employeeReceiptTasks().find(t=>String(t.task_id)===String(taskId))||null}
+  function saveEmployeeReceiptField(input,kind){
+    const task=receiptTaskById(input.dataset.taskId);if(!task)return;
+    const skuId=kind==='qty'?input.dataset.employeeReceiptQty:input.dataset.employeeReceiptNote,draft=loadReceiptDraft(task);
+    draft.lines=draft.lines||{};draft.lines[skuId]=draft.lines[skuId]||{};
+    if(kind==='qty')draft.lines[skuId].qty=input.value.trim();
+    else draft.lines[skuId].note=input.value.trim();
+    saveReceiptDraft(task,draft);
+  }
+  function setEmployeeReceiptStatus(taskId,skuId,status){
+    const task=receiptTaskById(taskId);if(!task)return;
+    const line=(task.order_snapshot?.items||[]).find(x=>String(x.skuId)===String(skuId));if(!line)return;
+    const draft=loadReceiptDraft(task);draft.lines=draft.lines||{};const row=draft.lines[skuId]||{};
+    row.status=status;
+    if(status==='received')row.qty=String(receiptRemainingOrder(line));
+    else if(status==='out'||status==='other')row.qty='0';
+    else if(status==='later'&&(row.qty===undefined||row.qty===''))row.qty='0';
+    draft.lines[skuId]=row;saveReceiptDraft(task,draft);renderEmployee();
+  }
+  function buildEmployeeReceiptPayload(task){
+    if(!task)return null;
+    const draft=loadReceiptDraft(task),lines=Array.isArray(task.order_snapshot?.items)?task.order_snapshot.items:[],out=[];
+    for(const line of lines){
+      const d=draft.lines?.[line.skuId]||{},status=String(d.status||''),remaining=receiptRemainingOrder(line);
+      if(!['received','later','other','out','short','over'].includes(status)){showToast((line.skuName||'SKU')+' 还没选择收货结果');return null}
+      const qty=parseEmployeeQty(d.qty??'');
+      if(!Number.isFinite(qty)||qty<0){showToast((line.skuName||'SKU')+' 的到货数量不对');return null}
+      const eps=.000001;
+      if(status==='received'&&Math.abs(qty-remaining)>eps){showToast((line.skuName||'SKU')+' 点“收齐”时数量必须等于待收数量');return null}
+      if((status==='out'||status==='other')&&qty>eps){showToast((line.skuName||'SKU')+' 的“缺货 / 待他人”本次数量应为 0');return null}
+      if(status==='short'&&!(qty>eps&&qty<remaining-eps)){showToast((line.skuName||'SKU')+' 的“少到”数量要在 0 和待收量之间');return null}
+      if(status==='over'&&!(qty>remaining+eps)){showToast((line.skuName||'SKU')+' 的“多到”数量要大于待收量');return null}
+      if(status==='later'&&!(qty>=0&&qty<remaining-eps)){showToast((line.skuName||'SKU')+' 已经到齐时不要选“晚到”');return null}
+      out.push({skuId:line.skuId,status,receivedOrderQty:qty,note:String(d.note||'').slice(0,300)});
+    }
+    return{
+      format:'cassola-employee-receipt-v1',
+      submissionId:crypto.randomUUID?.()||String(Date.now()+Math.random()),
+      taskId:task.task_id,orderId:task.order_id,supplier:task.supplier||'',credentialId:accessSession.id,
+      submittedAt:new Date().toISOString(),lines:out
+    };
+  }
+  async function submitEmployeeReceiptTask(taskId){
+    const task=receiptTaskById(taskId);if(!task)return;
+    if(window.CassolaCloud?.employeeReceiptQueued?.(taskId,accessSession.id)){showToast('这份收货已经在待发送队列里');return}
+    const payload=buildEmployeeReceiptPayload(task);if(!payload)return;
+    if(!window.CassolaCloud?.connected?.()){
+      window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload);
+      showToast('📵 收货已保存到待发送队列');renderEmployee();return;
+    }
+    try{
+      await window.CassolaCloud.submitEmployeeReceipt(taskId,payload);
+      localStorage.removeItem(receiptDraftKey(taskId));
+      showToast('🚚 收货事实已提交给 Supervisor');
+      renderEmployee();
+    }catch(err){
+      if(!navigator.onLine||!err?.status||err.status>=500){
+        window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload);
+        showToast('📵 Cloud 没接住，收货已保存待发送');renderEmployee();return;
+      }
+      alert('提交收货失败：'+(err?.data?.detail||err?.message||'未知错误'));
+    }
+  }
+  async function switchEmployeePanel(mode){
+    employeePanel=mode==='receipt'?'receipt':'count';
+    if(employeePanel==='receipt'&&window.CassolaCloud?.connected?.()){
+      await window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{});
+    }
+    renderEmployee();
   }
   function saveEmployeeInput(input){
     if(!isEmployee())return;
@@ -317,7 +445,7 @@
   }
   function logout(){
     window.CassolaCloud?.logout?.().catch?.(()=>{});
-    accessSession=null;
+    accessSession=null;employeePanel='count';
     showMode('gate');
     setTimeout(()=>document.getElementById('cassolaGateCode')?.focus(),80);
   }
@@ -360,9 +488,14 @@
     });
     document.getElementById('cassolaEmployee').addEventListener('input',e=>{
       if(e.target.matches('[data-employee-sku]'))saveEmployeeInput(e.target);
+      else if(e.target.matches('[data-employee-receipt-qty]'))saveEmployeeReceiptField(e.target,'qty');
+      else if(e.target.matches('[data-employee-receipt-note]'))saveEmployeeReceiptField(e.target,'note');
     });
     document.getElementById('cassolaEmployee').addEventListener('click',e=>{
       if(e.target.closest('[data-cassola-logout]')){logout();return}
+      const panel=e.target.closest('[data-employee-panel]');if(panel){switchEmployeePanel(panel.dataset.employeePanel);return}
+      const receiptStatus=e.target.closest('[data-employee-receipt-status]');if(receiptStatus){setEmployeeReceiptStatus(receiptStatus.dataset.taskId,receiptStatus.dataset.skuId,receiptStatus.dataset.employeeReceiptStatus);return}
+      const receiptSubmit=e.target.closest('[data-employee-receipt-submit]');if(receiptSubmit){submitEmployeeReceiptTask(receiptSubmit.dataset.employeeReceiptSubmit);return}
       if(e.target.closest('[data-employee-clear]')){clearEmployeeDraft();return}
       if(e.target.closest('[data-employee-cloud]')){uploadEmployeeCount();return}
       if(e.target.closest('[data-employee-outbox]')){flushEmployeeOutbox();return}
