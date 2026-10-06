@@ -153,7 +153,7 @@ function v3EnsureState(){
   state.customCategories=[...new Set((Array.isArray(state.customCategories)?state.customCategories:[]).map(x=>String(x||'').trim()).filter(Boolean))];
   state.skus=(Array.isArray(state.skus)?state.skus:[]).map(v3NormalizeSku);
   state.placedOrders=state.placedOrders.map(v4NormalizeOrder);
-  state.version=6;
+  state.version=7;
 }
 v3EnsureState(); saveState();
 function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id)).slice().sort(v6SkuCompare)}
