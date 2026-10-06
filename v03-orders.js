@@ -399,14 +399,14 @@ async function v4ApplyEmployeeReceiptTask(taskId){
     id:crypto.randomUUID?.()||String(Date.now()+Math.random()),at,
     deviceName:state.syncMeta?.deviceName||'本设备',
     employeeReceiptTaskId:task.task_id,employeeReceiptSubmissionId:task.submission_id,
-    employeeCredentialId:task.credential_id,employeeDisplayName:task.displayName||'员工',lines:[]
+    employeeCredentialId:task.credential_id,lines:[]
   };
   for(const l of reports){
     const b=baseMap.get(String(l.skuId)),i=o.items.find(x=>String(x.skuId)===String(l.skuId)),s=sku(i.skuId);
     const factor=Number(b.unitsPerOrder)||1,before=Number(i.creditedQty)||0,delta=Math.max(0,(Number(l.receivedOrderQty)||0)*factor),after=before+delta,ordered=Number(i.orderedQty)||0;
     if(s&&delta>0){
       s.qty=Number(s.qty)+delta;
-      addHistory('arrival',s.id,`+${fmt(delta)} ${s.unit} → ${fmt(s.qty)} ${s.unit}`,`${o.supplier} · 员工收货 · ${task.displayName||task.credential_id} · ${v4ReceiptStatusLabel(l.status)}`,{
+      addHistory('arrival',s.id,`+${fmt(delta)} ${s.unit} → ${fmt(s.qty)} ${s.unit}`,`${o.supplier} · 员工收货 · ${task.credential_id} · ${v4ReceiptStatusLabel(l.status)}`,{
         orderId:o.id,receiptId:batch.id,employeeReceiptTaskId:task.task_id,employeeReceiptSubmissionId:task.submission_id,employeeCredentialId:task.credential_id
       });
     }
