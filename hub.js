@@ -341,7 +341,7 @@
       renderEmployee();
     }catch(err){
       if(!navigator.onLine||!err?.status||err.status>=500){
-        try{window.CassolaCloud?.queueEmployeeReceipt?.(taskId,buildEmployeeReceiptPayload(task)||{})}catch(_){}
+        try{if(payload)window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload)}catch(_){}
         showToast('📵 Cloud 没接住，收货已保存待发送');renderEmployee();return;
       }
       alert('提交收货失败：'+(err?.data?.detail||err?.message||'未知错误'));
