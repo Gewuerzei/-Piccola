@@ -11,10 +11,91 @@ function v4AreaMeta(id){return v4Areas.find(x=>x.id===id)||v4Areas[0]}
 function v4AreaOf(s){return s?.area||'sushi'}
 const v3Builtins=new Set(seedSkus.map(s=>s.id));
 const v3NoAuto=new Set(['redapple','daikon','mango_hard','basil','avocado_half','avocado_soft']);
+
+/* Inventory v0.7 · product families. One card may contain multiple concrete SKUs. */
+const v6FamilyDefaults={
+  butter500:{familyName:'Burro'},butter250:{familyName:'Burro'},
+  panna200:{familyName:'Panna'},panna125:{familyName:'Panna'},
+  quail18:{familyName:'鹌鹑蛋'},quail12:{familyName:'鹌鹑蛋'},
+  gamberi_s800:{familyName:'Gamberi rossi'},gamberi_l800:{familyName:'Gamberi rossi'},
+  scampi_s800:{familyName:'Scampi'},scampi_l800:{familyName:'Scampi'},
+  ikura1:{familyName:'Ikura'},ikura500:{familyName:'Ikura'},
+  surimi1:{familyName:'Surimi'},surimi_hf1:{familyName:'Surimi',brand:'恒丰'},
+  glove_m:{familyName:'白手套'},glove_l:{familyName:'白手套'}
+};
+function v6FamilyKey(name){
+  const x=String(name||'SKU').normalize?.('NFKC')||String(name||'SKU');
+  return 'family:'+x.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^\w\u00C0-\uFFFF]+/g,'_').replace(/^_+|_+$/g,'');
+}
+function v6FamilyName(s){return String(s?.familyName||s?.name||'SKU').trim()||String(s?.name||'SKU')}
+function v6FamilyId(s){return String(s?.familyId||v6FamilyKey(v6FamilyName(s)))}
+function v6Brand(s){return String(s?.brand||'').trim()}
+function v6BaseMeasure(s){
+  const unit=String(s?.unit||'').trim();
+  if(/^kg$/i.test(unit))return{value:1,unit:'kg'};
+  if(/^g$/i.test(unit))return{value:.001,unit:'kg'};
+  if(/^l$/i.test(unit))return{value:1,unit:'L'};
+  if(/^ml$/i.test(unit))return{value:.001,unit:'L'};
+  const spec=String(s?.spec||'').trim().replace(/,/g,'.');
+  if(!spec||/[–—~-]\s*\d/.test(spec))return null;
+  let m=spec.match(/(\d+(?:\.\d+)?)\s*(kg|g|ml|l)\b/i);
+  if(m){
+    const n=Number(m[1]),u=m[2].toLowerCase();
+    if(!(n>=0))return null;
+    if(u==='kg')return{value:n,unit:'kg'};
+    if(u==='g')return{value:n/1000,unit:'kg'};
+    if(u==='l')return{value:n,unit:'L'};
+    if(u==='ml')return{value:n/1000,unit:'L'};
+  }
+  m=spec.match(/(\d+(?:\.\d+)?)\s*(颗|張|张|片|个)(?:装|\/|$)/);
+  if(m)return{value:Number(m[1]),unit:m[2]==='張'?'张':m[2]};
+  return null;
+}
+function v6PackageSummary(rows){
+  const byUnit=new Map();
+  rows.forEach(x=>{const u=String(x.unit||'单位');byUnit.set(u,(byUnit.get(u)||0)+(Number(x.qty)||0))});
+  return [...byUnit.entries()].map(([u,q])=>fmt(q)+' '+u).join(' + ');
+}
+function v6FamilyStockSummary(rows){
+  const measures=rows.map(v6BaseMeasure),same=measures.length&&measures.every(Boolean)&&measures.every(x=>x.unit===measures[0].unit);
+  const packages=v6PackageSummary(rows);
+  if(same){
+    const total=rows.reduce((n,x,i)=>n+(Number(x.qty)||0)*measures[i].value,0);
+    return{main:fmt(total),unit:measures[0].unit,detail:packages};
+  }
+  if(rows.length&&rows.every(x=>String(x.unit||'')===String(rows[0].unit||''))){
+    return{main:fmt(rows.reduce((n,x)=>n+(Number(x.qty)||0),0)),unit:String(rows[0].unit||''),detail:packages};
+  }
+  return{main:'混合',unit:'规格',detail:packages};
+}
+function v6SkuCompare(a,b){
+  const ai=categories.indexOf(a.category),bi=categories.indexOf(b.category);
+  const ac=ai<0?999:ai,bc=bi<0?999:bi;
+  if(ac!==bc)return ac-bc;
+  const fa=v6FamilyName(a),fb=v6FamilyName(b),fc=fa.localeCompare(fb,'zh-CN',{numeric:true,sensitivity:'base'});
+  if(fc)return fc;
+  const bc2=v6Brand(a).localeCompare(v6Brand(b),'zh-CN',{numeric:true,sensitivity:'base'});if(bc2)return bc2;
+  const sc=String(a.spec||'').localeCompare(String(b.spec||''),'zh-CN',{numeric:true,sensitivity:'base'});if(sc)return sc;
+  return String(a.name||'').localeCompare(String(b.name||''),'zh-CN',{numeric:true,sensitivity:'base'});
+}
+function v6SkuFamilies(rows){
+  const map=new Map();
+  rows.slice().sort(v6SkuCompare).forEach(x=>{
+    const id=v6FamilyId(x);
+    if(!map.has(id))map.set(id,{id,name:v6FamilyName(x),rows:[]});
+    map.get(id).rows.push(x);
+  });
+  return [...map.values()];
+}
 function v3Num(v){if(v===''||v==null)return null;const n=typeof parseLocaleDecimal==='function'?parseLocaleDecimal(v):Number(v);return Number.isFinite(n)?n:null}
 function v3DefaultWeeks(cat){if(cat==='蔬果')return .6;if(cat==='冷藏')return 1;if(cat==='处理库存')return 0;return 2}
 function v3NormalizeSku(s){
   if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto'; if(!s.area)s.area='sushi';
+  const familyDefault=v6FamilyDefaults[String(s.id)]||null;
+  if(!String(s.familyName||'').trim())s.familyName=familyDefault?.familyName||String(s.name||'SKU').trim()||'SKU';
+  if(!String(s.familyId||'').trim())s.familyId=v6FamilyKey(s.familyName);
+  if(!String(s.brand||'').trim()&&familyDefault?.brand)s.brand=familyDefault.brand;
+  s.brand=String(s.brand||'').trim();
   ['blueAt','yellowAt','redAt','targetQty','manualWeeklyUse'].forEach(k=>{s[k]=v3Num(s[k])});
   s.targetWeeks=v3Num(s.targetWeeks)??v3DefaultWeeks(s.category);
   s.orderUnit=String(s.orderUnit||s.unit||'').trim()||s.unit||'';
@@ -75,7 +156,7 @@ function v3EnsureState(){
   state.version=6;
 }
 v3EnsureState(); saveState();
-function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id))}
+function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id)).slice().sort(v6SkuCompare)}
 function v3Cats(){return typeof inventoryCategories==='function'?inventoryCategories():[...new Set([...categories,...(state.customCategories||[]),...v3Skus().map(s=>s.category).filter(Boolean)])]}
 function v3Suppliers(){return ['全部',...new Set([...suppliers.filter(s=>s!=='全部'),...v3Skus().map(s=>s.supplier).filter(Boolean)])]}
 function v3Icon(s){return s?.icon||skuIcons[s?.id]||categoryIcons[s?.category]||'📦'}
