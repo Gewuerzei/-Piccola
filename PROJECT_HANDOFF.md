@@ -10,13 +10,13 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
-- Staff: **v0.3.3 · Swap Lifecycle**
-- Access: **v0.7 · Employee Count + Authorized Receiving**
+- Staff: **v0.4 · Staff Cloud + Managed Employee Tasks**
+- Access: **v0.8 · Managed Staff Access + Published Tasks**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
 - 架构：**local-first + manual cloud sync**；JSON 保留为独立冷备份 / fallback
-- Staff 当前仍为本地模块，不参与 Cloud v0.1 同步
+- Staff 已加入 Cloud：人员表 / attendance / swaps / restMoves / schedules / weekPublications / history 进入独立 `staff` scope；头像仍只在本机 IndexedDB / 完整备份
 
 仓库是公开仓库。**不要提交员工头像、真实员工名单、账号密码、API secret、工资或其他敏感经营数据。**
 
@@ -24,18 +24,23 @@
 
 ## 1.1 Access / Role Layer
 
-Cassola 从 Pietro 单人工具扩展为 **Supervisor 总账 + 员工责任区盘货**。Access Code 必须在发布版本里预先登记，设备端不能自己创建管理员权限。
+Cassola 从 Pietro 单人工具扩展为 **Supervisor 总账 + Staff 人员 + 员工任务入口**。Supervisor / legacy credential 仍可预登记；Staff 人员现在可由 Supervisor 在运行时开通随机 Employee PIN，不需要每次改公开仓库。
 
 当前规则：
 - PWA 打开后先进入 **Access Gate**
-- `access-registry.js` 是角色登记表，只允许放匿名 credential id / role / scope / salt / hash
-- **绝不能提交明文 Access Code，也不要提交真实员工姓名**
+- `access-registry.js` 只保留公开仓库可接受的 legacy / bootstrap credential 元数据；只允许匿名 credential id / role / scope / salt / hash。
+- **绝不能把真实员工姓名或运行时生成的员工 PIN 提交到 GitHub。**
+- Staff 管理页可为某个 `personId` 开通 managed Employee Access：Cloud 生成随机 6 位 PIN、PBKDF2 verifier 与匿名 credential id。
+- 因 Supervisor 明确要求以后能再次查看员工 PIN，managed employee PIN 的可恢复副本只保存在私有 Supabase `access_credentials.managed_pin_plaintext`；该表对 anon / authenticated 无直连权限，只能由 authenticated Supervisor session 经 Edge Function 读取。PIN 不进入 Inventory / Staff JSON、公开 GitHub 或 audit payload。
+- 登录验证仍使用 `salt + PBKDF2-SHA256 hash`；明文副本不是登录验证来源。
 - 当前 credential：
   - `supervisor` → 完整 Hub / Inventory / Staff
   - `produce_a` → employee，scope = `category: 蔬果`
   - `produce_b` → employee，scope = `category: 蔬果`
 - 同一责任区可以有多个员工 credential；身份槽位不同，但 scope 相同
-- Access Code 使用随机 salt + PBKDF2-SHA256 派生值校验
+- Access Code 使用随机 salt + PBKDF2-SHA256 派生值校验。
+- managed employee 第一次在某台设备成功联网登录后，该设备只缓存**这个成功使用过的 credential** 的 verifier 到 `cassola_access_offline_v01`，以后可离线登录；不再把所有未来员工 verifier 预编译进公开 PWA。
+- 在线时 Cloud 对 PIN 的判断优先于本机旧 verifier；PIN 已被重置 / 停用时，联网设备不能拿旧缓存绕过。完全离线设备无法知道 Cloud 刚刚撤销了旧 PIN，这是 offline-first 的已知物理边界。
 - 角色会话只存在当前页面运行时；重新加载 PWA 重新要求输入 Access Code
 - 连续输错 5 次，当前会话冷却 30 秒
 - 静态 PWA 没有服务器，因此此机制是内部权限隔离 / casual access gate，不是高安全账户认证；短数字 code 理论上可离线穷举
@@ -276,17 +281,20 @@ Cloud v0.1 的核心规则：
 - **JSON 永远保留**：下载云端前 PWA 会先自动导出一份完整本机 JSON 安全备份；设置页原有完整 JSON 导出继续存在。
 - **Employee append-only**：员工联网时只上传新的 `employee_submission`，不能直接修改 canonical Inventory。JSON employee package 继续保留作离线备用。
 - **Employee catalog**：员工联网登录时优先使用 Cloud canonical Head 汇总出的责任区 SKU 目录；只有 Cloud 尚未初始化或离线时，才退回员工设备自己的本机 catalog / seed。Supervisor 改 SKU 后需先上传 Cloud，员工下次联网打开即可取得新目录。
-- **Staff 不同步**：Cloud v0.1 只覆盖 Inventory scope + employee submission inbox。
+- **Staff 独立 scope**：Staff Working Head 使用 `staff` scope；下载仍手动，上传仍遵守 parent lineage / branch 规则。人员、岗位、attendance、换休、个人调休、排岗、周表发布版本与 history 会同步；头像不会进入 Staff Cloud。
+- **Staff 周表发布是显式 Cloud 动作**：本地生成 v1/v2/v3 后，如果 Supervisor Cloud 已连接，会同时尝试上传 Staff Working Head。遇到 lineage 分叉只生成 branch，不抢 canonical Staff Head。
+- **Staff 任务发布与 Staff Head 分开**：给员工发布盘货 SKU 使用 `employee_inventory_tasks` 事务表，不把“今天谁盘什么”硬塞进 Staff 主数据。
 
 ### Cloud scope
 
-固定 scope：
+固定 Cloud scope：
 - `sushi` = 🍣 Sushi
 - `cucina` = 🔪 Cucina
 - `bar` = 🍸 Bar / Sala
 - `common` = 📦 Comune
+- `staff` = 👥 Staff
 
-全店不是一个“越来越大的 revision number”，而是四个 scope Head 的组合。Supervisor 拥有全店操作权，但 partial sync 仍是首等功能。
+Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自己的上传 / 下载入口。整个 Suite 不使用一个越来越大的全局 revision number。
 
 ### Cloud service_role Data API invariant
 
@@ -311,6 +319,7 @@ Cloud v0.1 的核心规则：
 - `employee_submissions`
 - `employee_submission_items`
 - `employee_receipt_tasks`
+- `employee_inventory_tasks`
 
 关键 RPC：
 - `cassola_apply_upload_batch`
@@ -321,7 +330,7 @@ Cloud v0.1 的核心规则：
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v9；支持 employee count / SKU proposal / Supervisor-authorized employee receiving，并由 Edge 再验证 scope 与收货任务状态）
+- `cassola-cloud`（当前生产 v11；支持 Inventory/Staff lineage、managed Staff Access、Staff-published count tasks、employee count / SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
@@ -329,7 +338,7 @@ Edge Function：
 
 ### Cloud 本地元数据
 
-- `cassola_cloud_meta_v01`：每 scope 记录本机基于哪个 cloud version、local fingerprint、lastSyncAt 等
+- `cassola_cloud_meta_v01`：Inventory 四区与 `staff` scope 都记录本机基于哪个 cloud version、local fingerprint、lastSyncAt 等
 - `cassola_cloud_device_v01`：匿名设备 ID
 - Cloud session token **不写入 localStorage**，只存在当前页面运行时
 
@@ -656,7 +665,7 @@ priceRecords[] = {
 
 # Staff
 
-## 4. Staff v0.3.3 · Swap Lifecycle
+## 4. Staff v0.4 · Staff Cloud + Managed Employee Tasks
 
 主要文件：
 - `staff.js`
@@ -744,6 +753,43 @@ Staff 的主轴现在是 **周休息 / 请假 / 缺勤管理**，岗位排班降
 - 头像自动方形裁切并压缩为约 256×256 WebP
 - Staff 历史记录
 - Staff JSON 版本交接
+
+### Staff Cloud / Managed Employee Access / 盘货任务
+
+Staff v0.4 把原来的本地人员表提升为多 Supervisor 共用的 Staff 主数据层，但仍保持 local-first：
+
+- Staff Cloud scope snapshot 包含：`people / roles / schedules / attendance / swaps / restMoves / weekPublications / history`。
+- `syncMeta.deviceName / revision` 继续是本机信息，不作为共享业务主数据。
+- **头像不进入 Cloud**。Cloud capture 会剥离 `people[].avatarStamp`；下载 Staff 时按 `personId` 保留当前设备已有的本地 avatarStamp / IndexedDB blob。
+- Staff 设置页提供：`☁️ 上传 Staff / ⬇️ 下载 Staff / 🕘 云端历史`。下载前自动导出一份普通 Staff JSON。
+- 其他 Supervisor 必须明确下载 Cloud Head 才覆盖本机 Staff；不会后台静默合并。
+- 周表 `📣 发布 vN` 保留原本 immutable snapshot 语义，并在 Cloud 已连接时同时尝试上传 Staff Head。PDF 继续只是打印 / 微信 / 外发出口，不再承担数据同步职责。
+
+Staff 人员与 Access 分层：
+
+- `people[].id` = “这个人是谁”的稳定 Staff person id。
+- `access_credentials.staff_person_id` = 这个 Staff person 绑定的登录 credential。
+- Supervisor 在“编辑人员 → Employee Access”可生成、查看、复制、重新生成、停用员工 PIN。
+- managed PIN 随机生成；重新生成会撤销当前 Cloud sessions。完全离线旧设备仍可能使用旧 verifier，直到下次联网。
+- 删除 Staff 人员时，若 Cloud 可用，会先停用其 managed credential；停用 managed credential 也会 revoke 其 active inventory tasks。
+- legacy `produce_a / produce_b` 继续兼容，不强制迁移。
+
+Staff 人员页可直接 **📋 发布盘货任务**。当前 selector：
+
+1. `supplier`：例如“大兴”，发布瞬间匹配所有 `sku.supplier === 大兴`
+2. `category`：例如“蔬果”
+3. `area`：Sushi / Cucina / Bar-Sala / Comune
+4. `sku`：单独发布一个具体 SKU
+
+任务发布时会冻结 `resolved_sku_ids + sku_snapshot`。之后新建同分类 / 同供应商 SKU **不会自动加入旧任务**；要重新发布才会进入。一个员工的 active count tasks 不能互相覆盖同一 SKU，避免同一人看到重复盘货实体。
+
+Employee 端盘货页会显示 Staff 发布的任务卡。存在多个任务时可切换；每个任务有独立当日 draft / `effectiveKey = task:<taskId>:<date>`。managed employee 没有任何 active count task 时，盘货页明确显示 **“无任务”**。
+
+员工提交 Staff task count 后仍走原 Supervisor 审核：
+- Cloud Edge 验证 task 属于当前 credential、状态 active、count SKU 集合与冻结 snapshot 完全一致。
+- submission 继续落入 `employee_submissions / employee_submission_items`，并带 `inventory_task_id`。
+- Supervisor 采用后才修改 canonical Inventory。
+- JSON 手工导入仍只信任公开 registry；动态 Staff credential 的 JSON 只有从 Cloud inbox 进入时才可按 Cloud 已验证 task scope 导入，避免任意本地 JSON 冒充动态员工。
 
 ### 可选岗位排班
 
@@ -937,15 +983,14 @@ Inventory：
 - 暂未做采购订单预计总额、实际采购总额和库存估值。
 
 Staff：
-- v0.3 的周休息表是真正主功能，需要在 iPhone 实机测试横向周表滚动、连续异常录入、周表发布和双人换休流程。
+- v0.4 的周休息表仍是真正主功能，需要在 iPhone 实机测试横向周表滚动、连续异常录入、周表发布、双人换休、Staff Cloud 上传/下载、人员 PIN 管理和任务发布流程。
 - 原岗位拖拽板保留为可选功能，仍需要真实 iPhone 触摸测试。
 - 周表 / 月报 PDF 当前都是单页 A4 横向，人员非常多时会压缩布局。
 - 请假 / 调休是记录功能，不是完整 HR 审批系统。
 - 暂无工时统计、工资、打卡。
-- 暂无权限系统。
-- 暂无云同步。
-
-如果未来多人同时高频编辑才考虑共享后端。不要为了两三个人的排班过早引入复杂云系统。
+- Staff Cloud 当前仍是**手动 Working Head 同步**，不是多人实时协同编辑器；同时编辑会按 lineage 进入 branch / diverged，而不是 last-write-wins。
+- managed employee PIN 是店内分流权限，不按国防级凭证设计；6 位 PIN + verifier 缓存的离线暴力破解风险属于已接受的内部工具威胁模型。
+- Staff task 第一版 selector 支持供应商 / 分类 / 区域 / 单独 SKU；尚未做任意布尔组合条件。
 
 ---
 
