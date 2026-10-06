@@ -319,7 +319,7 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 /* Employee Receipt Tasks v0.1 */
 .cassola-employee-mode-tabs{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(3,1fr);
   gap:8px;
   padding:6px;
   margin:0 0 12px;
