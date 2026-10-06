@@ -1,4 +1,4 @@
-/* Cassola Employee Count Import v0.1 · Supervisor scoped submission review */
+/* Cassola Employee Count Import v0.2 · counts + loss / conversion review */
 (function(){
   let pending=null;
 
@@ -58,11 +58,35 @@
       if(scopeIds.some(id=>!scopeAllows(record.scope,sku(id))))throw new Error('scopeSkuIds 含越权 SKU');
       if(scopeIds.some(id=>!seen.has(id))||seen.size!==scopeIds.length)throw new Error('盘货包不是完整责任区快照');
     }
+    if(data.events!==undefined&&!Array.isArray(data.events))throw new Error('events 必须是数组');
+    const events=[],eventIds=new Set();
+    for(const item of (data.events||[])){
+      const id=String(item?.id||'').trim(),type=String(item?.type||'');
+      if(!id||eventIds.has(id))throw new Error('库存变动记录重复或缺少 id');
+      eventIds.add(id);
+      if(!['loss','transfer'].includes(type))throw new Error('未知库存变动类型');
+      const source=sku(item.skuId);
+      if(!source)throw new Error('库存变动含未知 SKU：'+item.skuId);
+      if(!scopeAllows(record.scope,source))throw new Error(source.name+' 的库存变动越权');
+      const qty=Number(item.qty);
+      if(!Number.isFinite(qty)||qty<=0)throw new Error(source.name+' 的变动数量无效');
+      const note=String(item.note||'').trim().slice(0,300);
+      const recordedAt=validTime(item.recordedAt)?String(item.recordedAt):data.submittedAt;
+      if(type==='loss'){
+        events.push({id,type,source,qty,note,recordedAt,target:null});
+        continue;
+      }
+      const target=sku(item.targetId);
+      if(!target||String(target.id)===String(source.id))throw new Error(source.name+' 的转化目标无效');
+      if(!scopeAllows(record.scope,target))throw new Error(target.name+' 不属于该员工责任区');
+      if(String(target.unit||'')!==String(source.unit||''))throw new Error(source.name+' → '+target.name+' 的库存单位不一致');
+      events.push({id,type,source,qty,note,recordedAt,target});
+    }
     const active=activeFor(expectedKey);
     const incomingAt=new Date(data.submittedAt).getTime();
     const activeAt=active?new Date(active.submittedAt).getTime():-Infinity;
     const stale=!!active&&incomingAt<=activeAt;
-    return{record,scope:record.scope,rows,active,stale,effectiveKey:expectedKey};
+    return{record,scope:record.scope,rows,events,active,stale,effectiveKey:expectedKey};
   }
 
   function diffClass(delta){
@@ -93,7 +117,8 @@
         <div><span>提交时间</span><b>${esc(new Date(data.submittedAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))}</b></div>
       </div>
       <div class="ei-latest">当前 active：${esc(activeText)}</div>
-      <div class="ei-stats"><div><span>提交 SKU</span><b>${v.rows.length}</b></div><div><span>有差异</span><b>${changed.length}</b></div><div><span>无变化</span><b>${same}</b></div></div>
+      <div class="ei-stats"><div><span>提交 SKU</span><b>${v.rows.length}</b></div><div><span>有差异</span><b>${changed.length}</b></div><div><span>库存变动</span><b>${v.events.length}</b></div></div>
+      ${v.events.length?'<div class="ei-event-list"><div class="ei-event-head">📉 员工报告的报损 / 转化</div>'+v.events.map(e=>'<div class="ei-event-row"><div><strong>'+(e.type==='loss'?'🗑️ 报损':'🔄 内部转化')+' · '+esc(e.source.name)+'</strong><small>'+esc(e.note||'无备注')+'</small></div><b>'+esc(e.qty)+' '+esc(e.source.unit||'')+(e.target?' → '+esc(e.target.name):'')+'</b></div>').join('')+'</div>':''}
       <div class="ei-diff-list">${v.rows.map(x=>{
         const delta=x.qty-x.old,cls=diffClass(delta);
         return `<div class="ei-diff-row ${cls}"><div><strong>${esc(x.s.name)}</strong><small>${esc(x.s.spec||'无规格')}</small></div><div class="ei-values"><span>${fmt(x.old)} → <b>${fmt(x.qty)}</b> ${esc(x.s.unit)}</span><em>${fmtSigned(delta)}</em></div></div>`;
@@ -111,13 +136,31 @@
     if(v.stale){showToast('这不是当天最新版');return}
     if(!confirm(`采用 ${v.scope.label||v.scope.id} · ${pending.data.date} 的员工盘货？`))return;
     const now=stamp(),submissionId=pending.data.submissionId;
+    const supersededIds=[];
     state.employeeSubmissions.filter(x=>x.effectiveKey===v.effectiveKey&&x.status==='active').forEach(x=>{
+      supersededIds.push(String(x.submissionId));
       x.status='superseded';
       x.supersededAt=now;
       x.supersededBy=submissionId;
     });
+    if(supersededIds.length){
+      (state.history||[]).forEach(h=>{
+        if(h.employeeSubmissionId&&supersededIds.includes(String(h.employeeSubmissionId)))h.employeeSuperseded=true;
+      });
+    }
     const batch=`employee:${submissionId}`;
     let changed=0;
+    v.events.forEach(e=>{
+      const common={
+        batch,employeeSubmissionId:submissionId,employeeScopeId:v.scope.id,employeeCredentialId:pending.data.credentialId,
+        employeeEventId:e.id,at:e.recordedAt
+      };
+      if(e.type==='loss'){
+        addHistory('loss',e.source.id,`-${fmt(e.qty)} ${e.source.unit}（员工报告）`,e.note||'员工盘货报损',common);
+      }else{
+        addHistory('transfer',e.source.id,`-${fmt(e.qty)} ${e.source.unit}（员工报告）`,e.note||'员工盘货内部转化',{...common,targetId:e.target.id,text2:`+${fmt(e.qty)} ${e.target.unit}`});
+      }
+    });
     v.rows.forEach(({s,qty,old})=>{
       if(old===qty)return;
       s.qty=qty;
@@ -138,7 +181,9 @@
       status:'active',
       deviceRevision:Number(pending.data.deviceRevision)||0,
       counts:v.rows.map(x=>({skuId:x.s.id,qty:x.qty})),
-      changedCount:changed
+      events:v.events.map(e=>({id:e.id,type:e.type,skuId:e.source.id,qty:e.qty,targetId:e.target?.id||null,note:e.note,recordedAt:e.recordedAt})),
+      changedCount:changed,
+      eventCount:v.events.length
     });
     saveState();
     const cloudSubmissionId=pending.cloudSubmissionId;
@@ -146,7 +191,7 @@
     pending=null;
     renderAll();
     refresh();
-    showToast(`已采用员工盘货 · ${changed} 项变化`);
+    showToast(`已采用员工盘货 · ${changed} 项变化 · ${v.events.length} 条变动`);
     if(cloudSubmissionId&&window.CassolaCloud?.reviewEmployee){
       window.CassolaCloud.reviewEmployee(cloudSubmissionId,'accepted','Applied to Supervisor local ledger')
         .then(()=>{if(typeof showToast==='function')showToast('☁️ 云端员工盘货已标记采用')})
