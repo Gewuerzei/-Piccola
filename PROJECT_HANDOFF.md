@@ -11,7 +11,7 @@
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.6.2 · Week / Quarter / Year Archive**
 - Staff: **v0.3.3 · Swap Lifecycle**
-- Access: **v0.6 · Employee Count + Loss / Conversion Facts**
+- Access: **v0.7 · Employee Count + Authorized Receiving**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
 - Backend: **Supabase · Cassola Piccola Cloud**（project ref `ktdgxaxkuqwrdqttcajt`，Zurich / eu-central-2）
@@ -43,7 +43,8 @@ Cassola 从 Pietro 单人工具扩展为 **Supervisor 总账 + 员工责任区�
 Employee Mode 当前：
 - 只显示 scope 允许的 SKU，不能进入 Inventory / Staff 管理界面
 - 当前 `produce` scope 依据 `category = 蔬果`
-- 员工只填写现场盘货数量
+- 员工界面有两个页签：`📋 盘货` / `🚚 收货`
+- 盘货继续填写完整责任区现场数量；收货页只有在 Supervisor 明确授权后才显示任务，否则固定显示“无任务”
 - 员工草稿使用独立 localStorage 前缀 `cassola_employee_count_v01`，**不得写入 `cassola_inventory_v01`**
 - 导出格式：`cassola-employee-count-v1`
 - scoped JSON 只包含该责任区已填写 SKU，不得夹带其他 scope SKU
@@ -59,10 +60,12 @@ Employee Mode 当前：
 - 显示名会缓存到本机 `cassola_cloud_identity_v01`，因此同一设备以后离线 PIN 登录仍可显示“负责人：…”；从未联网过的新设备离线时显示通用员工名。
 - Access Code 本地 PBKDF2 校验仍保留，所以**完全断网也能进入 Employee / Supervisor 本地界面**。
 - Cloud SKU catalog 会缓存到 `cassola_employee_catalog_v01`；重新打开 PWA 且断网时，优先用最近一次 Cloud 正式目录，而不是退回旧 seed。
+- Supervisor 已授权的员工收货任务会缓存到 `cassola_employee_receipt_tasks_v01`；员工曾联网取得任务后，在短暂离线场景仍能继续填写这份任务。
 - Employee 盘货页操作区规则：使用 viewport `position: fixed` 的**四格胖胖 Dock**，从左到右为“清空 / 新 SKU / 上传 / JSON”；不得退回会在列表中途卡住的 sticky。Dock 必须 `bottom: 0`，由 Dock 自己用 `env(safe-area-inset-bottom)` 吃掉 iPhone Home Indicator 安全区，不能同时在外层容器重复计算安全区。若 Outbox 有待发送项，在“上传”格右上角显示独立 `待N` badge，员工点击 badge 才调用手动 Outbox flush，不能静默发送。员工 shell 只保留与 Dock 实际高度匹配的 bottom padding，保证最后一个 SKU 可完整滚到 Dock 上方。
 - 离线员工提交使用 `cassola_cloud_outbox_v01`。当前支持：
   - `employee_submission`
   - `sku_proposal`
+  - `employee_receipt`
 - 恢复网络后 Cloud session 可自动重连，但**Outbox 不静默自动提交**；员工必须自己点击“上传待发送”。
 - 员工可对 scope 内 SKU 提交：
   - `sku_change`：规格 / 库存单位 / 订货单位 / 包装倍率提议
@@ -90,6 +93,33 @@ Employee Mode 当前：
 - 周耗算法继续使用原公式区分 arrival / loss / transfer；员工报损不是正常消耗，员工内部转化也不是正常消耗。
 - 同责任区同一天的新 submission supersede 旧 active submission 时，旧 submission 对应的 history 保留审计但标记 `employeeSuperseded=true`；`v3WeeklyUse` 必须忽略这些旧记录，避免重复计算事件。
 - Cloud Edge 会再次验证事件 source / target scope、数量、库存单位与允许的 conversion pair；浏览器提交不能绕过责任区。
+
+### Employee authorized receiving
+- 员工**不能自己领取收货任务**。只有 Supervisor 在某张未结案 placed order 上点击“👷 授权员工收货”，员工的 `🚚 收货`页才会出现任务；没有授权时显示“无任务”。
+- 授权以 **order + SKU lines** 为单位，并再次按目标 employee credential 的 scope 过滤。Cloud Edge 会重新核对 canonical SKU 是否属于员工 scope。
+- 同一订单同一 SKU 在 `authorized / submitted` 状态下不能同时分配给多个员工；Edge 会拒绝重叠授权，防止重复现场收货。
+- Supervisor 可在授权 Dialog 看到本单当前 `authorized / submitted` 任务；`authorized` 尚未提交的任务可以撤销。
+- 员工收货填写的是**本次到货量（order unit）**，不是累计库存。每行必须明确：
+  - `received` 收齐
+  - `later` 晚到 / 待补
+  - `other` 待他人核对
+  - `out` 缺货结案
+  - `short` 少到结案
+  - `over` 多到结案
+- 员工提交格式：`cassola-employee-receipt-v1`。提交后 Cloud task 从 `authorized → submitted`，员工任务立即消失；**仍然不会直接修改 Supervisor Inventory / placedOrders**。
+- Supervisor 在 `☁️ Cloud → 🚚 收货审核`里明确“✓ 确认入账”后，才会：
+  1. 把 employee reported quantity 按授权时冻结的 `unitsPerOrder` 换回 stock unit
+  2. 增加 SKU qty
+  3. 写标准 `arrival` history
+  4. 生成正式 `receiptBatches[]`
+  5. 更新 `creditedQty / lineStatus / order status`
+- 正式 receipt batch 写入 `employeeReceiptTaskId / employeeReceiptSubmissionId / employeeCredentialId`，保证本机重复审核时可检测“本机已入账”，Cloud 标记失败时只补记 review，不能二次加库存。
+- 如果授权以后 Supervisor 本机又发生其他收货，审核时必须显示 drift 警告；员工 report 仍按“本次新增”追加，Supervisor 必须人工确认不是同一批货重复记录。
+- 如果授权后订单包装换算发生变化，员工提交不得直接应用，必须拒绝并重新授权。
+- 收货授权 / submission 使用 Supabase `employee_receipt_tasks` 表；生命周期：
+  `authorized → submitted → accepted / rejected`，另有 `revoked`。
+- 收货任务不是 canonical Inventory Head；它属于 Cloud 协作 / inbox 层。Supervisor 确认到本机后，仍需按原规则由 Supervisor 自己上传 Inventory Cloud。
+- 离线 receipt submission 进入 `cassola_cloud_outbox_v01`，恢复网络后仍然必须员工主动点“上传待发送”，禁止静默提交。
 
 ### Employee submission import invariant
 
@@ -280,6 +310,7 @@ Cloud v0.1 的核心规则：
 - `access_rate_limits`
 - `employee_submissions`
 - `employee_submission_items`
+- `employee_receipt_tasks`
 
 关键 RPC：
 - `cassola_apply_upload_batch`
@@ -290,7 +321,7 @@ Cloud v0.1 的核心规则：
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v7；employee submission 支持可选 loss / transfer events，并由 Edge 再验证）
+- `cassola-cloud`（当前生产 v9；支持 employee count / SKU proposal / Supervisor-authorized employee receiving，并由 Edge 再验证 scope 与收货任务状态）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
