@@ -2,6 +2,38 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4.3 · Role Tasks + Inventory Rollback
+**2026-10-06**
+
+- Inventory Cloud 修复与 Staff Cloud 相同的 iOS / PWA `Load Failed` 根因：
+  - 下载前不再自动触发 Blob JSON 文件下载
+  - 先确认 Cloud Head 存在
+  - 再把本机完整 Inventory + Cloud meta 保存到 `cassola_inventory_cloud_rollback_v01`
+  - Cloud 卡新增 **↩️ 恢复下载前 Inventory**
+  - 手工 JSON 导出继续保留
+- Staff **岗位**新增 📋 任务入口，可把 SKU task basket 发布给整个岗位，例如：
+  - Maki → 大兴
+  - Maki → 蔬果
+  - Maki → 大兴 + 蔬果 + 单独 SKU
+- 岗位任务跟随 Staff `people[].primaryRole`，不跟随某一天排岗板的临时岗位。
+- 人员改“主要岗位”时，如果已开通 managed Employee Access：
+  - 离开旧岗位会撤销旧岗位自动 task
+  - 进入新岗位会自动取得该岗位当前 active task
+  - 若与个人 task SKU 重叠则阻止岗位变更，要求 Supervisor 先处理冲突
+- Staff canonical upload 会 batch 对齐 managed credential 的岗位，补偿离线修改；branch upload 不会改变岗位任务。
+- 新员工先归岗位、后生成 PIN 时，也会自动继承该岗位任务。
+- 岗位规则仍采用冻结 snapshot；一个岗位当前只允许一份 active rule。更新岗位责任必须撤销旧 rule 后重新发布，不会偷偷改员工做到一半的 task。
+- Staff roster 同步若 role / rule 没变化会保持原 task id，不因普通 Staff 上传反复 revoke/recreate。
+- Supabase migration：`cassola_cloud_v06_staff_role_inventory_tasks`
+  - 新增 `access_credentials.staff_role_id`
+  - 新增 `staff_role_inventory_task_rules`
+  - `employee_inventory_tasks` 新增 `source_kind / source_role_id / source_rule_id`
+- Supabase Edge Function `cassola-cloud` 升级到 **ACTIVE v14**。
+- 不清空 Inventory / Staff / Employee drafts / Outbox / IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v082`。
+
+---
+
 ## Staff Cloud v0.4.2 · iOS Download Rollback
 **2026-10-06**
 
