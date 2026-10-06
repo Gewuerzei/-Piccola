@@ -23,7 +23,12 @@
   }
   function sameScope(a,b){
     if(!a||!b)return false;
-    return a.id===b.id&&a.kind===b.kind&&a.value===b.value;
+    if(a.id!==b.id||a.kind!==b.kind||a.value!==b.value)return false;
+    if(a.kind==='skuIds'){
+      const aa=[...new Set((a.skuIds||[]).map(String))].sort(),bb=[...new Set((b.skuIds||[]).map(String))].sort();
+      return JSON.stringify(aa)===JSON.stringify(bb);
+    }
+    return true;
   }
   function validDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''))}
   function validTime(v){return Number.isFinite(new Date(v).getTime())}
@@ -33,15 +38,18 @@
       .filter(x=>x.effectiveKey===key&&x.status==='active')
       .sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt))[0]||null;
   }
-  function validate(data){
+  function validate(data,options={}){
     if(!data||data.format!=='cassola-employee-count-v1')throw new Error('不是员工盘货包');
     if(data.role!=='employee')throw new Error('角色不是 employee');
     if(!validDate(data.date)||!validTime(data.submittedAt))throw new Error('日期 / 提交时间无效');
     if(!data.submissionId||!data.credentialId)throw new Error('缺少 submissionId / credentialId');
-    const record=registryRecord(data.credentialId);
+    let record=registryRecord(data.credentialId);
+    const cloudTask=!!options.cloudSubmissionId&&!!data.inventoryTaskId&&data.scope?.kind==='skuIds';
+    if(cloudTask&&!record)record={id:data.credentialId,role:'employee',scope:data.scope,dynamic:true};
     if(!record||record.role!=='employee'||!record.scope)throw new Error('这个员工槽位没有登记');
-    if(!sameScope(record.scope,data.scope))throw new Error('盘货包 scope 与登记权限不一致');
-    const expectedKey=`${record.scope.id}:${data.date}`;
+    if(!cloudTask&&!sameScope(record.scope,data.scope))throw new Error('盘货包 scope 与登记权限不一致');
+    const effectiveScope=cloudTask?data.scope:record.scope;
+    const expectedKey=cloudTask?`task:${data.inventoryTaskId}:${data.date}`:`${effectiveScope.id}:${data.date}`;
     if(data.effectiveKey!==expectedKey)throw new Error('effectiveKey 不匹配');
     if(!Array.isArray(data.counts)||!data.counts.length)throw new Error('盘货包没有数量');
     ensureState();
@@ -53,14 +61,14 @@
       seen.add(item.skuId);
       const s=sku(item.skuId);
       if(!s)throw new Error(`未知 SKU：${item.skuId}`);
-      if(!scopeAllows(record.scope,s))throw new Error(`${s.name} 不属于该员工责任区`);
+      if(!scopeAllows(effectiveScope,s))throw new Error(`${s.name} 不属于该员工责任区`);
       const qty=Number(item.qty);
       if(!Number.isFinite(qty)||qty<0)throw new Error(`${s.name} 的数量无效`);
       rows.push({s,qty,old:Number(s.qty)||0});
     }
     if(Array.isArray(data.scopeSkuIds)){
       const scopeIds=[...new Set(data.scopeSkuIds.map(String))];
-      if(scopeIds.some(id=>!scopeAllows(record.scope,sku(id))))throw new Error('scopeSkuIds 含越权 SKU');
+      if(scopeIds.some(id=>!scopeAllows(effectiveScope,sku(id))))throw new Error('scopeSkuIds 含越权 SKU');
       if(scopeIds.some(id=>!seen.has(id))||seen.size!==scopeIds.length)throw new Error('盘货包不是完整责任区快照');
     }
     if(data.events!==undefined&&!Array.isArray(data.events))throw new Error('events 必须是数组');
@@ -72,7 +80,7 @@
       if(!['loss','transfer'].includes(type))throw new Error('未知库存变动类型');
       const source=sku(item.skuId);
       if(!source)throw new Error('库存变动含未知 SKU：'+item.skuId);
-      if(!scopeAllows(record.scope,source))throw new Error(source.name+' 的库存变动越权');
+      if(!scopeAllows(effectiveScope,source))throw new Error(source.name+' 的库存变动越权');
       const qty=Number(item.qty);
       if(!Number.isFinite(qty)||qty<=0)throw new Error(source.name+' 的变动数量无效');
       const note=String(item.note||'').trim().slice(0,300);
@@ -83,7 +91,7 @@
       }
       const target=sku(item.targetId);
       if(!target||String(target.id)===String(source.id))throw new Error(source.name+' 的转化目标无效');
-      if(!scopeAllows(record.scope,target))throw new Error(target.name+' 不属于该员工责任区');
+      if(!scopeAllows(effectiveScope,target))throw new Error(target.name+' 不属于该员工责任区');
       if(String(target.unit||'')!==String(source.unit||''))throw new Error(source.name+' → '+target.name+' 的库存单位不一致');
       const configured=Array.isArray(source.conversionTargets)&&source.conversionTargets.length?source.conversionTargets:EMPLOYEE_CONVERSION_TARGETS[String(source.id)]||[];
       if(!configured.map(String).includes(String(target.id)))throw new Error(source.name+' → '+target.name+' 不是已配置的内部转化关系');
@@ -93,7 +101,7 @@
     const incomingAt=new Date(data.submittedAt).getTime();
     const activeAt=active?new Date(active.submittedAt).getTime():-Infinity;
     const stale=!!active&&incomingAt<=activeAt;
-    return{record,scope:record.scope,rows,events,active,stale,effectiveKey:expectedKey};
+    return{record,scope:effectiveScope,rows,events,active,stale,effectiveKey:expectedKey};
   }
 
   function diffClass(delta){
@@ -107,7 +115,7 @@
   }
   function preview(data,options={}){
     let v;
-    try{v=validate(data)}catch(err){alert('员工盘货包无法导入：'+err.message);return}
+    try{v=validate(data,options)}catch(err){alert('员工盘货包无法导入：'+err.message);return}
     pending={data,validation:v,cloudSubmissionId:options.cloudSubmissionId||null};
     const changed=v.rows.filter(x=>x.qty!==x.old),same=v.rows.length-changed.length;
     const activeText=v.active?`${v.active.credentialId} · ${new Date(v.active.submittedAt).toLocaleString('zh-CN',{hour:'2-digit',minute:'2-digit'})}`:'无';
