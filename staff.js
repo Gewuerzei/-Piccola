@@ -1283,25 +1283,31 @@
   function renderTaskPreview(){
     const box=document.getElementById('staffTaskPreview');if(!box)return;
     const rows=taskBasketRows(),dlg=document.getElementById('staffTaskDialog'),ready=!!dlg?._accessReady;
-    const warning=ready?'':'<div class="staff-task-access-warning">🔐 先给这个人员生成并启用 Employee PIN，预览可以看，但现在不能发布。</div>';
+    const isRole=!!taskPublisherRoleId;
+    const warning=ready?'':('<div class="staff-task-access-warning">'+(isRole?'☁️ 先连接 Supervisor Cloud。':'🔐 先给这个人员生成并启用 Employee PIN，预览可以看，但现在不能发布。')+'</div>');
+    const roleHasActive=isRole&&(taskRowsCache||[]).some(x=>x.status==='active');
     const activeIds=new Set((taskRowsCache||[]).filter(x=>x.status==='active').flatMap(x=>x.resolved_sku_ids||[]).map(String));
     const conflicts=rows.filter(x=>activeIds.has(String(x.id)));
-    const conflict=conflicts.length?'<div class="staff-task-conflict">⚠️ '+conflicts.length+' 个 SKU 已在这个员工的其他有效任务中。发布前要先撤销旧任务或从篮子移除重叠条件。</div>':'';
+    const roleLock=roleHasActive?'<div class="staff-task-conflict">⚠️ 这个岗位已经有有效盘货任务。岗位任务采用冻结快照，先撤销旧任务，再发布新版本。</div>':'';
+    const conflict=!isRole&&conflicts.length?'<div class="staff-task-conflict">⚠️ '+conflicts.length+' 个 SKU 已在这个员工的其他有效任务中。发布前要先撤销旧任务或从篮子移除重叠条件。</div>':'';
     const content=rows.length?'<div class="staff-task-preview-head"><b>最终 '+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,16).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>16?'<span>＋'+(rows.length-16)+'</span>':'')+'</div>':'<div class="empty">任务篮子还是空的。</div>';
-    box.innerHTML=warning+conflict+content;
-    const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!ready||!!conflicts.length;
+    box.innerHTML=warning+roleLock+conflict+content;
+    const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!ready||roleHasActive||(!isRole&&!!conflicts.length);
   }
   function renderTaskRows(){
     const box=document.getElementById('staffTaskList');if(!box)return;
-    const active=(taskRowsCache||[]).filter(x=>x.status==='active');
-    box.innerHTML=active.length?active.map(t=>'<div class="staff-task-row"><div><b>📋 '+esc(t.label)+'</b><small>'+((t.resolved_sku_ids||[]).length)+' SKU · '+esc(new Date(t.published_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><button type="button" class="btn danger ghost" data-staff-task-revoke="'+esc(t.task_id)+'">撤销</button></div>').join(''):'<div class="empty">还没有有效盘货任务。</div>';
+    const active=(taskRowsCache||[]).filter(x=>x.status==='active'),isRole=!!taskPublisherRoleId;
+    box.innerHTML=active.length?active.map(t=>{
+      const id=isRole?t.rule_id:t.task_id;
+      return '<div class="staff-task-row"><div><b>📋 '+esc(t.label)+'</b><small>'+((t.resolved_sku_ids||[]).length)+' SKU · '+esc(new Date(t.published_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+(isRole?' · 岗位自动同步':'')+'</small></div><button type="button" class="btn danger ghost" data-staff-task-revoke="'+esc(id)+'">撤销</button></div>';
+    }).join(''):'<div class="empty">还没有有效盘货任务。</div>';
     renderTaskPreview();
   }
   async function openTaskPublisher(personId){
     const p=personById(personId);if(!p)return;
-    taskPublisherPersonId=personId;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
+    taskPublisherPersonId=personId;taskPublisherRoleId=null;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
     const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList'),basket=document.getElementById('staffTaskBasket');
-    document.getElementById('staffTaskTitle').textContent='📋 '+p.name+' · 发布盘货任务';
+    document.getElementById('staffTaskTitle').textContent='📋 '+p.name+' · 发布个人盘货任务';
     document.getElementById('staffTaskLabel').value='';
     preview.innerHTML='<div class="empty">正在读取 Cloud Inventory…</div>';list.innerHTML='<div class="empty">正在读取已有任务…</div>';basket.innerHTML='';
     dlg._accessReady=false;document.getElementById('staffTaskPublish').disabled=true;if(!dlg.open)dlg.showModal();
@@ -1316,18 +1322,45 @@
       fillTaskSelector();renderTaskBasket();renderTaskRows();
     }catch(err){preview.innerHTML='<div class="empty">读取任务资料失败：'+esc(err?.message||'未知错误')+'</div>'}
   }
+  async function openRoleTaskPublisher(roleId){
+    const role=roleById(roleId);if(!role)return;
+    taskPublisherPersonId=null;taskPublisherRoleId=roleId;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
+    const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList'),basket=document.getElementById('staffTaskBasket');
+    document.getElementById('staffTaskTitle').textContent='📋 '+role.icon+' '+role.name+' · 岗位盘货任务';
+    document.getElementById('staffTaskLabel').value='';
+    preview.innerHTML='<div class="empty">正在读取 Cloud Inventory…</div>';list.innerHTML='<div class="empty">正在读取岗位任务…</div>';basket.innerHTML='';
+    dlg._accessReady=cloudReady();document.getElementById('staffTaskPublish').disabled=true;if(!dlg.open)dlg.showModal();
+    if(!cloudReady()){preview.innerHTML='<div class="empty">先连接 Supervisor Cloud 才能设置岗位任务。</div>';list.innerHTML='';return}
+    try{
+      const [opts,tasks]=await Promise.all([
+        window.CassolaCloud.inventoryTaskOptions(),
+        window.CassolaCloud.listRoleInventoryTasks(roleId)
+      ]);
+      taskOptionsCache=opts;taskRowsCache=tasks.tasks||[];dlg._accessReady=true;
+      fillTaskSelector();renderTaskBasket();renderTaskRows();
+    }catch(err){preview.innerHTML='<div class="empty">读取岗位任务失败：'+esc(err?.message||'未知错误')+'</div>'}
+  }
   async function publishPersonTask(){
-    if(!taskPublisherPersonId||!cloudReady())return;
+    if((!taskPublisherPersonId&&!taskPublisherRoleId)||!cloudReady())return;
     const label=document.getElementById('staffTaskLabel').value.trim(),rows=taskBasketRows();
     if(!taskBasketSelectors.length||!rows.length){toast('先往任务里加入 SKU');return}
     try{
       const selector={type:'basket',items:taskBasketSelectors.map(x=>({type:x.type,value:x.value}))};
-      const data=await window.CassolaCloud.publishInventoryTask(taskPublisherPersonId,selector,label,'Published from Staff SKU basket');
-      toast('📣 已发布 '+(data.task?.resolved_sku_ids?.length||0)+' 个 SKU');
-      taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];
+      if(taskPublisherRoleId){
+        const role=roleById(taskPublisherRoleId);if(!role)return;
+        const data=await window.CassolaCloud.publishRoleInventoryTask(role.id,role.name,selector,label,'Published from Staff role SKU basket');
+        toast('📣 岗位任务已发布 · '+(data.rule?.resolved_sku_ids?.length||0)+' SKU · 同步 '+(data.memberCount||0)+' 人');
+        taskRowsCache=(await window.CassolaCloud.listRoleInventoryTasks(role.id)).tasks||[];
+      }else{
+        const data=await window.CassolaCloud.publishInventoryTask(taskPublisherPersonId,selector,label,'Published from Staff SKU basket');
+        toast('📣 已发布 '+(data.task?.resolved_sku_ids?.length||0)+' 个 SKU');
+        taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];
+      }
       taskBasketSelectors=[];renderTaskBasket();renderTaskRows();
     }catch(err){
-      if(err?.data?.error==='inventory_task_overlap')alert('这些 SKU 与已有任务“'+(err.data.label||'盘货任务')+'”重叠。\n\n已发布任务不会偷偷变形。请撤销旧任务，或把补充 SKU 单独组成一张新任务。');
+      if(err?.data?.error==='role_task_exists')alert('这个岗位已经有有效任务。岗位任务不会原地变形，请先撤销旧任务，再发布新版本。');
+      else if(err?.data?.error==='role_task_overlap')alert('岗位任务和某些成员现有的个人任务发生 SKU 重叠。\n\n先处理这些个人任务，再发布岗位任务。');
+      else if(err?.data?.error==='inventory_task_overlap')alert('这些 SKU 与已有任务“'+(err.data.label||'盘货任务')+'”重叠。\n\n已发布任务不会偷偷变形。请撤销旧任务，或把补充 SKU 单独组成一张新任务。');
       else if(err?.data?.error==='staff_access_required')alert('先给这个 Staff 人员开通 Employee Access。');
       else alert('发布任务失败：'+(err?.data?.detail||err?.message||'未知错误'));
     }
@@ -1335,8 +1368,18 @@
 
   async function revokePersonTask(taskId){
     if(!confirm('撤销这份盘货任务？'))return;
-    try{await window.CassolaCloud.revokeInventoryTask(taskId);taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];renderTaskRows();toast('任务已撤销')}
-    catch(err){alert('撤销失败：'+(err?.message||'未知错误'))}
+    try{
+      if(taskPublisherRoleId){
+        await window.CassolaCloud.revokeRoleInventoryTask(taskId);
+        taskRowsCache=(await window.CassolaCloud.listRoleInventoryTasks(taskPublisherRoleId)).tasks||[];
+        toast('岗位任务已撤销，成员下次 Cloud 刷新后会同步');
+      }else{
+        await window.CassolaCloud.revokeInventoryTask(taskId);
+        taskRowsCache=(await window.CassolaCloud.listInventoryTasks(taskPublisherPersonId)).tasks||[];
+        toast('任务已撤销');
+      }
+      renderTaskRows();
+    }catch(err){alert('撤销失败：'+(err?.message||'未知错误'))}
   }
 
   function renderPeople(){
