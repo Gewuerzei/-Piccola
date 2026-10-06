@@ -331,12 +331,14 @@
   }
 
   function openNewSku(){
-    ensureDialogs();
-    ['employeeNewName','employeeNewSpec','employeeNewQty','employeeNewNote'].forEach(id=>document.getElementById(id).value='');
+    ensureDialogs();refreshProposalOptions();
+    ['employeeNewName','employeeNewSpec','employeeNewQty','employeeNewNote','employeeNewCategory','employeeNewSupplier'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('employeeNewUnit').value='';
     document.getElementById('employeeNewOrderUnit').value='';
     document.getElementById('employeeNewFactor').value='1';
-    document.getElementById('employeeNewArea').value='sushi';
+    const scope=session()?.scope||{};
+    document.getElementById('employeeNewArea').value=scope.kind==='area'?scope.value:'sushi';
+    if(scope.kind==='category')document.getElementById('employeeNewCategory').value=scope.value||'';
     document.getElementById('employeeNewSkuDialog').showModal();
   }
 
@@ -359,7 +361,8 @@
         orderUnit:document.getElementById('employeeNewOrderUnit').value||unit,
         unitsPerOrder:Number(String(document.getElementById('employeeNewFactor').value||'1').replace(',','.'))||1,
         area:document.getElementById('employeeNewArea').value,
-        category:scope.kind==='category'?scope.value:''
+        category:document.getElementById('employeeNewCategory').value.trim()||(scope.kind==='category'?scope.value:''),
+        supplier:document.getElementById('employeeNewSupplier').value.trim()
       },
       qty,
       note:document.getElementById('employeeNewNote').value.trim()
@@ -371,14 +374,57 @@
     }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
   }
 
+  function openNewCategory(){
+    ensureDialogs();refreshProposalOptions();
+    document.getElementById('employeeNewCategoryName').value='';
+    document.getElementById('employeeNewCategoryNote').value='';
+    document.getElementById('employeeNewCategoryDialog').showModal();
+  }
+  async function submitNewCategory(){
+    const category=document.getElementById('employeeNewCategoryName').value.trim(),note=document.getElementById('employeeNewCategoryNote').value.trim();
+    if(!category){if(typeof showToast==='function')showToast('分类名称不能为空');return}
+    if(proposalCategories().includes(category)){if(typeof showToast==='function')showToast('这个分类已经存在');return}
+    const p={proposalId:crypto.randomUUID?.()||String(Date.now()+Math.random()),proposalType:'new_category',businessDate:today(),proposed:{category},note};
+    try{
+      const r=await submitOrQueue(p);document.getElementById('employeeNewCategoryDialog').close();
+      if(!r.queued&&typeof showToast==='function')showToast('🏷️ 新分类已交给 Supervisor');
+    }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+  }
+  function openReclassify(id){
+    ensureDialogs();refreshProposalOptions();
+    const sku=proposalCatalog().find(x=>String(x.id)===String(id));if(!sku){alert('找不到这个正式 SKU。');return}
+    document.getElementById('employeeReclassifySkuId').value=sku.id;
+    document.getElementById('employeeReclassifyTitle').textContent='🏷️ '+(sku.name||'SKU')+' · 重新归类';
+    document.getElementById('employeeReclassifyCurrent').innerHTML='<div><span>当前分类</span><b>'+esc(sku.category||'未分类')+'</b></div><div><span>供应商</span><b>'+esc(sku.supplier||'未设置')+'</b></div>';
+    document.getElementById('employeeReclassifyCategory').value='';
+    document.getElementById('employeeReclassifyNote').value='';
+    document.getElementById('employeeReclassifyDialog').showModal();
+  }
+  async function submitReclassify(){
+    const skuId=document.getElementById('employeeReclassifySkuId').value,sku=proposalCatalog().find(x=>String(x.id)===String(skuId));
+    if(!sku)return;
+    const category=document.getElementById('employeeReclassifyCategory').value.trim(),note=document.getElementById('employeeReclassifyNote').value.trim();
+    if(!category){if(typeof showToast==='function')showToast('先填写建议分类');return}
+    if(category===String(sku.category||'')){if(typeof showToast==='function')showToast('它现在已经是这个分类');return}
+    const p={proposalId:crypto.randomUUID?.()||String(Date.now()+Math.random()),proposalType:'sku_reclassify',skuId:sku.id,businessDate:today(),proposed:{category},note};
+    try{
+      const r=await submitOrQueue(p);document.getElementById('employeeReclassifyDialog').close();
+      if(!r.queued&&typeof showToast==='function')showToast('🏷️ 归类提议已交给 Supervisor');
+    }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+  }
+
   function proposalTypeLabel(type){
     if(type==='new_sku')return'＋ 新 SKU';
+    if(type==='new_category')return'🏷️ 新分类';
+    if(type==='sku_reclassify')return'🏷️ 重新归类';
     if(type==='sku_change')return'🧪 规格 / 单位';
     return'🚩 SKU 问题';
   }
   function proposalSummary(p){
     const x=p.proposed||{};
-    if(p.proposal_type==='new_sku')return [x.name,x.spec,x.unit,x.area].filter(Boolean).join(' · ');
+    if(p.proposal_type==='new_sku')return [x.name,x.spec,x.unit,x.category,x.supplier,x.area].filter(Boolean).join(' · ');
+    if(p.proposal_type==='new_category')return '新分类 '+(x.category||'');
+    if(p.proposal_type==='sku_reclassify')return (p.current_snapshot?.category||'未分类')+' → '+(x.category||'');
     if(p.proposal_type==='sku_change')return [
       x.spec?('规格 '+x.spec):'',
       x.unit?('库存单位 '+x.unit):'',
