@@ -648,7 +648,16 @@
         meta.scopes[id]=current;
       });
       if(row.status==='branch')alert('🌿 Staff 已上传为分支。云端正式 Staff Head 没有被覆盖，请先核对另一台 Supervisor 的修改。');
-      else if(typeof showToast==='function')showToast('👥 Staff 已上传云端');
+      else{
+        const roleMap=new Map((staffState.roles||[]).map(r=>[String(r.id),r]));
+        const roster=(staffState.people||[]).filter(p=>p.active!==false).map(p=>({
+          personId:p.id,personName:p.name||'',roleId:p.primaryRole||'',roleName:roleMap.get(String(p.primaryRole||''))?.name||''
+        }));
+        const sync=await syncStaffRoleRoster(roster).catch(err=>({ok:false,error:err?.message||'role_sync_failed'}));
+        const conflicts=(sync?.results||[]).filter(x=>x.ok===false&&x.error==='role_task_overlap');
+        if(conflicts.length)alert('⚠️ Staff 已上传，但有 '+conflicts.length+' 名员工的岗位任务与个人任务重叠。\n\n请到 Staff 检查这些人的任务后再同步岗位。');
+        if(typeof showToast==='function')showToast('👥 Staff 已上传云端');
+      }
     }
     await refreshStatus({silent:true}).catch(()=>{});
     window.dispatchEvent(new CustomEvent('cassola-cloud-staff-change'));
@@ -851,8 +860,9 @@
     submitEmployee,reviewEmployee,openPending,
     submitSkuProposal,listSkuProposals,reviewSkuProposal,
     listEmployeeDirectory,authorizeReceiptTask,revokeReceiptTask,listReceiptTasks,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
-    staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,
+    staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,staffAccessSetRole,syncStaffRoleRoster,
     inventoryTaskOptions,publishInventoryTask,listInventoryTasks,revokeInventoryTask,
+    publishRoleInventoryTask,listRoleInventoryTasks,revokeRoleInventoryTask,
     staffUpload,staffDownload,staffStatus,staffHistory,
     inventoryRollbackInfo,restoreInventoryRollback,
     queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
