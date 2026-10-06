@@ -2,6 +2,35 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4.4 · Shared Role First-Wins + Receipt Submit Fix
+**2026-10-06**
+
+- 岗位盘货任务从“给岗位成员各复制一张 task”改为真正的 **岗位共享任务**：
+  - 一份 role rule 固定在岗位上
+  - 当前岗位的所有 active managed employees 都看到同一个 task id
+  - 每个人可以在自己设备上独立填写 draft
+  - **谁先完整提交，谁成为 winner**
+  - 第一个成功 submission 后 role rule 立刻 `completed`，其他成员的同一任务失效
+- first-wins 由数据库函数 `cassola_submit_shared_role_count` 在事务中锁定 role rule 并写 submission / items / winner，避免两台设备同时提交产生双赢家。
+- 其他成员晚到的在线提交返回 `inventory_task_not_active`；离线 Outbox 下次手动发送时会记为 expired，不会重复进入 Supervisor inbox。
+- managed credential scope 现在按 **个人 active task + 当前岗位 active shared rule** 并集计算；岗位任务完成 / 撤销后刷新岗位成员 scope。
+- 人员的 `primaryRole` 只决定共享岗位任务可见性，不再创建 / revoke 每人一张 role task instance。
+- Supabase migration：`cassola_cloud_v07_shared_role_tasks`
+  - role rule status 增加 `completed`
+  - 增加 winner / completed metadata
+  - `employee_submissions.role_task_rule_id`
+  - atomic RPC `cassola_submit_shared_role_count`
+- Edge Function `cassola-cloud` 升级到 **ACTIVE v15**。
+- 修复 Employee **🚚 收货 → 提交本次收货** 看起来“没反应”的实机问题：
+  - Cloud 日志确认问题发生时没有 `receipt_submit` 请求，task 仍为 authorized
+  - 收货前端校验提示原本使用 toast，但 toast `z-index:50` 被 Employee shell `z-index:250` 盖住
+  - toast 提升为 `z-index:500`
+  - 点击提交后按钮显示 `⏳ 正在提交…`，防止重复点击，并在任务失效 / 请求错误时明确反馈
+- 不清空 Inventory / Staff / Employee drafts / Outbox / IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v083`。
+
+---
+
 ## Staff v0.4.3 · Role Tasks + Inventory Rollback
 **2026-10-06**
 
