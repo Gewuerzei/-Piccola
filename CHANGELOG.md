@@ -2,6 +2,22 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff Cloud v0.4.2 · iOS Download Rollback
+**2026-10-06**
+
+- 修复另一台 iPhone / PWA 执行 **⬇️ 下载 Staff Cloud** 时先强制导出 JSON，可能出现系统级 `Load Failed` 的问题。
+- Staff Cloud 下载不再依赖浏览器 Blob 文件下载作为前置保护。
+- 新流程：
+  1. 先读取 Cloud Staff Head
+  2. Head 存在后，将当前本机 Staff 保存到 `cassola_staff_cloud_rollback_v01`
+  3. 再应用 Cloud Staff
+- Staff Cloud 卡新增 **↩️ 恢复下载前版本**；没有 rollback 时按钮自动禁用。
+- 手工 Staff JSON / 完整备份导出功能保留不变，只在用户主动点导出时生成文件。
+- 没有清空 Staff / Inventory / IndexedDB，也没有重新 seed Cloud。
+- Service Worker cache 更新为 `cassola-suite-v081`。
+
+---
+
 ## Staff v0.4.1 + Employee SKU Center
 **2026-10-06**
 
