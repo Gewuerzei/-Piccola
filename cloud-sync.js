@@ -198,7 +198,7 @@
       oc.partial=items.some(i=>['short','over','out'].includes(String(i.lineStatus)));
       placedOrders[String(o.id)]=oc;
     });
-    return{
+    const snapshot={
       schemaVersion:1,scopeId,
       skus:mapById(skus),
       hiddenSkuIds:hidden,
@@ -207,6 +207,8 @@
       priceRecords:prices,
       placedOrders
     };
+    if(scopeId==='common')snapshot.customCategories=clone(Array.isArray(state.customCategories)?state.customCategories:[]);
+    return snapshot;
   }
   function scopeFingerprint(scopeId){return fingerprint(captureScope(scopeId))}
 
@@ -232,6 +234,9 @@
     const affectedIds=new Set([...previousIds,...incomingIds]);
 
     state.skus=beforeSkus.filter(s=>!previousIds.has(String(s.id))&&!incomingIds.has(String(s.id))).concat(incomingSkus);
+    if(scopeId==='common'&&Array.isArray(cloud.customCategories)){
+      state.customCategories=[...new Set(cloud.customCategories.map(x=>String(x||'').trim()).filter(Boolean))];
+    }
 
     const preservedHidden=(state.hiddenSkuIds||[]).filter(id=>!affectedIds.has(String(id)));
     const cloudHidden=Object.keys(cloud.hiddenSkuIds||{}).filter(id=>cloud.hiddenSkuIds[id]);
