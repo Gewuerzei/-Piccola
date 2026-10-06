@@ -479,6 +479,25 @@
       if(typeof renderAll==='function')renderAll();
       return{changed:!!changed.length,message:changed.length?'已采用规格 / 单位提议':'本机已经是这个规格'};
     }
+    if(p.proposal_type==='new_category'){
+      const name=String(proposed.category||'').trim();if(!name)throw new Error('分类名称为空');
+      state.customCategories=Array.isArray(state.customCategories)?state.customCategories:[];
+      if(!state.customCategories.includes(name)&&!(typeof categories!=='undefined'&&categories.includes(name)))state.customCategories.push(name);
+      if(typeof saveState==='function')saveState();
+      if(typeof renderAll==='function')renderAll();
+      return{changed:true,message:'已登记分类 · '+name};
+    }
+    if(p.proposal_type==='sku_reclassify'){
+      const s=localSku(p.sku_id);if(!s)throw new Error('本机找不到这个 SKU，请先下载对应区域云端');
+      const next=String(proposed.category||'').trim();if(!next)throw new Error('新分类为空');
+      const old=String(s.category||'');if(old===next)return{changed:false,message:'本机已经是这个分类'};
+      s.category=next;state.customCategories=Array.isArray(state.customCategories)?state.customCategories:[];
+      if(!state.customCategories.includes(next)&&!(typeof categories!=='undefined'&&categories.includes(next)))state.customCategories.push(next);
+      if(typeof addHistory==='function')addHistory('adjust',s.id,'分类 '+old+' → '+next,'员工归类提议 · '+(p.display_name||p.credential_id),{employeeSkuProposalId:p.proposal_id});
+      if(typeof saveState==='function')saveState();
+      if(typeof renderAll==='function')renderAll();
+      return{changed:true,message:'已重新归类 · '+next};
+    }
     if(p.proposal_type==='new_sku'){
       const already=(state.skus||[]).find(s=>String(s.employeeSkuProposalId||'')===String(p.proposal_id||''));
       if(already)return{changed:false,message:'这份新 SKU 提议已写入本机'};
@@ -488,11 +507,13 @@
       let s={
         id,name:String(proposed.name||'新 SKU'),icon:'📦',spec:String(proposed.spec||''),unit:String(proposed.unit||'个'),
         orderUnit:String(proposed.orderUnit||proposed.unit||'个'),unitsPerOrder:Number(proposed.unitsPerOrder)>0?Number(proposed.unitsPerOrder):1,
-        category:String(proposed.category||p.scope_definition?.value||'待确认'),supplier:'待确认',area:String(proposed.area||'sushi'),
+        category:String(proposed.category||p.scope_definition?.value||'待确认'),supplier:String(proposed.supplier||'待确认'),area:String(proposed.area||'sushi'),
         qty:Number(p.qty)||0,warningMode:'auto',manualWeeklyUse:null,targetWeeks:2,targetQty:null,autoOrder:false,
         employeeSkuProposalId:p.proposal_id||''
       };
       if(typeof v3NormalizeSku==='function')s=v3NormalizeSku(s);
+      state.customCategories=Array.isArray(state.customCategories)?state.customCategories:[];
+      if(s.category&&!state.customCategories.includes(s.category)&&!(typeof categories!=='undefined'&&categories.includes(s.category)))state.customCategories.push(s.category);
       state.skus.push(s);
       if(Number(s.qty)>0&&typeof addHistory==='function')addHistory('count',s.id,'0 → '+fmt(s.qty)+' '+s.unit,'员工新 SKU 提议 · '+(p.display_name||p.credential_id),{employeeSkuProposalId:p.proposal_id});
       if(typeof saveState==='function')saveState();
@@ -535,12 +556,16 @@
   document.addEventListener('click',e=>{
     const detail=e.target.closest('[data-employee-detail]');if(detail){openDetail(detail.dataset.employeeDetail);return}
     if(e.target.closest('[data-employee-new-sku]')){openNewSku();return}
+    if(e.target.closest('[data-employee-new-category]')){openNewCategory();return}
+    const reclass=e.target.closest('[data-employee-reclassify]');if(reclass){openReclassify(reclass.dataset.employeeReclassify);return}
     if(e.target.closest('#employeeLossAdd')){e.preventDefault();addLossEvent();return}
     if(e.target.closest('#employeeTransferAdd')){e.preventDefault();addTransferEvent();return}
     const movementRemove=e.target.closest('[data-employee-event-remove]');if(movementRemove){e.preventDefault();removeMovementEvent(movementRemove.dataset.employeeEventRemove);return}
     if(e.target.closest('#employeeSkuChangeSubmit')){e.preventDefault();submitChange();return}
     if(e.target.closest('#employeeSkuIssueSubmit')){e.preventDefault();submitIssue();return}
     if(e.target.closest('#employeeNewSkuSubmit')){e.preventDefault();submitNewSku();return}
+    if(e.target.closest('#employeeNewCategorySubmit')){e.preventDefault();submitNewCategory();return}
+    if(e.target.closest('#employeeReclassifySubmit')){e.preventDefault();submitReclassify();return}
     if(e.target.closest('[data-cloud-proposals]')){openReview();return}
     const accept=e.target.closest('[data-proposal-accept]');if(accept){acceptProposal(accept.dataset.proposalAccept);return}
     const reject=e.target.closest('[data-proposal-reject]');if(reject){rejectProposal(reject.dataset.proposalReject);return}
@@ -549,5 +574,5 @@
   document.addEventListener('DOMContentLoaded',()=>{ensureDialogs();injectSupervisorButton()});
   window.addEventListener('cassola-cloud-reconnected',injectSupervisorButton);
 
-  window.CassolaEmployeeTools={enhance,openReview,injectSupervisorButton};
+  window.CassolaEmployeeTools={enhance,openReview,injectSupervisorButton,panelHtml};
 })();
