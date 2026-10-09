@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.7.1 · Product Families + Manual Card Sorting + Week / Quarter / Year Archive**
+- Inventory: **v0.7.2 · Visual Category Sections + Product Families + Card Sorting + Archives**
 - Staff: **v0.4.4 · Staff Cloud + Shared Role Tasks**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
@@ -585,6 +585,10 @@ SKU 可使用手动阈值或历史周耗。
 - 不改变 `cassola_inventory_v01`
 
 ### Inventory 卡片排序 / 手动拖动
+- v0.7.2 起，在“分类 · 商品名”排序且分类为“全部”时，库存首页按真实 SKU `category` 显示分区标题（商品卡数量 / SKU 数量），只影响 DOM 展示；切换到“自定义拖动”时移除分区标题，卡片仍为直属 `stockList` 子元素，可正常拖动。
+- “鲜鱼”纳入内置分类显示顺序并有 🐟 图标；这**不是**把鲜鱼 SKU 重新 seed、覆盖 Cloud 或改动员工任务 scope。
+- 手动排序 `sortRank = null` 代表没有排名，不能 `Number(null)` 后误认成 0；新 SKU / 未排名卡片应排在有手动名次的卡片之后。
+- 不根据供应商或储藏位置偷偷改动正式 `category`：员工的任务 / scope 可能直接依赖 `category = 蔬果`，自动移类会引入权限 / 任务变化。正式 SKU 重新归类必须走 Supervisor 审核 / 本机明确操作，上传 Cloud 仍是独立人工动作。
 - Inventory 首页新增排序模式：**分类 · 商品名 / 商品名 / 供应商 / 需补货优先 / 自定义拖动**。
 - 排序对象是“商品卡 / family”，不是拆开的 SKU variant；同一商品卡里的不同规格 / 品牌继续折叠在卡内。
 - **自定义拖动**使用商品卡顶部的 `⠿ 拖动排序` handle，基于 Pointer Events，iPhone / Android 触摸和桌面鼠标都走同一套逻辑。
