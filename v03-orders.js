@@ -181,7 +181,7 @@ function v6ClearDragMarkers(d){
 }
 function v6DragPosition(d,clientX,clientY){
   d.y=clientY;
-  const delta=clientY-d.startY;
+  const delta=clientY-d.startY+(window.scrollY-d.startScrollY);
   if(!d.moved&&Math.abs(delta)<5)return;
   d.moved=true;
   d.card.style.transform='translate3d(0,'+delta+'px,0)';
@@ -213,7 +213,7 @@ function v6BeginDrag(handle,mode,id,x,y){
   if(document.getElementById('searchInput').value.trim()||(document.getElementById('categoryFilter').value||'全部')!=='全部')return false;
   const card=handle.closest('[data-v6-family-card]'),list=document.getElementById('stockList');
   if(!card||card.parentElement!==list)return false;
-  const d={mode,id,handle,card,list,startY:y,y,x,moved:false,before:null,frame:0};
+  const d={mode,id,handle,card,list,startY:y,startScrollY:window.scrollY,y,x,moved:false,before:null,frame:0};
   v6DragState=d;
   card.classList.add('v6-dragging');
   document.body.classList.add('v6-sorting');
@@ -248,17 +248,17 @@ document.addEventListener('touchstart',e=>{
 },{passive:false});
 document.addEventListener('touchmove',e=>{
   const d=v6DragState;if(!d||d.mode!=='touch')return;
-  const t=[...e.changedTouches].find(x=>x.identifier===d.id);
+  const t=Array.from(e.changedTouches).find(x=>x.identifier===d.id);
   if(!t)return;
   e.preventDefault();
   d.x=t.clientX;
   v6DragPosition(d,t.clientX,t.clientY);
 },{passive:false});
 document.addEventListener('touchend',e=>{
-  const d=v6DragState;if(d?.mode==='touch'&&[...e.changedTouches].some(x=>x.identifier===d.id))v6EndDrag(true);
+  const d=v6DragState;if(d?.mode==='touch'&&Array.from(e.changedTouches).some(x=>x.identifier===d.id))v6EndDrag(true);
 });
 document.addEventListener('touchcancel',e=>{
-  const d=v6DragState;if(d?.mode==='touch'&&[...e.changedTouches].some(x=>x.identifier===d.id))v6EndDrag(false);
+  const d=v6DragState;if(d?.mode==='touch'&&Array.from(e.changedTouches).some(x=>x.identifier===d.id))v6EndDrag(false);
 });
 document.addEventListener('pointerdown',e=>{
   if(e.pointerType==='touch')return; // handled by Touch Events on iPhone / Android
