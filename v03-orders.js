@@ -1,4 +1,4 @@
-/* Inventory v0.7.2 · visual category sections + product families + card sorting */
+/* Inventory v0.7.3 · iOS-safe drag reorder + visual category sections */
 let v4ArchiveYearOpen=null;
 let v4ArchiveQuarterOpen=null;
 let v4ArchiveWeekOpen=null;
@@ -168,48 +168,117 @@ document.addEventListener('click',e=>{
   renderStock();
 });
 
-document.addEventListener('pointerdown',e=>{
-  const handle=e.target.closest('[data-v6-drag-handle]');
-  if(!handle||v6StockSortMode!=='manual')return;
-  if(e.pointerType==='mouse'&&e.button!==0)return;
+/* iOS / Android use Touch Events to keep the whole gesture alive when WebKit
+   changes pointer capture; mouse / pen use Pointer Events. The dragged card
+   stays in the DOM until release, so moving nodes cannot break capture. */
+function v6DragCards(list){
+  return [...list.children].filter(x=>x.matches?.('[data-v6-family-card]'));
+}
+function v6ClearDragMarkers(d){
+  d.list.querySelectorAll('.v6-drop-before,.v6-drop-last').forEach(el=>{
+    el.classList.remove('v6-drop-before','v6-drop-last');
+  });
+}
+function v6DragPosition(d,clientX,clientY){
+  d.y=clientY;
+  const delta=clientY-d.startY;
+  if(!d.moved&&Math.abs(delta)<5)return;
+  d.moved=true;
+  d.card.style.transform='translate3d(0,'+delta+'px,0)';
+  d.card.style.zIndex='8';
+  v6ClearDragMarkers(d);
+  const others=v6DragCards(d.list).filter(el=>el!==d.card);
+  d.before=others.find(el=>{
+    const rect=el.getBoundingClientRect();
+    return clientY<rect.top+rect.height/2;
+  })||null;
+  if(d.before)d.before.classList.add('v6-drop-before');
+  else if(others.length)others[others.length-1].classList.add('v6-drop-last');
+}
+function v6AutoScrollDrag(d){
+  if(v6DragState!==d)return;
+  const threshold=85,top=d.y,bottom=window.innerHeight-d.y;
+  let speed=0;
+  if(top<threshold)speed=-Math.min(18,Math.max(0,(threshold-top)/5));
+  else if(bottom<threshold)speed=Math.min(18,Math.max(0,(threshold-bottom)/5));
+  if(speed){
+    const before=window.scrollY;
+    window.scrollBy(0,speed);
+    if(before!==window.scrollY&&d.moved)v6DragPosition(d,d.x,d.y);
+  }
+  d.frame=requestAnimationFrame(()=>v6AutoScrollDrag(d));
+}
+function v6BeginDrag(handle,mode,id,x,y){
+  if(v6DragState||v6StockSortMode!=='manual')return false;
+  if(document.getElementById('searchInput').value.trim()||(document.getElementById('categoryFilter').value||'全部')!=='全部')return false;
   const card=handle.closest('[data-v6-family-card]'),list=document.getElementById('stockList');
-  if(!card||card.parentElement!==list)return;
-  e.preventDefault();
-  try{handle.setPointerCapture(e.pointerId)}catch(_){}
-  v6DragState={pointerId:e.pointerId,handle,card,list,moved:false};
+  if(!card||card.parentElement!==list)return false;
+  const d={mode,id,handle,card,list,startY:y,y,x,moved:false,before:null,frame:0};
+  v6DragState=d;
   card.classList.add('v6-dragging');
   document.body.classList.add('v6-sorting');
+  if(mode==='pointer')try{handle.setPointerCapture(id)}catch(_){}
+  d.frame=requestAnimationFrame(()=>v6AutoScrollDrag(d));
+  return true;
+}
+function v6EndDrag(commit){
+  const d=v6DragState;if(!d)return;
+  v6DragState=null;
+  if(d.frame)cancelAnimationFrame(d.frame);
+  v6ClearDragMarkers(d);
+  d.card.classList.remove('v6-dragging');
+  d.card.style.transform='';
+  d.card.style.zIndex='';
+  document.body.classList.remove('v6-sorting');
+  if(d.mode==='pointer')try{d.handle.releasePointerCapture(d.id)}catch(_){}
+  if(!commit||!d.moved)return;
+  const oldOrder=v6DragCards(d.list).map(x=>x.dataset.v6FamilyCard).join('|');
+  d.list.insertBefore(d.card,d.before);
+  const newOrder=v6DragCards(d.list).map(x=>x.dataset.v6FamilyCard).join('|');
+  if(oldOrder===newOrder)return;
+  v6CommitManualFamilyOrder();
+  renderStock();
+  showToast('卡片顺序已保存');
+}
+document.addEventListener('touchstart',e=>{
+  const handle=e.target.closest?.('[data-v6-drag-handle]');
+  const t=e.changedTouches?.[0];
+  if(!handle||!t)return;
+  if(v6BeginDrag(handle,'touch',t.identifier,t.clientX,t.clientY))e.preventDefault();
+},{passive:false});
+document.addEventListener('touchmove',e=>{
+  const d=v6DragState;if(!d||d.mode!=='touch')return;
+  const t=[...e.changedTouches].find(x=>x.identifier===d.id);
+  if(!t)return;
+  e.preventDefault();
+  d.x=t.clientX;
+  v6DragPosition(d,t.clientX,t.clientY);
+},{passive:false});
+document.addEventListener('touchend',e=>{
+  const d=v6DragState;if(d?.mode==='touch'&&[...e.changedTouches].some(x=>x.identifier===d.id))v6EndDrag(true);
+});
+document.addEventListener('touchcancel',e=>{
+  const d=v6DragState;if(d?.mode==='touch'&&[...e.changedTouches].some(x=>x.identifier===d.id))v6EndDrag(false);
+});
+document.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch')return; // handled by Touch Events on iPhone / Android
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  const handle=e.target.closest?.('[data-v6-drag-handle]');
+  if(handle&&v6BeginDrag(handle,'pointer',e.pointerId,e.clientX,e.clientY))e.preventDefault();
 });
 document.addEventListener('pointermove',e=>{
-  const d=v6DragState;if(!d||e.pointerId!==d.pointerId)return;
+  const d=v6DragState;
+  if(!d||d.mode!=='pointer'||e.pointerId!==d.id)return;
   e.preventDefault();
-  if(e.clientY<90)window.scrollBy(0,-14);
-  else if(e.clientY>window.innerHeight-90)window.scrollBy(0,14);
-  const target=[...d.list.children].find(el=>{
-    if(el===d.card||!el.dataset?.v6FamilyCard)return false;
-    const r=el.getBoundingClientRect();
-    return e.clientY>=r.top&&e.clientY<=r.bottom;
-  });
-  if(!target)return;
-  const rect=target.getBoundingClientRect();
-  if(e.clientY<rect.top+rect.height/2)d.list.insertBefore(d.card,target);
-  else d.list.insertBefore(d.card,target.nextSibling);
-  d.moved=true;
+  d.x=e.clientX;
+  v6DragPosition(d,e.clientX,e.clientY);
 });
-function v6FinishDrag(e){
-  const d=v6DragState;if(!d||e.pointerId!==d.pointerId)return;
-  try{d.handle.releasePointerCapture(e.pointerId)}catch(_){}
-  d.card.classList.remove('v6-dragging');
-  document.body.classList.remove('v6-sorting');
-  v6DragState=null;
-  if(d.moved){
-    v6CommitManualFamilyOrder();
-    renderStock();
-    showToast('卡片顺序已保存');
-  }
-}
-document.addEventListener('pointerup',v6FinishDrag);
-document.addEventListener('pointercancel',v6FinishDrag);
+document.addEventListener('pointerup',e=>{
+  if(v6DragState?.mode==='pointer'&&e.pointerId===v6DragState.id)v6EndDrag(true);
+});
+document.addEventListener('pointercancel',e=>{
+  if(v6DragState?.mode==='pointer'&&e.pointerId===v6DragState.id)v6EndDrag(false);
+});
 
 document.getElementById('stockSort')?.addEventListener('change',e=>v6SetStockSortMode(e.target.value));
 
