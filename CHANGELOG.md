@@ -2,6 +2,20 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.7.3 · iPhone Touch-safe Card Sorting
+**2026-10-09**
+
+- 修复 iPhone/Android 上自定义卡片拖动可能无法启动/中途断开的触摸事件问题。
+- 旧版在手指滑动过程中立即 `insertBefore` 重排正在捕获 pointer 的 DOM 节点，可能触发 WebKit capture 中断。新版卡片浮动跟随触摸，只有松手时才真正换位置。
+- 新增蓝色投放位置标记、浮动反馈和靠近窗口边缘自动滚动；滚动位置纳入浮动坐标。
+- 移动端使用 `touchstart/touchmove/touchend/touchcancel`（`touchmove` 显式非 passive），鼠标/触控笔仍使用 Pointer Events。
+- 无排序变化或触摸取消时不写 `sortRank`；发生变化时继续由 `v6CommitManualFamilyOrder()` 落库，原 SKU/商品族/库存和 Cloud 语义不变。
+- 继续要求 **自定义拖动 + 全部分类 + 空搜索**，抓住卡顶的 `⠿ 拖动排序`，卡面点击仍只展开商品规格。
+- 不触及 `cassola_inventory_v01` 的现有库存值、订单、历史、员工资料、权限、Cloud Head，也不清空任何 localStorage / IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v089`。
+
+---
+
 ## UI Hotfix · Staff Weekly Rest Table Light Theme
 **2026-10-09**
 
