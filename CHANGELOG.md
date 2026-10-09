@@ -2,6 +2,30 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.7.1 · Zero Stock + Sortable Cards
+**2026-10-09**
+
+- 修复库存首页 **“设库存 / 手动调整”无法保存 0**：
+  - `adjust` 允许 `0`
+  - 到货 / 报损 / 内部转换仍要求数量 > 0
+  - 因此像“已消耗 → 0 箱”现在可以正常落账并写标准 adjust history。
+- Inventory 首页新增卡片排序器：
+  - 分类 · 商品名
+  - 商品名
+  - 供应商
+  - 需补货优先
+  - 自定义拖动
+- **自定义拖动**按商品卡 / family 排序，不拆散同商品的不同规格 / 品牌。
+- 拖动采用 Pointer Events + 专用 `⠿` handle，支持 iPhone / Android 触摸；拖动时接近屏幕上下边缘会轻微自动滚动。
+- 只有搜索为空、分类为“全部”时允许拖动，避免对过滤后的局部列表写入错误全局顺序。
+- 手动排序保存为 SKU 可选字段 `sortRank`；同 family 的 variants 共用 rank，随 Inventory JSON / Cloud scope 同步。
+- 排序查看模式单独保存在本机 `cassola_stock_sort_v01`，不强迫所有设备使用同一排序模式。
+- JSON handoff diff 现在也把 `sortRank` 计入 SKU 资料变化。
+- 不清空 `cassola_inventory_v01`、订单、历史、Staff、Employee drafts / Outbox 或头像 IndexedDB。
+- Service Worker cache 更新为 `cassola-suite-v086`。
+
+---
+
 ## Inventory v0.7 · Product Families + Packaging Reports
 **2026-10-06**
 
