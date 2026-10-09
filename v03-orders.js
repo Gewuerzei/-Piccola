@@ -1,4 +1,4 @@
-/* Inventory v0.7.1 · product families + card sorting + active receiving archive */
+/* Inventory v0.7.2 · visual category sections + product families + card sorting */
 let v4ArchiveYearOpen=null;
 let v4ArchiveQuarterOpen=null;
 let v4ArchiveWeekOpen=null;
@@ -136,7 +136,24 @@ renderStock=function(){
       </div>
     </article>`;
   }
-  document.getElementById('stockList').innerHTML=families.length?families.map(familyCard).join(''):'<div class="empty">这个区域还没有匹配的 SKU 🗿</div>';
+  // Keep canonical SKU categories unchanged. This groups cards visually only;
+  // manual drag mode still renders direct card children with no section headers.
+  const visibleCardsHtml=(()=>{
+    if(v6StockSortMode!=='category'||cat!=='全部')return families.map(familyCard).join('');
+    const categoryNames=[...new Set(families.map(g=>String(g.rows[0]?.category||'未分类')))];
+    categoryNames.sort((a,b)=>{
+      const ai=categories.indexOf(a),bi=categories.indexOf(b);
+      if(ai!==bi)return (ai<0?999:ai)-(bi<0?999:bi);
+      return a.localeCompare(b,'zh-CN',{numeric:true,sensitivity:'base'});
+    });
+    return categoryNames.map(category=>{
+      const groups=families.filter(g=>String(g.rows[0]?.category||'未分类')===category);
+      const totalSkus=groups.reduce((sum,g)=>sum+g.rows.length,0);
+      const title=`<div class="v6-stock-category-head"><span class="v6-category-name">${categoryIcons[category]||'📦'} ${escapeHtml(category)}</span><span class="v6-category-count">${groups.length} 张商品卡 · ${totalSkus} 个 SKU</span></div>`;
+      return title+groups.map(familyCard).join('');
+    }).join('');
+  })();
+  document.getElementById('stockList').innerHTML=families.length?visibleCardsHtml:'<div class="empty">这个区域还没有匹配的 SKU 🗿</div>';
   const areaSkus=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter);
   const alerts=areaSkus.filter(x=>['zero','red','yellow'].includes(v3Level(x))).length;
   const pending=Object.keys(state.order).filter(id=>Number(state.order[id])>0&&v4AreaOf(sku(id))===v4AreaFilter).length;
