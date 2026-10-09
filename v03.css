@@ -447,3 +447,31 @@ body.v6-sorting{overscroll-behavior:none}
 .v6-category-name{font-size:12px;font-weight:900;color:var(--text)}
 .v6-category-count{font-size:9px;font-weight:750;color:var(--muted);text-align:right}
 :root[data-theme="light"] .v6-stock-category-head{background:rgba(31,37,48,.045)}
+
+
+/* Inventory v0.7.3 · drag preview and drop target */
+.v6-sortable-card.v6-dragging{
+  opacity:.96;
+  transition:none!important;
+  will-change:transform;
+  border-color:color-mix(in srgb,var(--accent) 40%,var(--line));
+  box-shadow:0 20px 46px rgba(0,0,0,.33);
+  cursor:grabbing;
+}
+.v6-sortable-card.v6-drop-before::before,
+.v6-sortable-card.v6-drop-last::after{
+  content:"";
+  position:absolute;
+  left:8px;right:8px;
+  height:4px;border-radius:999px;
+  background:var(--soft-blue);
+  box-shadow:0 0 0 3px var(--soft-blue-bg);
+  z-index:9;pointer-events:none;
+}
+.v6-sortable-card.v6-drop-before::before{top:-8px}
+.v6-sortable-card.v6-drop-last::after{bottom:-8px}
+body.v6-sorting,body.v6-sorting .v6-drag-handle{
+  -webkit-user-select:none;
+  user-select:none;
+}
+body.v6-sorting .v6-drag-handle{cursor:grabbing}
