@@ -434,3 +434,16 @@ body.v6-sorting{overscroll-behavior:none}
   .v6-family-value .stock-value{font-size:18px;min-width:66px}
   .v6-variant-row .sku-top{align-items:flex-start}
 }
+
+
+/* Inventory v0.7.2 · category headers are view-only, not canonical SKU changes */
+.v6-stock-category-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin:14px 3px 0;padding:10px 12px;
+  border-radius:16px;background:rgba(185,201,255,.055);
+  border:1px solid var(--line)
+}
+.v6-stock-category-head:first-child{margin-top:1px}
+.v6-category-name{font-size:12px;font-weight:900;color:var(--text)}
+.v6-category-count{font-size:9px;font-weight:750;color:var(--muted);text-align:right}
+:root[data-theme="light"] .v6-stock-category-head{background:rgba(31,37,48,.045)}
