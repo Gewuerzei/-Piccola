@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.7 · Product Families + Week / Quarter / Year Archive**
+- Inventory: **v0.7.1 · Product Families + Manual Card Sorting + Week / Quarter / Year Archive**
 - Staff: **v0.4.4 · Staff Cloud + Shared Role Tasks**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
@@ -583,6 +583,16 @@ SKU 可使用手动阈值或历史周耗。
 - 这是视图 / DOM 按需加载优化，不删除、不裁剪 `placedOrders` 历史数据
 - 订单与时间节点都按新到旧显示
 - 不改变 `cassola_inventory_v01`
+
+### Inventory 卡片排序 / 手动拖动
+- Inventory 首页新增排序模式：**分类 · 商品名 / 商品名 / 供应商 / 需补货优先 / 自定义拖动**。
+- 排序对象是“商品卡 / family”，不是拆开的 SKU variant；同一商品卡里的不同规格 / 品牌继续折叠在卡内。
+- **自定义拖动**使用商品卡顶部的 `⠿ 拖动排序` handle，基于 Pointer Events，iPhone / Android 触摸和桌面鼠标都走同一套逻辑。
+- 为避免在过滤后的残缺列表里误改全局顺序，只有 **搜索为空 + 分类=全部** 时才显示拖动 handle；有筛选时仍按已保存的手动顺序显示，但不能拖。
+- 手动顺序写入具体 SKU 的可选 `sortRank` 字段；同一 family 的所有 variant 使用同一个 rank。它随 Inventory JSON / Cloud scope 一起同步，不改 SKU id、库存、订单或历史。
+- 排序模式本身只保存为本机 UI preference：`cassola_stock_sort_v01`。也就是说不同设备可以选择不同查看方式，但“自定义顺序”本身是 canonical SKU metadata，可随 Cloud 同步。
+- 新 SKU 没有 `sortRank` 时，在手动模式中排在已有手动排序卡片之后；第一次拖动后当前 area 的完整商品卡顺序会统一写 rank。
+- “设库存 / 手动调整”允许目标库存为 **0**；到货、报损、内部转换仍要求数量 > 0，避免把“动作数量 0”和“库存归零”混为一谈。
 
 ### Product Family / SKU Card Layer
 
