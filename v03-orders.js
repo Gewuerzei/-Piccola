@@ -1,10 +1,87 @@
-/* Inventory v0.7 · product families + active receiving archive */
+/* Inventory v0.7.1 · product families + card sorting + active receiving archive */
 let v4ArchiveYearOpen=null;
 let v4ArchiveQuarterOpen=null;
 let v4ArchiveWeekOpen=null;
 const v4ExpandedSettledOrders=new Set();
 const v6ExpandedFamilies=new Set();
 let v4PendingFocusIndex=0;
+
+const V6_STOCK_SORT_KEY='cassola_stock_sort_v01';
+const V6_STOCK_SORT_MODES=new Set(['category','name','supplier','attention','manual']);
+let v6StockSortMode=(()=>{
+  try{
+    const x=localStorage.getItem(V6_STOCK_SORT_KEY)||'category';
+    return V6_STOCK_SORT_MODES.has(x)?x:'category';
+  }catch(_){return'category'}
+})();
+let v6DragState=null;
+
+function v6FamilyAutoCompare(a,b){return v6SkuCompare(a.rows[0],b.rows[0])}
+function v6FamilyRank(g){
+  const ranks=g.rows.map(x=>Number(x.sortRank)).filter(Number.isFinite);
+  return ranks.length?Math.min(...ranks):Infinity;
+}
+function v6FamilySupplier(g){
+  return [...new Set(g.rows.map(x=>String(x.supplier||'')).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN',{numeric:true,sensitivity:'base'}))[0]||'';
+}
+function v6FamilyAttention(g){
+  const score={zero:5,red:4,yellow:3,blue:2,ok:1};
+  return Math.max(...g.rows.map(x=>score[v3Level(x)]||0),0);
+}
+function v6SortFamilies(families){
+  const mode=v6StockSortMode;
+  return families.slice().sort((a,b)=>{
+    if(mode==='manual'){
+      const ar=v6FamilyRank(a),br=v6FamilyRank(b);
+      if(ar!==br){
+        if(!Number.isFinite(ar))return 1;
+        if(!Number.isFinite(br))return-1;
+        return ar-br;
+      }
+    }else if(mode==='name'){
+      const n=a.name.localeCompare(b.name,'zh-CN',{numeric:true,sensitivity:'base'});
+      if(n)return n;
+    }else if(mode==='supplier'){
+      const n=v6FamilySupplier(a).localeCompare(v6FamilySupplier(b),'zh-CN',{numeric:true,sensitivity:'base'});
+      if(n)return n;
+    }else if(mode==='attention'){
+      const n=v6FamilyAttention(b)-v6FamilyAttention(a);
+      if(n)return n;
+    }
+    return v6FamilyAutoCompare(a,b);
+  });
+}
+function v6SetStockSortMode(mode){
+  v6StockSortMode=V6_STOCK_SORT_MODES.has(mode)?mode:'category';
+  try{localStorage.setItem(V6_STOCK_SORT_KEY,v6StockSortMode)}catch(_){}
+  renderStock();
+}
+function v6SyncStockSortUi(q='',cat='全部'){
+  const sel=document.getElementById('stockSort'),hint=document.getElementById('stockSortHint');
+  if(sel&&sel.value!==v6StockSortMode)sel.value=v6StockSortMode;
+  if(!hint)return;
+  const messages={
+    category:'先按分类，再按商品卡 / 品牌 / 规格排列。',
+    name:'按商品卡名称排列，不改变正式库存数据。',
+    supplier:'按供应商排列，同商品不同规格仍折叠在一张卡。',
+    attention:'见底 / 红 / 黄库存优先显示。',
+    manual:(q||cat!=='全部')?'清除搜索并选择“全部分类”后，可直接拖动商品卡。':'抓住每张卡顶部的 ⠿，上下拖动即可保存顺序。'
+  };
+  hint.textContent=messages[v6StockSortMode]||messages.category;
+}
+function v6CommitManualFamilyOrder(){
+  const list=document.getElementById('stockList');if(!list)return;
+  const ids=[...list.children].map(x=>x.dataset?.v6FamilyCard).filter(Boolean);
+  if(!ids.length)return;
+  const ranks=new Map(ids.map((id,i)=>[String(id),(i+1)*100]));
+  (state.skus||[]).forEach(x=>{
+    if(v4AreaOf(x)!==v4AreaFilter)return;
+    const rank=ranks.get(v6FamilyId(x));
+    if(rank!=null)x.sortRank=rank;
+  });
+  saveState();
+}
+
 
 renderCategoryFilter=function(){
   const el=document.getElementById('categoryFilter'),cur=el.value||'全部';
@@ -29,20 +106,24 @@ renderStock=function(){
   v4RenderAreaTabs();
   const q=document.getElementById('searchInput').value.trim().toLowerCase();
   const cat=document.getElementById('categoryFilter').value||'全部';
+  v6SyncStockSortUi(q,cat);
   const areaRows=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter).filter(x=>cat==='全部'||x.category===cat);
-  const families=v6SkuFamilies(areaRows).filter(g=>!q||g.rows.some(x=>`${x.name} ${x.familyName||''} ${x.brand||''} ${x.spec} ${x.supplier}`.toLowerCase().includes(q)));
-  function singleCard(x){
+  const families=v6SortFamilies(v6SkuFamilies(areaRows).filter(g=>!q||g.rows.some(x=>`${x.name} ${x.familyName||''} ${x.brand||''} ${x.spec} ${x.supplier}`.toLowerCase().includes(q))));
+  const canDrag=v6StockSortMode==='manual'&&!q&&cat==='全部';
+  const dragHandle=g=>canDrag?`<button type="button" class="v6-drag-handle" data-v6-drag-handle aria-label="拖动 ${escapeHtml(g.name)} 排序"><span>⠿</span> 拖动排序</button>`:'';
+  function singleCard(x,g){
     const use=v3WeeklyUse(x);
-    return `<article class="sku-card"><div class="sku-top"><div class="sku-main"><div class="sku-icon">${v3Icon(x)}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta">${x.spec?`<span class="meta-pill spec">${escapeHtml(x.spec)}</span>`:''}${x.brand?`<span class="meta-pill">🏷️ ${escapeHtml(x.brand)}</span>`:''}<span class="meta-pill">${categoryIcons[x.category]||'📦'} ${escapeHtml(x.category)}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div><div class="sku-actions v3-four"><button class="mini-btn" data-action="operate" data-id="${x.id}">到货/报损</button><button class="mini-btn" data-action="order" data-id="${x.id}">＋订货</button><button class="mini-btn" data-action="set" data-id="${x.id}">设库存</button><button class="mini-btn" data-v3-edit="${x.id}">编辑</button></div></article>`;
+    return `<article class="sku-card v6-sortable-card" data-v6-family-card="${escapeHtml(g.id)}">${dragHandle(g)}<div class="sku-top"><div class="sku-main"><div class="sku-icon">${v3Icon(x)}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta">${x.spec?`<span class="meta-pill spec">${escapeHtml(x.spec)}</span>`:''}${x.brand?`<span class="meta-pill">🏷️ ${escapeHtml(x.brand)}</span>`:''}<span class="meta-pill">${categoryIcons[x.category]||'📦'} ${escapeHtml(x.category)}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div><div class="sku-actions v3-four"><button class="mini-btn" data-action="operate" data-id="${x.id}">到货/报损</button><button class="mini-btn" data-action="order" data-id="${x.id}">＋订货</button><button class="mini-btn" data-action="set" data-id="${x.id}">设库存</button><button class="mini-btn" data-v3-edit="${x.id}">编辑</button></div></article>`;
   }
   function familyCard(g){
-    if(g.rows.length===1)return singleCard(g.rows[0]);
+    if(g.rows.length===1)return singleCard(g.rows[0],g);
     const expanded=v6ExpandedFamilies.has(g.id),summary=v6FamilyStockSummary(g.rows);
     const severity={zero:5,red:4,yellow:3,blue:2,ok:1};
     const worst=g.rows.slice().sort((a,b)=>(severity[v3Level(b)]||0)-(severity[v3Level(a)]||0))[0];
     const alerts=g.rows.filter(x=>['zero','red','yellow'].includes(v3Level(x))).length;
     const icon=v3Icon(g.rows[0]),category=g.rows[0].category;
-    return `<article class="sku-card v6-family-card ${expanded?'expanded':''}">
+    return `<article class="sku-card v6-family-card v6-sortable-card ${expanded?'expanded':''}" data-v6-family-card="${escapeHtml(g.id)}">
+      ${dragHandle(g)}
       <button type="button" class="v6-family-toggle" data-v6-family-toggle="${escapeHtml(g.id)}" aria-expanded="${expanded?'true':'false'}">
         <div class="sku-main"><div class="sku-icon">${icon}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(g.name)}</div><div class="sku-meta"><span class="meta-pill">${categoryIcons[category]||'📦'} ${escapeHtml(category)}</span><span class="meta-pill">🗂️ ${g.rows.length} 个 SKU</span>${alerts?`<span class="meta-pill v6-alert">⚠️ ${alerts} 项</span>`:''}</div><div class="v3-stock-hint">${escapeHtml(summary.detail||'混合包装')} · 点开看规格 / 品牌</div></div></div>
         <div class="v6-family-value"><div class="stock-value v3-${v3Level(worst)}">${escapeHtml(summary.main)} <small>${escapeHtml(summary.unit)}</small></div><span class="v6-family-chevron">⌄</span></div>
@@ -69,6 +150,51 @@ document.addEventListener('click',e=>{
   if(v6ExpandedFamilies.has(id))v6ExpandedFamilies.delete(id);else v6ExpandedFamilies.add(id);
   renderStock();
 });
+
+document.addEventListener('pointerdown',e=>{
+  const handle=e.target.closest('[data-v6-drag-handle]');
+  if(!handle||v6StockSortMode!=='manual')return;
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  const card=handle.closest('[data-v6-family-card]'),list=document.getElementById('stockList');
+  if(!card||card.parentElement!==list)return;
+  e.preventDefault();
+  try{handle.setPointerCapture(e.pointerId)}catch(_){}
+  v6DragState={pointerId:e.pointerId,handle,card,list,moved:false};
+  card.classList.add('v6-dragging');
+  document.body.classList.add('v6-sorting');
+});
+document.addEventListener('pointermove',e=>{
+  const d=v6DragState;if(!d||e.pointerId!==d.pointerId)return;
+  e.preventDefault();
+  if(e.clientY<90)window.scrollBy(0,-14);
+  else if(e.clientY>window.innerHeight-90)window.scrollBy(0,14);
+  const target=[...d.list.children].find(el=>{
+    if(el===d.card||!el.dataset?.v6FamilyCard)return false;
+    const r=el.getBoundingClientRect();
+    return e.clientY>=r.top&&e.clientY<=r.bottom;
+  });
+  if(!target)return;
+  const rect=target.getBoundingClientRect();
+  if(e.clientY<rect.top+rect.height/2)d.list.insertBefore(d.card,target);
+  else d.list.insertBefore(d.card,target.nextSibling);
+  d.moved=true;
+});
+function v6FinishDrag(e){
+  const d=v6DragState;if(!d||e.pointerId!==d.pointerId)return;
+  try{d.handle.releasePointerCapture(e.pointerId)}catch(_){}
+  d.card.classList.remove('v6-dragging');
+  document.body.classList.remove('v6-sorting');
+  v6DragState=null;
+  if(d.moved){
+    v6CommitManualFamilyOrder();
+    renderStock();
+    showToast('卡片顺序已保存');
+  }
+}
+document.addEventListener('pointerup',v6FinishDrag);
+document.addEventListener('pointercancel',v6FinishDrag);
+
+document.getElementById('stockSort')?.addEventListener('change',e=>v6SetStockSortMode(e.target.value));
 
 renderCount=function(){
   v4RenderAreaTabs();
