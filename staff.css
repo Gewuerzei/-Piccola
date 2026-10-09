@@ -368,3 +368,67 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
 }
 :root[data-theme="light"] .staff-task-builder{background:rgba(31,37,48,.035)}
 
+
+
+/* Staff week table light-theme completion v0.1 (2026-10-09)
+   The outer weekly card was light, but its sticky header and sticky name
+   column still used hard-coded dark surfaces. Keep all overrides theme-scoped.
+   Presentation only: no changes to attendance, people, swaps or publications. */
+:root[data-theme="light"] .staff-week-wrap{
+  background:linear-gradient(145deg,rgba(255,255,255,.99),rgba(246,243,237,.98));
+  border-color:var(--line);
+}
+:root[data-theme="light"] .staff-week-header{
+  background:#eae7e0;
+  color:var(--text);
+  border-bottom:1px solid rgba(31,37,48,.13);
+}
+:root[data-theme="light"] .staff-week-person{
+  background:#fffdfa;
+  color:var(--text);
+  border-right:1px solid rgba(31,37,48,.12);
+}
+:root[data-theme="light"] .staff-week-row{
+  border-bottom:1px solid rgba(31,37,48,.09);
+}
+:root[data-theme="light"] .staff-week-row:last-child{border-bottom:0}
+:root[data-theme="light"] .staff-week-row:nth-of-type(even){
+  background:rgba(31,37,48,.018);
+}
+:root[data-theme="light"] .staff-week-cell{
+  border-right:1px solid rgba(31,37,48,.075);
+  color:var(--text);
+}
+:root[data-theme="light"] .staff-week-cell:active{
+  background:rgba(31,37,48,.09);
+}
+:root[data-theme="light"] .staff-week-avatar{
+  background:rgba(31,37,48,.045);
+  border-color:rgba(31,37,48,.10);
+}
+:root[data-theme="light"] .staff-week-cell.status-rest{
+  background:rgba(72,95,150,.10);
+}
+:root[data-theme="light"] .staff-week-cell.status-leave{
+  background:rgba(155,117,37,.105);
+}
+:root[data-theme="light"] .staff-week-cell.status-swap{
+  background:rgba(79,139,96,.11);
+}
+:root[data-theme="light"] .staff-week-cell.status-absent{
+  background:rgba(200,95,103,.11);
+}
+:root[data-theme="light"] .staff-week-cell.has-swap{
+  box-shadow:inset 0 0 0 1px rgba(79,139,96,.18);
+}
+:root[data-theme="light"] .staff-week-cell.has-move{
+  box-shadow:inset 0 0 0 1px rgba(155,117,37,.20);
+}
+:root[data-theme="light"] .staff-status-legend span{
+  background:rgba(31,37,48,.045);
+  border-color:var(--line);
+}
+:root[data-theme="light"] .staff-month-row.has-absence{
+  background:linear-gradient(145deg,rgba(200,95,103,.065),rgba(246,243,237,.98));
+  border-color:rgba(200,95,103,.25);
+}
