@@ -76,7 +76,7 @@ function v31Diff(incoming){
     const a=localMap.get(id),b=inMap.get(id);
     if(!a||!b){skuChanges++;return}
     if(Number(a.qty)!==Number(b.qty))stock++;
-    if([a.name,a.familyId,a.familyName,a.brand,a.spec,a.unit,a.orderUnit,a.unitsPerOrder,a.category,a.supplier,a.area,a.icon,a.warningMode,a.targetQty,a.targetWeeks,a.autoOrder].join('|')!==[b.name,b.familyId,b.familyName,b.brand,b.spec,b.unit,b.orderUnit,b.unitsPerOrder,b.category,b.supplier,b.area,b.icon,b.warningMode,b.targetQty,b.targetWeeks,b.autoOrder].join('|'))skuChanges++;
+    if([a.name,a.familyId,a.familyName,a.brand,a.spec,a.unit,a.orderUnit,a.unitsPerOrder,a.category,a.supplier,a.area,a.icon,a.warningMode,a.targetQty,a.targetWeeks,a.autoOrder,a.sortRank].join('|')!==[b.name,b.familyId,b.familyName,b.brand,b.spec,b.unit,b.orderUnit,b.unitsPerOrder,b.category,b.supplier,b.area,b.icon,b.warningMode,b.targetQty,b.targetWeeks,b.autoOrder,b.sortRank].join('|'))skuChanges++;
   });
   const localHist=new Set((state.history||[]).map(h=>h.id));
   const newHistory=(incoming.history||[]).filter(h=>!localHist.has(h.id)).length;
