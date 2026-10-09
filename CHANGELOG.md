@@ -2,6 +2,19 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.7.2 · Category Sections + Sort Rank Fix
+**2026-10-09**
+
+- “分类 · 商品名”模式下，Inventory 首页按现有正式 SKU category 显示分区标题、商品卡数和 SKU 数；不改变 SKU / 数量 / 分类 / Cloud Head。
+- 内置分类显示顺序补充 **🐟 鲜鱼**，使已存在的鲜鱼 SKU 不再被放到未知类别的末尾；旧的自定义分类仍完整保留。
+- 自定义拖动模式不渲染分类标题，仍可直接拖动商品卡。
+- 修复无手动排名的 `sortRank = null` 被 `Number(null)` 误认成 0、导致新卡片跑到手动排序首位的问题。
+- 现有员工蔬果责任区、任务 scope 不变，绝不自动重归类正式 SKU；必要的业务重归类继续由 Supervisor 人工完成。
+- 不清空 Inventory / Staff / Employee drafts / Outbox / IndexedDB，也不自动下载或修改 Cloud Head。
+- Service Worker cache 更新为 `cassola-suite-v087`。
+
+---
+
 ## Inventory v0.7.1 · Zero Stock + Sortable Cards
 **2026-10-09**
 
