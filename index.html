@@ -56,6 +56,18 @@
         <select id="categoryFilter" aria-label="分类筛选"></select>
         <button id="addSkuBtn" class="btn primary compact">＋ SKU</button>
       </div>
+      <div class="v6-stock-sortbar">
+        <label>排序
+          <select id="stockSort" aria-label="库存卡片排序">
+            <option value="category">分类 · 商品名</option>
+            <option value="name">商品名</option>
+            <option value="supplier">供应商</option>
+            <option value="attention">需补货优先</option>
+            <option value="manual">自定义拖动</option>
+          </select>
+        </label>
+        <span id="stockSortHint">同类商品会自动靠在一起。</span>
+      </div>
       <div id="stockSummary" class="summary-grid"></div>
       <div id="stockList" class="card-list"></div>
     </section>
