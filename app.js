@@ -281,7 +281,7 @@ function confirmAction(e){
   e.preventDefault();
   const id=document.getElementById('dialogSkuId').value; const s=sku(id); if(!s)return;
   const type=document.getElementById('actionType').value; const qty=parseLocaleDecimal(document.getElementById('actionQty').value); const note=document.getElementById('actionNote').value.trim();
-  if(!Number.isFinite(qty)||qty<=0){showToast('数量要大于 0');return;}
+  if(!Number.isFinite(qty)||qty<0||(type!=='adjust'&&qty<=0)){showToast(type==='adjust'?'库存不能小于 0':'数量要大于 0');return;}
   if(type==='arrival'){
     s.qty=Number(s.qty)+qty; addHistory('arrival',id,`+${fmt(qty)} ${s.unit} → ${fmt(s.qty)} ${s.unit}`,note);
   } else if(type==='loss'){
