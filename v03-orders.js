@@ -18,7 +18,7 @@ let v6DragState=null;
 
 function v6FamilyAutoCompare(a,b){return v6SkuCompare(a.rows[0],b.rows[0])}
 function v6FamilyRank(g){
-  const ranks=g.rows.map(x=>Number(x.sortRank)).filter(Number.isFinite);
+  const ranks=g.rows.map(x=>x.sortRank==null||x.sortRank===''?NaN:Number(x.sortRank)).filter(Number.isFinite);
   return ranks.length?Math.min(...ranks):Infinity;
 }
 function v6FamilySupplier(g){
