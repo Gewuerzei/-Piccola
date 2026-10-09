@@ -418,6 +418,7 @@ Supervisor：
 - Staff 不是独立主题。Inventory / Staff / Orders / Receiving 必须同时响应 `document.documentElement.dataset.theme / dataset.accent`。
 - Access Gate / Supervisor Hub / Employee 全屏入口也必须响应设备主题；这些页面不能保留硬编码 `#101218` 石头洞背景。
 - Orders / Receiving 与 Staff 的硬编码深色 surface 必须提供 light-theme override，不能出现“外层日间、收货卡仍黑色”的断层。
+- Staff **周休息表**亮色主题需要同时覆盖 `.staff-week-wrap` 外框、`.staff-week-header` 固定日期头、`.staff-week-person` 横向滚动时固定的姓名列，以及行分隔线、status 单元格和图例。此前仅外框亮色，内部 header/name 仍写死深色 `#202531` / `#1c202a`；2026-10-09 通过 staff.css 的主题限定覆盖修复。只修改 CSS，不改 `cassola_staff_v01`、头像、周表发布版本或 Cloud。
 - Accent 按钮使用直接绑定的 click handler，并同步 `active / aria-pressed`；这是为 iPhone PWA 现场点击可靠性做的 hotfix，不要退回只靠 document delegation。
 - 主题读取会校验 mode / accent 白名单；异常主题值只回退主题默认值，**不得清空任何 Inventory / Staff localStorage**。
 - 主题是**设备个人偏好**，不进入 Inventory Cloud snapshot。
