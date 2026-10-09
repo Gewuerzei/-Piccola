@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## UI Hotfix · Staff Weekly Rest Table Light Theme
+**2026-10-09**
+
+- 修复 Staff 日间主题下“周休息表外框已经变白，内部日期表头和姓名固定列仍是黑色”的样式断层。
+- 根因：`.staff-week-header` 固定背景 `#202531`，`.staff-week-person` 固定背景 `#1c202a`；之前的 light-theme override 仅覆盖了周表外框。
+- 日间模式补齐表头 / sticky 姓名列的浅色背景、行列分隔线、头像、图例及休息 / 请假 / 调休 / 缺勤状态色；月度缺勤提示也保持浅色背景与明显的警示边框。
+- 所有新规则限定在 `:root[data-theme="light"]`，夜间主题的既有深色规则保持不变。
+- **纯 CSS 调整**，不清空或修改 Staff / Inventory / 头像 / 已发布周表 / Cloud Head。
+- Service Worker cache 更新为 `cassola-suite-v088`。
+
+---
+
 ## Inventory v0.7.2 · Category Sections + Sort Rank Fix
 **2026-10-09**
 
