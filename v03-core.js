@@ -101,6 +101,7 @@ function v3NormalizeSku(s){
   if(!String(s.familyId||'').trim())s.familyId=v6FamilyKey(s.familyName);
   if(!String(s.brand||'').trim()&&familyDefault?.brand)s.brand=familyDefault.brand;
   s.brand=String(s.brand||'').trim();
+  s.sortRank=v3Num(s.sortRank);
   ['blueAt','yellowAt','redAt','targetQty','manualWeeklyUse'].forEach(k=>{s[k]=v3Num(s[k])});
   s.targetWeeks=v3Num(s.targetWeeks)??v3DefaultWeeks(s.category);
   s.orderUnit=String(s.orderUnit||s.unit||'').trim()||s.unit||'';
