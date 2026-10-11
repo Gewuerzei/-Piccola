@@ -996,6 +996,36 @@
       else downloadBlob(file,file.name);
     }catch(e){if(e.name!=='AbortError')downloadBlob(file,file.name)}
   }
+  // The weekly PDF embeds a raster Canvas. Render icon + label as pixels so
+  // recipients do not need a PDF Emoji font; no employee data is changed.
+  const WEEK_PDF_STATUS={
+    work:  {icon:'💼',label:'上班',bg:'#f0f2f5',fg:'#445163'},
+    rest:  {icon:'🌙',label:'休息',bg:'#e5edff',fg:'#3058a1'},
+    leave: {icon:'📝',label:'请假',bg:'#fff0d3',fg:'#946219'},
+    swap:  {icon:'🔧',label:'调休',bg:'#e1f3e8',fg:'#2e7955'},
+    absent:{icon:'❌',label:'缺勤',bg:'#ffe3e5',fg:'#a52935'}
+  };
+  function weekPdfStatus(st){return WEEK_PDF_STATUS[st]||WEEK_PDF_STATUS.work}
+  function drawWeekPdfCell(ctx,st,rec,x,y,w,h){
+    const status=weekPdfStatus(st),compact=h<58,boxW=Math.min(w-14,142),boxH=Math.min(h-9,74);
+    const bx=x+(w-boxW)/2,by=y+(h-boxH)/2;
+    ctx.save();
+    ctx.fillStyle=status.bg;roundRect(ctx,bx,by,boxW,boxH,Math.min(17,boxH*.27));ctx.fill();
+    const portion=st!=='work'?(rec?.portion==='am'?'上午':rec?.portion==='pm'?'下午':''):'';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    if(compact){
+      ctx.font=Math.max(18,Math.min(25,boxH*.54))+'px "Apple Color Emoji","Segoe UI Emoji",system-ui,sans-serif';
+      ctx.fillText(status.icon,bx+boxW*.29,by+boxH*.49,boxW*.30);
+      ctx.fillStyle=status.fg;ctx.font='800 '+Math.max(14,Math.min(18,boxH*.42))+'px system-ui,sans-serif';
+      ctx.fillText(portion?status.label+'·'+portion:status.label,bx+boxW*.67,by+boxH*.52,boxW*.62);
+    }else{
+      ctx.font=Math.min(35,boxH*.47)+'px "Apple Color Emoji","Segoe UI Emoji",system-ui,sans-serif';
+      ctx.fillText(status.icon,bx+boxW/2,by+boxH*.36,boxW-10);
+      ctx.fillStyle=status.fg;ctx.font='800 '+Math.min(20,boxH*.30)+'px system-ui,sans-serif';
+      ctx.fillText(portion?status.label+'·'+portion:status.label,bx+boxW/2,by+boxH*.79,boxW-12);
+    }
+    ctx.restore();
+  }
   async function generateWeekPdf(){
     const people=state.people.filter(p=>p.active!==false);if(!people.length){toast('还没有人员');return}
     toast('正在生成周表 PDF…');
@@ -1005,25 +1035,62 @@
     const fileVersion=latest&&!pending?('v'+latest.version):('draft-r'+state.syncMeta.revision);
     const W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 周休息表',70,82);
-    ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(weekLabel(currentDate)+' · '+releaseLabel,72,128);
-    const left=70,top=180,nameW=300,colW=(W-left*2-nameW)/7;
-    const rowH=Math.min(68,(H-top-75)/(people.length+1));
+    ctx.fillStyle='#151821';ctx.font='800 56px system-ui,sans-serif';ctx.fillText('Cassola · 周休息表',70,86);
+    ctx.fillStyle='#566274';ctx.font='600 28px system-ui,sans-serif';ctx.fillText(weekLabel(currentDate)+' · '+releaseLabel,72,134);
+    ctx.fillStyle='#e3e8ef';ctx.fillRect(70,160,W-140,2);
+    const left=70,right=W-70,top=195,nameW=272,tableW=right-left,colW=(tableW-nameW)/7;
+    // Reserve space for a five-item key and footer. Eight staff now use most
+    // of the sheet instead of leaving half of the paper empty.
+    const rowH=Math.min(96,(H-top-190)/(people.length+1));
     const days=['一','二','三','四','五','六','日'];
-    ctx.font='700 22px system-ui,sans-serif';
-    ctx.fillStyle='#f0f2f5';ctx.fillRect(left,top,W-left*2,rowH);
-    ctx.fillStyle='#242a35';ctx.fillText('人员',left+16,top+rowH*.65);
-    dates.forEach((d,i)=>{ctx.fillText('周'+days[i]+' '+d.slice(5).replace('-','/'),left+nameW+i*colW+12,top+rowH*.65)});
+    ctx.fillStyle='#edf1f6';ctx.fillRect(left,top,tableW,rowH);
+    // Weekend columns remain subtle, so status colours stay the main signal.
+    ctx.fillStyle='#e5ebf4';ctx.fillRect(left+nameW+colW*5,top,colW*2,rowH);
+    ctx.save();ctx.textBaseline='middle';
+    ctx.fillStyle='#253145';ctx.font='800 '+Math.min(26,rowH*.36)+'px system-ui,sans-serif';
+    ctx.fillText('人员',left+20,top+rowH*.50,nameW-32);
+    dates.forEach((d,i)=>{
+      const cx=left+nameW+(i+.5)*colW;
+      ctx.textAlign='center';
+      if(rowH<55){
+        ctx.font='800 18px system-ui,sans-serif';
+        ctx.fillText('周'+days[i]+' '+d.slice(5).replace('-','/'),cx,top+rowH*.52,colW-10);
+      }else{
+        ctx.font='800 '+Math.min(26,rowH*.33)+'px system-ui,sans-serif';
+        ctx.fillText('周'+days[i],cx,top+rowH*.35,colW-12);
+        ctx.font='600 '+Math.min(19,rowH*.24)+'px system-ui,sans-serif';
+        ctx.fillStyle='#637188';ctx.fillText(d.slice(5).replace('-','/'),cx,top+rowH*.74,colW-12);
+        ctx.fillStyle='#253145';
+      }
+    });
+    ctx.restore();
     people.forEach((p,ri)=>{
-      const y=top+rowH*(ri+1);ctx.fillStyle=ri%2?'#fafafa':'#f5f6f8';ctx.fillRect(left,y,W-left*2,rowH);
-      ctx.fillStyle='#222833';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.34))+'px system-ui,sans-serif';ctx.fillText(p.name,left+16,y+rowH*.63);
+      const y=top+rowH*(ri+1);
+      ctx.fillStyle=ri%2?'#ffffff':'#f8fafc';ctx.fillRect(left,y,tableW,rowH);
+      ctx.fillStyle='#dfe4ec';ctx.fillRect(left,y+rowH-1,tableW,1);
+      ctx.fillStyle='#253145';ctx.textBaseline='middle';
+      ctx.font='800 '+Math.max(15,Math.min(27,rowH*.34))+'px system-ui,sans-serif';
+      ctx.fillText(p.name,left+20,y+rowH*.51,nameW-32);
       dates.forEach((d,i)=>{
-        const st=attendanceGet(p.id,d)?.status||'work',m=ATTENDANCE_STATUS[st]||ATTENDANCE_STATUS.work;
-        ctx.fillStyle=st==='absent'?'#b4232c':'#343b48';ctx.font='700 '+Math.max(16,Math.min(22,rowH*.34))+'px system-ui,sans-serif';
-        ctx.fillText(m.short,left+nameW+i*colW+colW*.42,y+rowH*.63);
+        const rec=attendanceGet(p.id,d),st=rec?.status||'work';
+        drawWeekPdfCell(ctx,st,rec,left+nameW+i*colW,y,colW,rowH);
       });
     });
-    ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('班=上班  休=休息  假=请假  调=调休  缺=缺勤 · ↔ 换休记录在系统中保留',70,H-34);
+    // Light vertical guides aid eye-tracking across the seven weekdays.
+    ctx.fillStyle='#e3e8ef';
+    ctx.fillRect(left+nameW-1,top,2,rowH*(people.length+1));
+    for(let i=1;i<7;i++)ctx.fillRect(left+nameW+i*colW-1,top,1,rowH*(people.length+1));
+    const legendY=H-143,legendX=left+2,legendGap=(tableW-4)/5;
+    ['work','rest','leave','swap','absent'].forEach((st,i)=>{
+      const status=weekPdfStatus(st),x=legendX+i*legendGap;
+      ctx.fillStyle=status.bg;roundRect(ctx,x,legendY,legendGap-13,60,16);ctx.fill();
+      ctx.font='27px "Apple Color Emoji","Segoe UI Emoji",system-ui,sans-serif';
+      ctx.textBaseline='middle';ctx.fillText(status.icon,x+18,legendY+31,43);
+      ctx.fillStyle=status.fg;ctx.font='800 23px system-ui,sans-serif';
+      ctx.fillText(status.label,x+78,legendY+32,legendGap-93);
+    });
+    ctx.fillStyle='#727d8d';ctx.font='500 19px system-ui,sans-serif';
+    ctx.fillText('半天请假 / 休息 / 调休会标记“上午”或“下午” · 换休记录在 Staff 系统中保留',left,H-35);
     await shareCanvasPdf(canvas,'Cassola-Week-'+dates[0]+'-'+fileVersion+'.pdf');
   }
   async function generateMonthPdf(){
