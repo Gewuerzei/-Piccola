@@ -1,4 +1,6 @@
+let v3VariantSourceId='';
 function v3OpenSku(id=''){
+  v3VariantSourceId='';
   const catOptions=document.getElementById('v3CategoryOptions');if(catOptions)catOptions.innerHTML=v3Cats().map(c=>`<option value="${escapeHtml(c)}"></option>`).join('');
   const editing=!!id,s=editing?sku(id):{id:'',name:'',familyName:'',brand:'',spec:'',unit:'',category:'蔬果',supplier:'大兴',area:v4AreaFilter||'sushi',qty:0,icon:'',warningMode:'auto',targetWeeks:.6,autoOrder:true};
   if(!s)return;v3NormalizeSku(s);
@@ -25,10 +27,39 @@ function v3OpenSku(id=''){
   document.getElementById('v3Target').value=s.targetQty??'';
   document.getElementById('v3AutoOrder').checked=s.autoOrder!==false;
   document.getElementById('v3DeleteSku').classList.toggle('hidden',!editing);
+  document.getElementById('v3CopyVariant').classList.toggle('hidden',!editing);
   v3WarningForm();
   if(typeof v45RenderSkuPriceCard==='function')v45RenderSkuPriceCard(s.id||'');
-  document.getElementById('v3SkuDialog').showModal();
+  const dialog=document.getElementById('v3SkuDialog');
+  if(!dialog.open)dialog.showModal();
 }
+function v3CopyAsVariant(){
+  const sourceId=document.getElementById('v3SkuId').value;
+  const source=sku(sourceId);if(!source)return;
+  // Clone catalog attributes only. Inventory, order pack conversion, price and
+  // consumption must be confirmed independently for each physical SKU.
+  v3OpenSku();
+  v3VariantSourceId=sourceId;
+  const values={
+    v3Name:source.name,
+    v3FamilyName:source.familyName||source.name,
+    v3Brand:source.brand||'',
+    v3Icon:source.icon||'',
+    v3Spec:'',v3Unit:source.unit||'',
+    v3OrderUnit:source.unit||'',v3UnitsPerOrder:'1',
+    v3Category:source.category||'',v3Supplier:source.supplier||'',
+    v3Area:v4AreaOf(source),v3Qty:'0',
+    v3WarningMode:'auto',v3Blue:'',v3Yellow:'',v3Red:'',
+    v3Weekly:'',v3Weeks:String(source.targetWeeks??v3DefaultWeeks(source.category)),v3Target:''
+  };
+  Object.entries(values).forEach(([key,value])=>{document.getElementById(key).value=value});
+  document.getElementById('v3AutoOrder').checked=false;
+  document.getElementById('v3SkuTitle').textContent='＋ 同商品新增规格';
+  v3WarningForm();
+  document.getElementById('v3Spec').focus();
+  showToast('新规格库存为 0，请填写规格并核对订货单位');
+}
+
 function v3WarningForm(){document.getElementById('v3ManualThresholds').classList.toggle('hidden',document.getElementById('v3WarningMode').value!=='manual')}
 function v3SaveSku(e){
   e.preventDefault();
@@ -43,6 +74,18 @@ function v3SaveSku(e){
   const icon=document.getElementById('v3Icon').value.trim();
   if(!name||!unit||!category||!supplier){showToast('名称、库存单位、分类、供应商要填');return}
   const area=document.getElementById('v3Area').value||'sushi';
+  if(!id&&v3VariantSourceId){
+    const source=sku(v3VariantSourceId);
+    if(!spec){showToast('新增商品规格不能为空，例如 50g');return}
+    if(source&&spec.toLowerCase()===String(source.spec||'').trim().toLowerCase()){
+      showToast('新规格不能与原规格相同');return;
+    }
+    const familyId=v6FamilyKey(familyName);
+    const alreadyExists=state.skus.some(s=>v6FamilyId(s)===familyId&&
+      String(s.brand||'').trim()===brand&&String(s.spec||'').trim().toLowerCase()===spec.toLowerCase()&&
+      String(s.supplier||'')===supplier&&v4AreaOf(s)===area&&String(s.unit||'')===unit);
+    if(alreadyExists){showToast('相同商品卡中已存在这一规格，请直接编辑已有 SKU');return}
+  }
   const orderUnitRaw=document.getElementById('v3OrderUnit').value.trim();
   const unitsPerOrder=v3Num(document.getElementById('v3UnitsPerOrder').value)??1;
   if(!(unitsPerOrder>0)){showToast('订货单位换算必须大于 0');return}
@@ -101,6 +144,7 @@ document.getElementById('addSkuBtn').addEventListener('click',()=>v3OpenSku());
 document.getElementById('addSkuSettingsBtn').addEventListener('click',()=>v3OpenSku());
 document.getElementById('v3WarningMode').addEventListener('change',v3WarningForm);
 document.getElementById('v3SaveSku').addEventListener('click',v3SaveSku);
+document.getElementById('v3CopyVariant').addEventListener('click',v3CopyAsVariant);
 document.getElementById('v3DeleteSku').addEventListener('click',e=>{e.preventDefault();v3Delete()});
 document.getElementById('v3SuggestBtn').addEventListener('click',v3Generate);
 document.getElementById('v3PlaceBtn').addEventListener('click',v3Place);
