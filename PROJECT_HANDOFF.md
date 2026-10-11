@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.7.3 · Touch-safe Card Dragging + Category Sections + Product Families**
+- Inventory: **v0.7.4 · Chilled Prep Category + Safe SKU Variant Duplication**
 - Staff: **v0.4.4 · Staff Cloud + Shared Role Tasks**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
@@ -601,6 +601,14 @@ SKU 可使用手动阈值或历史周耗。
 - 新 SKU 没有 `sortRank` 时，在手动模式中排在已有手动排序卡片之后；第一次拖动后当前 area 的完整商品卡顺序会统一写 rank。
 - “设库存 / 手动调整”允许目标库存为 **0**；到货、报损、内部转换仍要求数量 > 0，避免把“动作数量 0”和“库存归零”混为一谈。
 
+### Inventory 冷藏配料 / 多规格建档 UX
+- “冷藏配料”是正式内置分类，插在“冷藏”之后、蔬果之前，图标 🥬；表示如蔬菜冰箱内的冷藏配料，不等于冷冻库。分类名与 SKU 自身 category 匹配，原来同名的 custom category 不会重建 SKU，也不改变已有库存。
+- `v3DefaultWeeks('冷藏配料') = 1`，只为新建或缺少 targetWeeks 的记录提供默认值，不改用户现有的预警/目标周数。
+- 350g / 50g 等**不同实物规格应各自独立 SKU**，共享同一 `familyName / familyId` 才在库存首页同卡折叠。库存规格字符串 `350/50g` 不会被自动解析成两笔库存。
+- SKU Manager 编辑已存在商品时新增 `＋ 同商品新增规格` 按钮：调用新建 SKU 编辑模式，预填名称、family、品牌、图标、单位、供应商、category 与 area；库存规格清空等待填写，库存设置 0，采购倍率重设 1，自动订货默认关闭，手工周耗/阈值/目标数量清空。
+- 新建规格时不能与原 SKU 规格相同；对同商品卡/品牌/规格/区域/供应商/库存单位的重复实体进行拦截。原 SKU id、qty、价格历史、收货/订单引用、员工权限与发布任务均保持不变。
+- 新规格只在本机 Supervisor 明确点击保存后生成；Inventory Cloud 同步仍为单独的人工上传动作。新增分类与规格须让员工看到时，先上传 Inventory scope，然后员工再刷新 catalog。不要在公开 repo seed 中写真实库存。
+
 ### Product Family / SKU Card Layer
 
 Inventory v0.7 把“商品卡”和“具体库存 SKU”分开，但**没有合并或改写任何 SKU 库存账**：
@@ -1060,7 +1068,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v089
+cassola-suite-v090
 ```
 
 当前 CORE 必须包含：
