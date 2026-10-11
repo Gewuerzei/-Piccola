@@ -93,7 +93,7 @@ function v6SkuFamilies(rows){
   return [...map.values()];
 }
 function v3Num(v){if(v===''||v==null)return null;const n=typeof parseLocaleDecimal==='function'?parseLocaleDecimal(v):Number(v);return Number.isFinite(n)?n:null}
-function v3DefaultWeeks(cat){if(cat==='蔬果')return .6;if(cat==='冷藏')return 1;if(cat==='处理库存')return 0;return 2}
+function v3DefaultWeeks(cat){if(cat==='蔬果')return .6;if(cat==='冷藏'||cat==='冷藏配料')return 1;if(cat==='处理库存')return 0;return 2}
 function v3NormalizeSku(s){
   if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto'; if(!s.area)s.area='sushi';
   const familyDefault=v6FamilyDefaults[String(s.id)]||null;
