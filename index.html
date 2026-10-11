@@ -231,6 +231,10 @@
         <label>库存规格<input id="v3Spec" placeholder="900g / 20kg / 20张" /></label>
         <label>库存单位<input id="v3Unit" placeholder="包 / 盒 / 瓶" required /></label>
       </div>
+      <div class="v3-variant-tools">
+        <small>350g 和 50g 属于两条独立 SKU，请分别填写规格。两条 SKU 的“商品卡 / 商品族”同名即可折叠显示。</small>
+        <button type="button" class="btn secondary hidden" id="v3CopyVariant">＋ 同商品新增规格</button>
+      </div>
       <div class="v3-subcard">
         <div class="v3-form-grid two">
           <label>订货单位<input id="v3OrderUnit" placeholder="箱 / 件 / 托；不换算时同库存单位" /></label>
@@ -250,7 +254,7 @@
           <option value="common">📦 Comune / 共用</option>
         </select>
       </label>
-      <datalist id="v3CategoryOptions"><option>寿司基础</option><option>干货</option><option>酱料</option><option>冷藏</option><option>蔬果</option><option>冷冻</option><option>处理库存</option><option>耗材</option><option>甜点</option><option>酒水</option><option>糖浆</option><option>饮料</option><option>Sala调味</option></datalist>
+      <datalist id="v3CategoryOptions"><option>寿司基础</option><option>干货</option><option>酱料</option><option>冷藏</option><option>冷藏配料</option><option>蔬果</option><option>冷冻</option><option>处理库存</option><option>耗材</option><option>甜点</option><option>酒水</option><option>糖浆</option><option>饮料</option><option>Sala调味</option></datalist>
       <datalist id="v3SupplierOptions"><option>大兴</option><option>米兰</option><option>Tosano</option><option>内部</option><option>自种</option><option>待确认</option></datalist>
       <label>当前 / 初始库存<input id="v3Qty" type="text" inputmode="decimal" autocomplete="off" /></label>
       <section class="v45-price-card" id="v45PriceCard">
