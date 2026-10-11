@@ -1013,6 +1013,7 @@
     ctx.fillStyle=status.bg;roundRect(ctx,bx,by,boxW,boxH,Math.min(17,boxH*.27));ctx.fill();
     const portion=st!=='work'?(rec?.portion==='am'?'上午':rec?.portion==='pm'?'下午':''):'';
     ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=status.fg; // monochrome emoji fallback must remain visible
     if(compact){
       ctx.font=Math.max(18,Math.min(25,boxH*.54))+'px "Apple Color Emoji","Segoe UI Emoji",system-ui,sans-serif';
       ctx.fillText(status.icon,bx+boxW*.29,by+boxH*.49,boxW*.30);
