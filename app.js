@@ -105,10 +105,10 @@ const seedSkus = [
   ['sala_panna','Panna','','盒','Sala调味','待确认','bar']
 ].map(([id,name,spec,unit,category,supplier,area='sushi'])=>({id,name,spec,unit,category,supplier,area,qty:0}));
 
-const categories = ['鲜鱼','寿司基础','干货','酱料','冷藏','冷藏配料','蔬果','冷冻','处理库存','耗材','甜点','酒水','糖浆','饮料','Sala调味'];
+const categories = ['鲜鱼','寿司基础','干货','酱料','冷藏','蔬果','冷藏物料','冷冻','处理库存','耗材','甜点','酒水','糖浆','饮料','Sala调味'];
 const suppliers = ['全部','大兴','米兰','Tosano','内部','自种','待确认'];
 const categoryIcons = {
-  '鲜鱼':'🐟','寿司基础':'🍣','干货':'🌾','酱料':'🫙','冷藏':'🧊','冷藏配料':'🥬','蔬果':'🥬','冷冻':'❄️','处理库存':'🔪','耗材':'🧤',
+  '鲜鱼':'🐟','寿司基础':'🍣','干货':'🌾','酱料':'🫙','冷藏':'🧊','冷藏配料':'🥬','冷藏物料':'🧺','蔬果':'🥬','冷冻':'❄️','处理库存':'🔪','耗材':'🧤',
   '甜点':'🍰','酒水':'🥃','糖浆':'🍹','饮料':'🥤','Sala调味':'🧂'
 };
 const skuIcons = {
@@ -162,12 +162,42 @@ function migrate(s){
   return {...base,...s,version:2,skus:base.skus,history:base.history,order:base.order,customCategories:base.customCategories};
 }
 function saveState(){localStorage.setItem(APP_KEY,JSON.stringify(state));}
+/* Shelf groups are a display-only hierarchy. Existing persisted categories,
+   employee selector snapshots and supplier task permissions must not migrate. */
+const V7_PRODUCE_ROOM_FILTER='@produce-room';
+function v7CategoryLabel(value){
+  const c=String(value||'').trim();
+  return c==='冷藏配料'?'冷藏物料':c;
+}
+function v7CategoryOrder(value){
+  const i=categories.indexOf(v7CategoryLabel(value));
+  return i<0?999:i;
+}
+function v7CategoryMatches(filter,actual){
+  const selected=String(filter||'全部');
+  if(selected==='全部')return true;
+  const actualLabel=v7CategoryLabel(actual);
+  if(selected===V7_PRODUCE_ROOM_FILTER)return actualLabel==='蔬果'||actualLabel==='冷藏物料';
+  return v7CategoryLabel(selected)===actualLabel;
+}
 function inventoryCategories(){
   return [...new Set([
     ...categories,
     ...(Array.isArray(state.customCategories)?state.customCategories:[]),
     ...(Array.isArray(state.skus)?state.skus.map(s=>String(s.category||'').trim()).filter(Boolean):[])
-  ])];
+  ].map(v7CategoryLabel).filter(Boolean))];
+}
+function v7CategoryFilterOptions(current='全部'){
+  const opts=inventoryCategories();
+  const selected=String(current||'全部');
+  const option=(value,label)=>`<option value="${escapeHtml(value)}" ${value===selected?'selected':''}>${escapeHtml(label)}</option>`;
+  const room=opts.filter(x=>x==='蔬果'||x==='冷藏物料');
+  const others=opts.filter(x=>x!=='蔬果'&&x!=='冷藏物料');
+  return option('全部','全部分类')+
+    '<optgroup label="🥬 蔬果风房">'+
+    option(V7_PRODUCE_ROOM_FILTER,'蔬果风房 · 全部')+
+    room.map(c=>option(c,'　'+c)).join('')+'</optgroup>'+
+    '<optgroup label="其他分类">'+others.map(c=>option(c,c)).join('')+'</optgroup>';
 }
 function sku(id){return state.skus.find(x=>x.id===id)}
 function fmt(n){return Number.isInteger(Number(n))?String(Number(n)):String(Number(n).toFixed(2)).replace(/0+$/,'').replace(/\.$/,'')}
@@ -180,12 +210,12 @@ function renderAll(){renderCategoryFilter();renderStock();renderCount();renderSu
 function renderCategoryFilter(){
   const sel=document.getElementById('categoryFilter');
   const cur=sel.value||'全部';
-  sel.innerHTML=['全部',...inventoryCategories()].map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join('');
+  sel.innerHTML=v7CategoryFilterOptions(cur);
 }
 function renderStock(){
   const q=document.getElementById('searchInput').value.trim().toLowerCase();
   const cat=document.getElementById('categoryFilter').value||'全部';
-  const rows=state.skus.filter(x=>(cat==='全部'||x.category===cat)&&(!q||`${x.name} ${x.spec} ${x.supplier}`.toLowerCase().includes(q)));
+  const rows=state.skus.filter(x=>v7CategoryMatches(cat,x.category)&&(!q||`${x.name} ${x.spec} ${x.supplier}`.toLowerCase().includes(q)));
   const list=document.getElementById('stockList');
   list.innerHTML=rows.length?rows.map(x=>`
     <article class="sku-card">
@@ -219,7 +249,7 @@ function renderStock(){
 function renderCount(){
   const root=document.getElementById('countList');
   root.innerHTML=inventoryCategories().map(cat=>{
-    const rows=state.skus.filter(x=>x.category===cat);
+    const rows=state.skus.filter(x=>v7CategoryMatches(cat,x.category));
     if(!rows.length) return '';
     return `<section class="count-group"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${cat}</div>${rows.map(x=>`
       <div class="count-row">
