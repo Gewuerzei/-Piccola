@@ -10,7 +10,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.7.6 · iPhone Native SKU Category Picker + Cold Room Groups**
-- Staff: **v0.4.4 · Staff Cloud + Shared Role Tasks**
+- Staff: **v0.4.5 · Readable Weekly PDF + Shared Role Tasks**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
@@ -1062,6 +1062,14 @@ Staff PDF 完全在浏览器本地生成，不上传服务器。
 4. 前端包装成单页 PDF。
 5. iOS 支持时调用 Share Sheet，否则下载文件。
 
+Staff 周休息表 PDF（v0.4.5）只改前端渲染，业务与数据契约保持不变：
+- `generateWeekPdf()` Canvas 绘制 **💼 上班 / 🌙 休息 / 📝 请假 / 🔧 调休 / ❌ 缺勤** 彩色圆角状态格及文字标签，并在下沿绘制图例；Emoji 先画入 Canvas，再随 JPEG 嵌入 PDF，不依赖 PDF 阅读器字体，但需在 iPhone Safari 实机验收 Emoji 渲染。
+- 表头日期分两行、增大行高和人员姓名字号、突出周末；`rowH` 根据活跃员工人数在单页 A4 横向自适应。人员很多时仍然会缩小，不改变原来的单页策略。
+- `rec.portion=am/pm` 的休息、请假、调休在格内额外标注“上午 / 下午”；无状态记录默认上班。状态色与文字同时编码，黑白打印或 emoji 回退仍可辨认。
+- 保持原发布 vN / draft 文件命名；PDF 仅读当前 Staff 状态，不修改 attendance、swaps、restMoves、weekPublications、Cloud Head、Inventory 或 PIN 数据。月报 PDF / 岗位排班 PDF 不变。
+- 已用虚构匿名人员模拟检验绘图内容与分享文件名；iPhone 真机渲染尚待验证。
+
+
 ---
 
 ## 5. UI 方向
@@ -1083,7 +1091,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v092
+cassola-suite-v093
 ```
 
 当前 CORE 必须包含：
