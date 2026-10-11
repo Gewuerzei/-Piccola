@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.7.5 · Produce Cold Room Hierarchy
+**2026-10-11**
+
+- 按 Pietro 指定的物理分区调整展示层级：**🥬 蔬果风房 → 蔬果 / 冷藏物料**。这是一层 UI 分组，不是创建一套新的库存主数据。
+- 原 `冷藏配料` 在显示、过滤、分类排序、盘货页面中以 `冷藏物料` 呈现；旧 category 值留在原 SKU 上，避免暗中修改员工任务或 Cloud Head。用户显式打开编辑并保存时才写新值。
+- 分类筛选新增风房 optgroup，提供“蔬果风房 · 全部”及两个子类；独立分类排序下库存卡片显示上级标题，子类标题缩进。
+- `自定义拖动` 仍保持所有商品卡直接属于 `stockList`，父分组只在分类排序模式显示，避免再次导致拖动失效。
+- 无 SKU 数量、库存单位、价格历史、员工权限、供应商或 Cloud 数据变更；旧自定义分类映射到同一显示名称，不显示重复的冷藏类。
+- Service Worker cache 更新为 `cassola-suite-v091`。
+
+---
+
 ## Inventory v0.7.4 · Chilled Prep Category + SKU Variant Shortcut
 **2026-10-11**
 
