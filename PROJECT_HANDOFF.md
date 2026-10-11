@@ -9,7 +9,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.7.4 · Chilled Prep Category + Safe SKU Variant Duplication**
+- Inventory: **v0.7.5 · Produce Cold Room Group + Refrigerated Materials**
 - Staff: **v0.4.4 · Staff Cloud + Shared Role Tasks**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
@@ -601,6 +601,13 @@ SKU 可使用手动阈值或历史周耗。
 - 新 SKU 没有 `sortRank` 时，在手动模式中排在已有手动排序卡片之后；第一次拖动后当前 area 的完整商品卡顺序会统一写 rank。
 - “设库存 / 手动调整”允许目标库存为 **0**；到货、报损、内部转换仍要求数量 > 0，避免把“动作数量 0”和“库存归零”混为一谈。
 
+### Inventory 蔬果风房展示层级（v0.7.5）
+- Pietro 明确的展示树：**🥬 蔬果风房 → 蔬果 / 冷藏物料**。风房是 UI 父分组，不是新的 SKU category、area、supplier 或独立 Cloud scope。
+- `app.js` 中 categories 叶分类依次显示 `冷藏 → 蔬果 → 冷藏物料 → 冷冻`；分类排序的库存首页、盘货页面均展示一次“蔬果风房”父标题，再缩进展示两个子分类；其他分类仍按既有顺序显示。
+- 分类筛选用 HTML optgroup 显示“蔬果风房 · 全部 / 蔬果 / 冷藏物料”，选择父筛选时将两个子类合并查看；切回 `全部` + `自定义拖动` 时原卡片直属 stockList，不能让新的父标题破坏拖动事件。
+- 历史上的 `冷藏配料` 通过 `v7CategoryLabel` 在 UI 显示为 `冷藏物料`，匹配、分组、排序和盘货统计归入同一叶分类。**不得自动批量改写**持久化 SKU category；已发布任务中的 scope 与 `resolved_sku_ids / sku_snapshot` 不变。Supervisor 以后显式保存 SKU 编辑表单，才把该 SKU 写为新 category `冷藏物料`。
+- 员工盘货实际按 supplier 或任务篮子发布。上述层级只是 UI 展示，不能根据“蔬果风房”重设供应商/员工权限；Cloud 继续 local-first + manual upload。
+
 ### Inventory 冷藏配料 / 多规格建档 UX
 - “冷藏配料”是正式内置分类，插在“冷藏”之后、蔬果之前，图标 🥬；表示如蔬菜冰箱内的冷藏配料，不等于冷冻库。分类名与 SKU 自身 category 匹配，原来同名的 custom category 不会重建 SKU，也不改变已有库存。
 - `v3DefaultWeeks('冷藏配料') = 1`，只为新建或缺少 targetWeeks 的记录提供默认值，不改用户现有的预警/目标周数。
@@ -1068,7 +1075,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v090
+cassola-suite-v091
 ```
 
 当前 CORE 必须包含：
