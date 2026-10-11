@@ -74,8 +74,7 @@ function v6FamilyStockSummary(rows){
   return{main:'混合',unit:'规格',detail:packages};
 }
 function v6SkuCompare(a,b){
-  const ai=categories.indexOf(a.category),bi=categories.indexOf(b.category);
-  const ac=ai<0?999:ai,bc=bi<0?999:bi;
+  const ac=v7CategoryOrder(a.category),bc=v7CategoryOrder(b.category);
   if(ac!==bc)return ac-bc;
   const fa=v6FamilyName(a),fb=v6FamilyName(b),fc=fa.localeCompare(fb,'zh-CN',{numeric:true,sensitivity:'base'});
   if(fc)return fc;
@@ -93,7 +92,7 @@ function v6SkuFamilies(rows){
   return [...map.values()];
 }
 function v3Num(v){if(v===''||v==null)return null;const n=typeof parseLocaleDecimal==='function'?parseLocaleDecimal(v):Number(v);return Number.isFinite(n)?n:null}
-function v3DefaultWeeks(cat){if(cat==='蔬果')return .6;if(cat==='冷藏'||cat==='冷藏配料')return 1;if(cat==='处理库存')return 0;return 2}
+function v3DefaultWeeks(cat){if(cat==='蔬果')return .6;if(['冷藏','冷藏配料','冷藏物料'].includes(cat))return 1;if(cat==='处理库存')return 0;return 2}
 function v3NormalizeSku(s){
   if(s.icon==null)s.icon=''; if(!s.warningMode)s.warningMode='auto'; if(!s.area)s.area='sushi';
   const familyDefault=v6FamilyDefaults[String(s.id)]||null;
