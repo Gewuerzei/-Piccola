@@ -13,7 +13,7 @@ function v3OpenSku(id=''){
   document.getElementById('v3Unit').value=s.unit||'';
   document.getElementById('v3OrderUnit').value=v5OrderUnit(s);
   document.getElementById('v3UnitsPerOrder').value=v5UnitsPerOrder(s);
-  document.getElementById('v3Category').value=s.category||'';
+  document.getElementById('v3Category').value=v7CategoryLabel(s.category||'');
   document.getElementById('v3Supplier').value=s.supplier||'';
   document.getElementById('v3Area').value=v4AreaOf(s);
   document.getElementById('v3Icon').value=s.icon||'';
@@ -47,7 +47,7 @@ function v3CopyAsVariant(){
     v3Icon:source.icon||'',
     v3Spec:'',v3Unit:source.unit||'',
     v3OrderUnit:source.unit||'',v3UnitsPerOrder:'1',
-    v3Category:source.category||'',v3Supplier:source.supplier||'',
+    v3Category:v7CategoryLabel(source.category||''),v3Supplier:source.supplier||'',
     v3Area:v4AreaOf(source),v3Qty:'0',
     v3WarningMode:'auto',v3Blue:'',v3Yellow:'',v3Red:'',
     v3Weekly:'',v3Weeks:String(source.targetWeeks??v3DefaultWeeks(source.category)),v3Target:''
@@ -69,7 +69,7 @@ function v3SaveSku(e){
   const brand=document.getElementById('v3Brand').value.trim();
   const spec=document.getElementById('v3Spec').value.trim();
   const unit=document.getElementById('v3Unit').value.trim();
-  const category=document.getElementById('v3Category').value.trim();
+  const category=v7CategoryLabel(document.getElementById('v3Category').value.trim());
   const supplier=document.getElementById('v3Supplier').value.trim();
   const icon=document.getElementById('v3Icon').value.trim();
   if(!name||!unit||!category||!supplier){showToast('名称、库存单位、分类、供应商要填');return}
