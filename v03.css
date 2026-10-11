@@ -521,3 +521,31 @@ body.v6-sorting .v6-drag-handle{cursor:grabbing}
   .v7-stock-room-head{padding:10px 12px;font-size:12px}
   .v7-stock-room-head span{font-size:8px}
 }
+
+/* Inventory v0.7.6 · native iPhone category picker */
+#v3SkuForm #v3Category{
+  min-height:48px;
+  width:100%;
+  appearance:auto;
+  -webkit-appearance:menulist;
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:17px;
+  padding:10px 12px;
+  font-size:14px;
+  font-weight:750;
+}
+#v3SkuForm .v8-custom-category{
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:var(--panel2);
+}
+#v3SkuForm .v8-custom-category input{
+  min-height:46px;
+}
+:root[data-theme="light"] #v3SkuForm #v3Category,
+:root[data-theme="light"] #v3SkuForm .v8-custom-category{
+  background:rgba(255,255,255,.96);
+}
