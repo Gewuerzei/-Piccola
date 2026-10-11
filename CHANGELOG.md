@@ -2,6 +2,20 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.7.4 · Chilled Prep Category + SKU Variant Shortcut
+**2026-10-11**
+
+- 内置 **冷藏配料** 分类，紧跟 **冷藏**，用于蔬菜冰箱内的冷藏配料；不与冷冻库存混淆。旧同名自定义分类自动去重，现有 SKU category 不变。
+- 冷藏配料的默认 targetWeeks 与冷藏相同（1 周），但不覆盖已有用户阈值。
+- SKU Manager 新增 **＋ 同商品新增规格** 按钮，并说明 350g 与 50g 应是不同的实际 SKU、同商品卡折叠。
+- 新规格以当前已保存 SKU 为模板，继承商品名称 / family / 品牌 / 图标 / 供应商 / 分类 / 区域 / 库存单位；清空 spec、qty = 0、orderUnit = stock unit、unitsPerOrder = 1、autoOrder = false、手动阈值与周耗清空；不复制价格历史、已下单订单或入库记录。
+- 新规格必须填写不同于原 SKU 的 spec；同 family + 品牌 + spec + supplier + area + unit 已存在时拒绝重复建档。
+- 已用模拟 DOM 验证 SKU 克隆、归零、独立商品卡关系和重复拦截；仍需 iPhone 实机检查。
+- 只改公开代码、样式和文档；不修改 Supervisor 现场 localStorage、Cloud Head、员工盘货任务和正式库存数量。
+- Service Worker cache 更新为 `cassola-suite-v090`。
+
+---
+
 ## Inventory v0.7.3 · iPhone Touch-safe Card Sorting
 **2026-10-09**
 
