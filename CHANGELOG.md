@@ -2,6 +2,20 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4.5 · Weekly Rest PDF Readability
+**2026-10-11**
+
+- Pietro 实机周休息表 PDF 反馈：A4 横向表格仅用一小块空间，“班 / 休”单字字体太小，手机查看很难辨认。
+- `generateWeekPdf()` 使用 Canvas 绘制大尺寸圆角状态胶囊：**💼 上班（灰）、🌙 休息（蓝）、📝 请假（黄）、🔧 调休（绿）、❌ 缺勤（红）**，同时保留中文文字标签；表尾图例一一对应。
+- 增大日期表头、人员姓名和每行高度，减少右下大量留白；周末表头淡蓝背景，横纵向细分割线保留可读性。
+- 支持 `portion=am/pm` 在休息 / 请假 / 调休胶囊内显示“上午 / 下午”，不再丢失半天信息。
+- Emoji 绘入 Canvas JPEG 再封装 PDF，规避 PDF 内嵌字体缺失；追加单色 emoji 前景色回退，状态文字始终存在。iPhone WebKit 仍需现场 PDF 视觉验收。
+- 保持 PDF 的 `发布 vN / draft` 版本名规则及默认 status=work 的语义，不修改 Staff 存储、版本发布快照、员工任务、Inventory、Cloud 或任何用户数据。月报 / 岗位 PDF 不变。
+- 用虚构人员、五种状态、上下午状态测试 Canvas 绘图调用及 PDF 文件名逻辑；JS 语法检查通过。
+- Service Worker cache 更新到 `cassola-suite-v093`。
+
+---
+
 ## Inventory v0.7.6 · Native iPhone SKU Category Selector
 **2026-10-11**
 
