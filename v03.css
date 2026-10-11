@@ -492,3 +492,32 @@ body.v6-sorting .v6-drag-handle{cursor:grabbing}
 :root[data-theme="light"] .v3-variant-tools{
   background:rgba(72,95,150,.055);
 }
+
+
+/* Inventory v0.7.5 · cold-room hierarchy, visual only */
+.v7-stock-room-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin:17px 3px 1px;padding:12px 14px;border-radius:19px;
+  background:color-mix(in srgb,var(--soft-blue) 12%,var(--panel));
+  border:1px solid color-mix(in srgb,var(--soft-blue) 21%,var(--line));
+  color:var(--text);font-size:13px;font-weight:900;
+}
+.v7-stock-room-head span{font-size:9px;color:var(--muted);font-weight:750}
+.v6-stock-category-head.v7-stock-room-child{
+  margin:9px 3px 0 15px;
+  border-left:3px solid color-mix(in srgb,var(--soft-blue) 55%,transparent);
+}
+.v7-stock-room-count{
+  margin-left:13px;
+  border-left:3px solid color-mix(in srgb,var(--soft-blue) 35%,var(--line));
+}
+#v3SkuForm .v7-category-help{
+  font-size:10px;line-height:1.4;color:var(--muted);
+}
+:root[data-theme="light"] .v7-stock-room-head{
+  background:rgba(79,139,96,.085);border-color:rgba(79,139,96,.17);
+}
+@media(max-width:420px){
+  .v7-stock-room-head{padding:10px 12px;font-size:12px}
+  .v7-stock-room-head span{font-size:8px}
+}
