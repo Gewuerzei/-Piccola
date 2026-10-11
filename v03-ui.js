@@ -1,9 +1,38 @@
 let v3VariantSourceId='';
+const V8_NEW_CATEGORY='__cassola_new_category__';
+function v8RenderSkuCategoryOptions(rawCategory=''){
+  const select=document.getElementById('v3Category');
+  const selected=v7CategoryLabel(rawCategory);
+  const available=inventoryCategories();
+  if(selected&&!available.includes(selected))available.push(selected);
+  const room=available.filter(c=>c==='蔬果'||c==='冷藏物料');
+  const others=available.filter(c=>c!=='蔬果'&&c!=='冷藏物料');
+  const option=c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+  select.innerHTML=
+    '<optgroup label="🥬 蔬果风房">'+room.map(option).join('')+'</optgroup>'+
+    '<optgroup label="其他分类">'+others.map(option).join('')+'</optgroup>'+
+    `<option value="${V8_NEW_CATEGORY}">＋ 新建分类…</option>`;
+  select.value=selected&&available.includes(selected)?selected:(available[0]||'');
+  document.getElementById('v3CustomCategory').value='';
+  v8SyncSkuCategoryForm(false);
+}
+function v8SyncSkuCategoryForm(focusInput=false){
+  const custom=document.getElementById('v3Category').value===V8_NEW_CATEGORY;
+  const wrap=document.getElementById('v3CustomCategoryWrap'),input=document.getElementById('v3CustomCategory');
+  wrap.classList.toggle('hidden',!custom);
+  input.required=custom;
+  if(custom&&focusInput)input.focus();
+}
+function v8SkuCategoryValue(){
+  const selected=document.getElementById('v3Category').value;
+  const raw=selected===V8_NEW_CATEGORY?document.getElementById('v3CustomCategory').value:selected;
+  return v7CategoryLabel(raw.trim());
+}
 function v3OpenSku(id=''){
   v3VariantSourceId='';
-  const catOptions=document.getElementById('v3CategoryOptions');if(catOptions)catOptions.innerHTML=v3Cats().map(c=>`<option value="${escapeHtml(c)}"></option>`).join('');
   const editing=!!id,s=editing?sku(id):{id:'',name:'',familyName:'',brand:'',spec:'',unit:'',category:'蔬果',supplier:'大兴',area:v4AreaFilter||'sushi',qty:0,icon:'',warningMode:'auto',targetWeeks:.6,autoOrder:true};
   if(!s)return;v3NormalizeSku(s);
+  v8RenderSkuCategoryOptions(s.category||'');
   document.getElementById('v3SkuTitle').textContent=editing?'编辑 SKU':'新建 SKU';
   document.getElementById('v3SkuId').value=s.id||'';
   document.getElementById('v3Name').value=s.name||'';
@@ -13,7 +42,7 @@ function v3OpenSku(id=''){
   document.getElementById('v3Unit').value=s.unit||'';
   document.getElementById('v3OrderUnit').value=v5OrderUnit(s);
   document.getElementById('v3UnitsPerOrder').value=v5UnitsPerOrder(s);
-  document.getElementById('v3Category').value=v7CategoryLabel(s.category||'');
+  // Category selection is already populated by v8RenderSkuCategoryOptions.
   document.getElementById('v3Supplier').value=s.supplier||'';
   document.getElementById('v3Area').value=v4AreaOf(s);
   document.getElementById('v3Icon').value=s.icon||'';
@@ -55,6 +84,7 @@ function v3CopyAsVariant(){
   Object.entries(values).forEach(([key,value])=>{document.getElementById(key).value=value});
   document.getElementById('v3AutoOrder').checked=false;
   document.getElementById('v3SkuTitle').textContent='＋ 同商品新增规格';
+  v8SyncSkuCategoryForm(false);
   v3WarningForm();
   document.getElementById('v3Spec').focus();
   showToast('新规格库存为 0，请填写规格并核对订货单位');
@@ -69,10 +99,16 @@ function v3SaveSku(e){
   const brand=document.getElementById('v3Brand').value.trim();
   const spec=document.getElementById('v3Spec').value.trim();
   const unit=document.getElementById('v3Unit').value.trim();
-  const category=v7CategoryLabel(document.getElementById('v3Category').value.trim());
+  const category=v8SkuCategoryValue();
   const supplier=document.getElementById('v3Supplier').value.trim();
   const icon=document.getElementById('v3Icon').value.trim();
   if(!name||!unit||!category||!supplier){showToast('名称、库存单位、分类、供应商要填');return}
+  if(['全部','蔬果风房',V7_PRODUCE_ROOM_FILTER,V8_NEW_CATEGORY].includes(category)){
+    showToast('请选择具体分类；蔬果风房只是分组');return;
+  }
+  if(document.getElementById('v3Category').value===V8_NEW_CATEGORY&&inventoryCategories().includes(category)){
+    showToast('这个分类已存在，请直接在菜单中选择');return;
+  }
   const area=document.getElementById('v3Area').value||'sushi';
   if(!id&&v3VariantSourceId){
     const source=sku(v3VariantSourceId);
@@ -144,6 +180,7 @@ document.getElementById('addSkuBtn').addEventListener('click',()=>v3OpenSku());
 document.getElementById('addSkuSettingsBtn').addEventListener('click',()=>v3OpenSku());
 document.getElementById('v3WarningMode').addEventListener('change',v3WarningForm);
 document.getElementById('v3SaveSku').addEventListener('click',v3SaveSku);
+document.getElementById('v3Category').addEventListener('change',()=>v8SyncSkuCategoryForm(true));
 document.getElementById('v3CopyVariant').addEventListener('click',v3CopyAsVariant);
 document.getElementById('v3DeleteSku').addEventListener('click',e=>{e.preventDefault();v3Delete()});
 document.getElementById('v3SuggestBtn').addEventListener('click',v3Generate);
