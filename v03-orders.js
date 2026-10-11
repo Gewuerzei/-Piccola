@@ -1,4 +1,4 @@
-/* Inventory v0.7.3 · iOS-safe drag reorder + visual category sections */
+/* Inventory v0.7.5 · produce room grouping + iOS-safe sorting */
 let v4ArchiveYearOpen=null;
 let v4ArchiveQuarterOpen=null;
 let v4ArchiveWeekOpen=null;
@@ -85,7 +85,7 @@ function v6CommitManualFamilyOrder(){
 
 renderCategoryFilter=function(){
   const el=document.getElementById('categoryFilter'),cur=el.value||'全部';
-  el.innerHTML=['全部',...v3Cats()].map(c=>`<option ${c===cur?'selected':''}>${escapeHtml(c)}</option>`).join('');
+  el.innerHTML=v7CategoryFilterOptions(cur);
 };
 renderSupplierTabs=function(){
   document.getElementById('supplierTabs').innerHTML=v3Suppliers().map(s=>`<button class="${s===activeSupplier?'active':''}" data-supplier="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('');
@@ -107,13 +107,13 @@ renderStock=function(){
   const q=document.getElementById('searchInput').value.trim().toLowerCase();
   const cat=document.getElementById('categoryFilter').value||'全部';
   v6SyncStockSortUi(q,cat);
-  const areaRows=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter).filter(x=>cat==='全部'||x.category===cat);
+  const areaRows=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter).filter(x=>v7CategoryMatches(cat,x.category));
   const families=v6SortFamilies(v6SkuFamilies(areaRows).filter(g=>!q||g.rows.some(x=>`${x.name} ${x.familyName||''} ${x.brand||''} ${x.spec} ${x.supplier}`.toLowerCase().includes(q))));
   const canDrag=v6StockSortMode==='manual'&&!q&&cat==='全部';
   const dragHandle=g=>canDrag?`<button type="button" class="v6-drag-handle" data-v6-drag-handle aria-label="拖动 ${escapeHtml(g.name)} 排序"><span>⠿</span> 拖动排序</button>`:'';
   function singleCard(x,g){
     const use=v3WeeklyUse(x);
-    return `<article class="sku-card v6-sortable-card" data-v6-family-card="${escapeHtml(g.id)}">${dragHandle(g)}<div class="sku-top"><div class="sku-main"><div class="sku-icon">${v3Icon(x)}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta">${x.spec?`<span class="meta-pill spec">${escapeHtml(x.spec)}</span>`:''}${x.brand?`<span class="meta-pill">🏷️ ${escapeHtml(x.brand)}</span>`:''}<span class="meta-pill">${categoryIcons[x.category]||'📦'} ${escapeHtml(x.category)}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div><div class="sku-actions v3-four"><button class="mini-btn" data-action="operate" data-id="${x.id}">到货/报损</button><button class="mini-btn" data-action="order" data-id="${x.id}">＋订货</button><button class="mini-btn" data-action="set" data-id="${x.id}">设库存</button><button class="mini-btn" data-v3-edit="${x.id}">编辑</button></div></article>`;
+    return `<article class="sku-card v6-sortable-card" data-v6-family-card="${escapeHtml(g.id)}">${dragHandle(g)}<div class="sku-top"><div class="sku-main"><div class="sku-icon">${v3Icon(x)}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta">${x.spec?`<span class="meta-pill spec">${escapeHtml(x.spec)}</span>`:''}${x.brand?`<span class="meta-pill">🏷️ ${escapeHtml(x.brand)}</span>`:''}<span class="meta-pill">${categoryIcons[v7CategoryLabel(x.category)]||'📦'} ${escapeHtml(v7CategoryLabel(x.category))}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div><div class="sku-actions v3-four"><button class="mini-btn" data-action="operate" data-id="${x.id}">到货/报损</button><button class="mini-btn" data-action="order" data-id="${x.id}">＋订货</button><button class="mini-btn" data-action="set" data-id="${x.id}">设库存</button><button class="mini-btn" data-v3-edit="${x.id}">编辑</button></div></article>`;
   }
   function familyCard(g){
     if(g.rows.length===1)return singleCard(g.rows[0],g);
@@ -125,7 +125,7 @@ renderStock=function(){
     return `<article class="sku-card v6-family-card v6-sortable-card ${expanded?'expanded':''}" data-v6-family-card="${escapeHtml(g.id)}">
       ${dragHandle(g)}
       <button type="button" class="v6-family-toggle" data-v6-family-toggle="${escapeHtml(g.id)}" aria-expanded="${expanded?'true':'false'}">
-        <div class="sku-main"><div class="sku-icon">${icon}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(g.name)}</div><div class="sku-meta"><span class="meta-pill">${categoryIcons[category]||'📦'} ${escapeHtml(category)}</span><span class="meta-pill">🗂️ ${g.rows.length} 个 SKU</span>${alerts?`<span class="meta-pill v6-alert">⚠️ ${alerts} 项</span>`:''}</div><div class="v3-stock-hint">${escapeHtml(summary.detail||'混合包装')} · 点开看规格 / 品牌</div></div></div>
+        <div class="sku-main"><div class="sku-icon">${icon}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(g.name)}</div><div class="sku-meta"><span class="meta-pill">${categoryIcons[v7CategoryLabel(category)]||'📦'} ${escapeHtml(v7CategoryLabel(category))}</span><span class="meta-pill">🗂️ ${g.rows.length} 个 SKU</span>${alerts?`<span class="meta-pill v6-alert">⚠️ ${alerts} 项</span>`:''}</div><div class="v3-stock-hint">${escapeHtml(summary.detail||'混合包装')} · 点开看规格 / 品牌</div></div></div>
         <div class="v6-family-value"><div class="stock-value v3-${v3Level(worst)}">${escapeHtml(summary.main)} <small>${escapeHtml(summary.unit)}</small></div><span class="v6-family-chevron">⌄</span></div>
       </button>
       <div class="v6-family-body ${expanded?'':'hidden'}">
@@ -140,17 +140,21 @@ renderStock=function(){
   // manual drag mode still renders direct card children with no section headers.
   const visibleCardsHtml=(()=>{
     if(v6StockSortMode!=='category'||cat!=='全部')return families.map(familyCard).join('');
-    const categoryNames=[...new Set(families.map(g=>String(g.rows[0]?.category||'未分类')))];
+    const categoryNames=[...new Set(families.map(g=>v7CategoryLabel(g.rows[0]?.category||'未分类')))];
     categoryNames.sort((a,b)=>{
-      const ai=categories.indexOf(a),bi=categories.indexOf(b);
-      if(ai!==bi)return (ai<0?999:ai)-(bi<0?999:bi);
+      const ai=v7CategoryOrder(a),bi=v7CategoryOrder(b);
+      if(ai!==bi)return ai-bi;
       return a.localeCompare(b,'zh-CN',{numeric:true,sensitivity:'base'});
     });
-    return categoryNames.map(category=>{
-      const groups=families.filter(g=>String(g.rows[0]?.category||'未分类')===category);
+    const isRoomCategory=name=>name==='蔬果'||name==='冷藏物料';
+    return categoryNames.map((category,index)=>{
+      const groups=families.filter(g=>v7CategoryLabel(g.rows[0]?.category||'未分类')===category);
       const totalSkus=groups.reduce((sum,g)=>sum+g.rows.length,0);
-      const title=`<div class="v6-stock-category-head"><span class="v6-category-name">${categoryIcons[category]||'📦'} ${escapeHtml(category)}</span><span class="v6-category-count">${groups.length} 张商品卡 · ${totalSkus} 个 SKU</span></div>`;
-      return title+groups.map(familyCard).join('');
+      const room=isRoomCategory(category);
+      const roomHead=room&&!categoryNames.slice(0,index).some(isRoomCategory)
+        ?'<div class="v7-stock-room-head">🥬 蔬果风房 <span>按存放位置分组</span></div>':'';
+      const title=`<div class="v6-stock-category-head ${room?'v7-stock-room-child':''}"><span class="v6-category-name">${categoryIcons[category]||'📦'} ${escapeHtml(category)}</span><span class="v6-category-count">${groups.length} 张商品卡 · ${totalSkus} 个 SKU</span></div>`;
+      return roomHead+title+groups.map(familyCard).join('');
     }).join('');
   })();
   document.getElementById('stockList').innerHTML=families.length?visibleCardsHtml:'<div class="empty">这个区域还没有匹配的 SKU 🗿</div>';
@@ -285,10 +289,13 @@ document.getElementById('stockSort')?.addEventListener('change',e=>v6SetStockSor
 renderCount=function(){
   v4RenderAreaTabs();
   const area=v4AreaMeta(v4AreaFilter);
-  const html=v3Cats().map(cat=>{
-    const rows=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter&&x.category===cat);
-    if(!rows.length)return'';
-    return `<section class="count-group"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${escapeHtml(cat)}</div>${rows.map(x=>`<div class="count-row"><div class="count-label"><span class="count-mini-icon">${v3Icon(x)}</span><div class="count-label-text"><strong>${escapeHtml(x.name)}</strong><small>${escapeHtml(x.spec||'无规格')} · 当前 ${fmt(x.qty)} ${escapeHtml(x.unit)}</small></div></div><div class="input-unit"><input class="count-input" data-id="${x.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="—"><span>${escapeHtml(x.unit)}</span></div></div>`).join('')}</section>`;
+  const countCats=v3Cats().filter(cat=>v3Skus().some(x=>v4AreaOf(x)===v4AreaFilter&&v7CategoryMatches(cat,x.category)));
+  const isRoomCategory=name=>name==='蔬果'||name==='冷藏物料';
+  const html=countCats.map((cat,index)=>{
+    const rows=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter&&v7CategoryMatches(cat,x.category));
+    const roomHead=isRoomCategory(cat)&&!countCats.slice(0,index).some(isRoomCategory)
+      ?'<div class="v7-stock-room-head">🥬 蔬果风房 <span>盘货分区</span></div>':'';
+    return roomHead+`<section class="count-group ${isRoomCategory(cat)?'v7-stock-room-count':''}"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${escapeHtml(cat)}</div>${rows.map(x=>`<div class="count-row"><div class="count-label"><span class="count-mini-icon">${v3Icon(x)}</span><div class="count-label-text"><strong>${escapeHtml(x.name)}</strong><small>${escapeHtml(x.spec||'无规格')} · 当前 ${fmt(x.qty)} ${escapeHtml(x.unit)}</small></div></div><div class="input-unit"><input class="count-input" data-id="${x.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="—"><span>${escapeHtml(x.unit)}</span></div></div>`).join('')}</section>`;
   }).join('');
   document.getElementById('countList').innerHTML=html||`<div class="empty">${area.icon} ${escapeHtml(area.label)} 还没有 SKU</div>`;
 };
