@@ -475,3 +475,20 @@ body.v6-sorting,body.v6-sorting .v6-drag-handle{
   user-select:none;
 }
 body.v6-sorting .v6-drag-handle{cursor:grabbing}
+
+
+/* Inventory v0.7.4 · multiple stock specs in one product family */
+.v3-variant-tools{
+  display:flex;flex-direction:column;gap:9px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:18px;
+  background:rgba(185,201,255,.045);
+}
+.v3-variant-tools small{
+  font-size:10.5px;line-height:1.5;color:var(--muted);
+}
+.v3-variant-tools button{
+  min-height:42px;align-self:stretch;
+}
+:root[data-theme="light"] .v3-variant-tools{
+  background:rgba(72,95,150,.055);
+}
