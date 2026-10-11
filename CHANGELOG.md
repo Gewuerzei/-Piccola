@@ -2,6 +2,19 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.7.6 · Native iPhone SKU Category Selector
+**2026-10-11**
+
+- 修正 iPhone PWA 中 SKU 编辑表单只有分类输入键盘、无法直接选项的问题：原 `datalist` 改为真正的原生 HTML `select`。
+- 新分类菜单用 `optgroup` 显示 **🥬 蔬果风房：蔬果 / 冷藏物料**，其余分类保留，并可选 `＋ 新建分类…` 显示自定义输入。
+- 旧 `冷藏配料` 在编辑器中展示为 `冷藏物料`，只在用户明确保存后才改变这条 SKU 的正式分类。
+- 防止把 `蔬果风房` / `全部` 这种只供 UI 使用的分组写成真实 SKU category；自定义分类已存在时提示使用菜单选项。
+- 自定义分类继续写入 `customCategories`，从本机 Inventory 保存，员工任务、供应商、Cloud 同步流程不变。
+- 通过模拟 DOM 测试：旧分类正确选中、分组选项可见、自定义分类可建立、重复/父级拒绝保存、原 SKU 不变、同商品新增规格不受影响。
+- 未在现场设备运行代码，等待 iPhone PWA 验收；Service Worker cache 更新为 `cassola-suite-v092`。
+
+---
+
 ## Inventory v0.7.5 · Produce Cold Room Hierarchy
 **2026-10-11**
 
