@@ -17,6 +17,11 @@
 
 > **2026-10-13 Staff v0.4.7 部门大切换卡（界面预备，不是分区完成）：**周休首页新增三个醒目可点击卡片 🍣 Sushi / 🍷 Bar-Sala / 🍳 Cucina。旧版 `cassola_staff_v01` 未能证明一定是 Sushi，因此 Sushi 标签下保留现有 legacy 工作副本并有醒目的未校验警告；Sala 和 Cucina 显示独立工作区尚未迁移提示，完全隐藏旧周表编辑、PDF、发布按钮。点击任一卡片只切换前端内容，不触发 Cloud 下载/上传或更改本机 Staff 状态。**正式启用**仍必须完成 Staff v2 Directory+部门 scope + Edge 部门权限+安全迁移；其他 Staff v1 功能尚未部门化，不得宣传已上线多部门排休。详见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
 
+> **2026-10-13 Staff v0.4.8 真实功能（本机预备迁移，不是正式 Cloud v2）：** `staff-departments.js` 新增 Settings →「历史版本安全导入」，经已连接 Supervisor 的 `list_versions` / `get_version_state` **只读**接口选择旧 Staff 历史、显示完整人员预览、明确选择部门，再保存到独立 `cassola_staff_departments_v01` 本机目录及部门副本；支持在 Bar/Sala / Cucina 周表大卡中只读查看本机已导入名单及既有休息记录，人员页额外显示独立部门人员；不挤进 Sushi 原 `cassola_staff_v01`，也不调用 Cloud `restore_version`，不改 Cloud Head。若员工 ID 与 Sushi/已导入部门重合、目标已有数据则拒绝自动合并；B 来源的旧 `primaryRole` 在 Sala 仅存 `serviceStation`，不可授权厨房盘货。
+> **已彻底停用 V1 的危险「整份替换下载」：**按钮禁用，`CassolaCloud.staffDownload()` 抛出明确提示；读取历史仅限安全导入。导入前持久保存当前 legacy + 部门根数据到时间戳回滚键；不能只说“选择历史就立即合并”。
+> **2026-10-12 PDF 周休恢复：**Sushi 页新增「🛟 从 PDF 恢复周休」，从**本机当前 8 人**生成逐人选择 10/12–10/18 休息日的表单；须人工核对 PDF、确认 8 人全部选定后调用 `CassolaStaff.applyVerifiedRestWeek`。程序先检查名册人数/日期/本地冲突并建立时间戳旧账备份，再把 rest 记录写到 `cassola_staff_v01`。保留旧发布 v1 对象，恢复后如需发布须显式创建新版。该功能不附带用户私人姓名/日期映射硬编码至公开 GitHub；未经过 Pietro 的实际点选不会自动恢复。
+> **限制：**现阶段部门人员合并**仅存在本机**；独立部门仍为只读预览，不能上传新部门 Cloud / 正式发布排休 / 分享到其他 Supervisor。后续实现完整 Staff v2、Edge 部门授权、版本合并及 migration commit 前，不得称之为多端正式同步。新 PWA cache v098，源码核对和本机模拟操作通过，iPhone 实机待验。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
@@ -24,7 +29,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.7.6 · iPhone Native SKU Category Picker + Cold Room Groups**
-- Staff: **v0.4.7 · Large Department Week Selector (UI Preview) + Download Guard**
+- Staff: **v0.4.8 · Local Department Historical Import + PDF Rest Recovery**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
@@ -1110,7 +1115,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v097
+cassola-suite-v098
 ```
 
 当前 CORE 必须包含：
