@@ -2,6 +2,19 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Employee UX Hotfix · Submission Feedback + Cached Panel (v095)
+**2026-10-13**
+
+- 员工反馈盘货提交 / 页面切换疑似卡顿；代码审计发现员工页面每个 SKU 绘制事件角标时重复读取 / JSON.parse 同一份 localStorage 草稿，现改为一次遍历草稿事件、对 SKU 计数并复用。
+- 员工点击“收货 / SKU”标签不再先 await Cloud refresh 才渲染，改为即时显示本机缓存，再异步刷新并由 cloud task change 事件更新；刷新失败保留缓存且提示。
+- 盘货点击上传时立即禁用上传按钮、显示“⏳ 发送中”。提交得到后端成功确认才显示“✅ Cloud 已确认接收”；断网或网络超时只显示“📵 已保存在待发送”，需手动点待N重新发送，不会谎报成功。
+- 保留独立 Submission ID、原 Outbox 幂等/审核机制、Inventory 与 Staff 数据，防止双击重复发送；状态文案跨 render 保留。未自动修改 Cloud 数据。
+- 只读诊断（非用户本次提交成功证明）：最近 45 次 Edge Function HTTP 响应全为 200，平均执行约 704ms，最长约 2577ms；生产 employee_submissions 表当时仍无收到记录，岗位共享任务规则也为 0。不能归因为单一缓存故障。
+- Pietro 已确认 2026-10-12 的历史 Staff 发布 v1 来自 Sushi，但其冻结 snapshot.cells 为空，无法只凭该 Cloud 发布记录还原哪天休息；保留原 PDF/回滚作为迁移资料。已更新迁移设计文档。
+- JS 语法检查、成功/离线/超时三路径模拟测试通过；iPhone 端效果未验收。Service Worker cache 更新为 `cassola-suite-v095`。
+
+---
+
 ## Staff Department Partition · Architecture Approved (Design Only)
 **2026-10-13**
 
