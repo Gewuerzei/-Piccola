@@ -24,6 +24,8 @@
 
 > **2026-10-13 服务端防覆写最终检查：cassola-cloud ACTIVE v19。** 为防旧 iPhone/PWA 继续写/下载共享 `staff` Head，Edge 对 `upload_scopes` 含 `staff` 返回 `legacy_staff_write_frozen` (409)，对 `download_scopes` 含 `staff` 返回 `legacy_staff_download_frozen` (409)，对 `restore_version` 指向旧 `staff` 历史返回 `legacy_staff_restore_frozen` (409)；因此旧客户端也无法再整体覆盖正式 Staff 或自身本机排休。**仍允许**以 Supervisor 身份执行 `list_versions` / `get_version_state` 只读历史导入、Inventory 的独立 scope 上传下载，以及员工盘货事务。生产 `staff` Head/8 人数据未更改，v19 已复读确认 ACTIVE。以后做真正的 Staff v2 前不得移除这些拦截，必须先完成部门作用域和服务端权限验收。
 
+> **2026-10-13 Staff v0.4.9 / PWA cache v099 · Sushi 周休一键恢复：**Pietro 不愿逐人填写八个日期。经只读核对，Cloud 历史 2026-10-12 v1 的发布 `snapshot.people` 及当前 Head 都属于相同的八人名册，顺序与已获 Pietro 确认的原 PDF 完全一致。已把 `staff-departments.js` 的表单恢复入口换成「⚡ 一键恢复已核对周休」：客户端使用旧 v1 冻结的 8 人姓名+personId 严格校验以及固定 SHA-256 指纹（公开仓库**不存原人员 ID 与姓名映射**），再按原 PDF 的 8 行休息日期位置自动生成 `{personId,date}`。一次显示核对摘要并确认，即调用原 `applyVerifiedRestWeek`，先备份旧本机 Staff、阻止冲突、保存 8 条周休、不动旧发布 v1 / Cloud。名单、顺序、记录冲突或 SHA 不一致时坚决拒绝，不能猜测恢复。模拟八人恢复与不匹配名册拒绝通过；iPhone 真机仍待验收。**无需逐人选择日期，也不是悄悄自动改数据，用户须主动确认执行。**
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
@@ -31,7 +33,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.7.6 · iPhone Native SKU Category Picker + Cold Room Groups**
-- Staff: **v0.4.8 · Local Department Historical Import + PDF Rest Recovery**
+- Staff: **v0.4.9 · One-Tap Verified Sushi PDF Week Restoration**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
@@ -1117,7 +1119,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v098
+cassola-suite-v099
 ```
 
 当前 CORE 必须包含：
