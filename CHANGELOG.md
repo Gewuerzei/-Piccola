@@ -8,7 +8,7 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 修复“只有覆盖下载、没有合并导入”的实质缺口。新增 `staff-departments.js` 与 Settings → **历史版本安全导入**：通过既有 Edge `list_versions` / `get_version_state` **只读**读取共享旧 Staff 的历史版本，先列出人员及原角色标记，明确选择 Sushi / Sala / Cucina 目标部门并二次确认。
 - 合并写入 **独立本机 `cassola_staff_departments_v01`**，保留原旧 `cassola_staff_v01`、周休表及发布版本；设置 / 人员页增加导入入口和独立部门人员显示，Bar/Sala / Cucina 大卡可阅读独立副本周休表。只读部门预览尚不可编辑/发布/上云。
 - 导入检查既有 personId 重叠与已有同部门快照：不靠同名推断合并，不覆盖既有分区；Sala 来源 `cassa/cucina/maki` 写入仅供显示的 `serviceStation`，不自动授予厨房盘货任务和权限。导入前生成带时间戳的 Staff 原始工作副本及部门本机数据恢复备份。
-- **旧版 Staff 整份替换下载已禁用**（前端按钮 disabled，Cloud API 封装也拒绝执行），以免再发生两套 Supervisor 互相覆盖。
+- **旧版 Staff 整份替换上传及下载均已禁用**（两按钮 disabled，Cloud API 封装都拒绝执行），以免两套 Supervisor 继续写同一旧 Head。`publishWeek()` 改为只在本机发布新版本，**不再隐式上传旧共享 Staff**；可通过 Staff JSON 人工备份。
 - Sushi 周排休增加「🛟 从 PDF 恢复周休」入口。旧 Cloud 发布 v1 的冻结 snapshot.cells 为空，所以按已核对的 PDF 逐人选择 10/12–10/18 休息日（8 人），确认后自动备份原始本机旧账、阻断日期/排休冲突，再恢复本机 8 条 rest 记录；旧 v1 发布对象不变，后续需显式重新发布新版。真实员工姓名/私人排休表未写进公开代码。
 - 经 JS 静态语法和模拟流程验证：历史 B 名册 8 人隔离导入、Sushi 8 人与发布历史完整保持、Sala 旧排休在新副本、提交前本机备份；PDF 恢复 8 条、重复调用幂等、冲突时拒绝覆盖。
 - **限制：**本次只修本机导入/恢复通道，**不是**正式三部门 Cloud 存储及多 Supervisor 自动同步。其他终端不会自动得到本机新增的 Sala 副本，Staff v2 服务端 grants、统一目录、跨主管合并及正式发表仍待独立实施。
