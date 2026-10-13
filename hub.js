@@ -360,12 +360,16 @@
     }
   }
 
-  async function switchEmployeePanel(mode){
+  function switchEmployeePanel(mode){
     employeePanel=mode==='receipt'?'receipt':mode==='sku'?'sku':'count';
-    if((employeePanel==='receipt'||employeePanel==='sku')&&window.CassolaCloud?.connected?.()){
-      await window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{});
-    }
+    // Show locally cached tasks immediately. Do not keep the tab frozen
+    // behind a 6.5s network refresh; cloud events update it asynchronously.
     renderEmployee();
+    if((employeePanel==='receipt'||employeePanel==='sku')&&window.CassolaCloud?.connected?.()){
+      window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{
+        if(typeof showToast==='function')showToast('☁️ 更新暂时失败，当前显示本机缓存');
+      });
+    }
   }
   function saveEmployeeInput(input){
     if(!isEmployee())return;
