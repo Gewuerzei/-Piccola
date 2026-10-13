@@ -118,43 +118,54 @@
     work.querySelector('[data-dept-prev]').addEventListener('click',()=>{week=dayIso(week,-7);renderDepartment(dept)});
     work.querySelector('[data-dept-next]').addEventListener('click',()=>{week=dayIso(week,7);renderDepartment(dept)});
   }
-  function openRestRecovery(){
-    const people=(legacy().people||[]).filter(p=>p.active!==false);
-    if(people.length!==8){alert('此工具只适用于 Pietro 已核对的 2026-10-12 Sushi 八人 PDF。当前人员数不匹配，已阻止恢复。');return}
-    let d=document.getElementById('staffPdfRestDialog');
-    if(!d){
-      d=document.createElement('dialog');d.id='staffPdfRestDialog';d.className='staff-dialog staff-safe-merge-dialog';
-      d.innerHTML='<div class="dialog-head"><div><div class="eyebrow">PDF WEEK RECOVERY</div><h3>🛟 恢复 10/12–10/18 Sushi 周休</h3></div><button type="button" class="icon-btn" data-rest-close>✕</button></div><div id="staffPdfRestContent"></div>';
-      document.body.appendChild(d);
-      d.addEventListener('click',ev=>{
-        if(ev.target.closest('[data-rest-close]'))d.close();
-        if(ev.target.closest('[data-rest-apply]'))applyRestSelection();
-      });
+  // Pietro approved the 2026-10-12 PDF. The corresponding frozen v1 publication
+  // has 8 roster rows in the exact PDF order. We store ONLY the SHA256 of
+  // source person-id + name pairs and day offsets (not people's private names).
+  // If local data is another roster, refuse instead of assuming an ordering.
+  const VERIFIED_PDF_WEEK='2026-10-12';
+  const VERIFIED_PDF_ROSTER_SHA256='e2eddcd9c6a7132c11bf2fff7cf31b35aea2ca98270730f921c37a045c4e80ea';
+  const VERIFIED_PDF_REST_DAYS=[14,15,12,13,14,13,12,15];
+  let pdfRecoveryBusy=false;
+  async function buildVerifiedPdfRows(data){
+    const publication=(data.weekPublications?.[VERIFIED_PDF_WEEK]||[]).find(p=>Number(p.version)===1);
+    const frozen=publication?.snapshot?.people;
+    const active=(data.people||[]).filter(p=>p.active!==false);
+    if(!Array.isArray(frozen)||frozen.length!==8||active.length!==8||publication?.snapshot?.weekStart!==VERIFIED_PDF_WEEK)
+      throw new Error('当前没有匹配的 10/12 Sushi v1 八人发布名册，不进行自动恢复');
+    if(!globalThis.crypto?.subtle||!globalThis.TextEncoder)
+      throw new Error('当前浏览器不能执行安全名册校验，请使用 HTTPS 重新打开 Piccola');
+    const originals=new Map(active.map(p=>[String(p.id),p]));
+    if(originals.size!==8)throw new Error('本机人员 ID 不唯一，已阻止恢复');
+    for(const person of frozen){
+      const local=originals.get(String(person.id));
+      if(!local||local.name!==person.name)
+        throw new Error('本机人员和旧发布名册不一致，已阻止自动对应');
     }
-    const rows=people.map(p=>{
-      let existing='';
-      for(let i=12;i<=18;i++)if(legacy().attendance?.['2026-10-'+i]?.[p.id]?.status==='rest')existing='2026-10-'+i;
-      return '<label class="staff-rest-row"><b>'+esc(p.name)+'</b><select data-rest-person="'+esc(p.id)+'"><option value="">选择 PDF 上的休息日</option>'+
-      Array.from({length:7},(_,i)=>{const day=12+i,v='2026-10-'+day;return '<option value="'+v+'" '+(existing===v?'selected':'')+'>周'+['一','二','三','四','五','六','日'][i]+' 10/'+day+'</option>'}).join('')+'</select></label>';
-    });
-    d.querySelector('#staffPdfRestContent').innerHTML='<p class="staff-merge-alert">原 Cloud v1 只保存了发布记录，没有休息单元格。请按已确认的 PDF 为每人选择休息日。恢复前自动备份，保存后会显示为与旧 v1 不一致，可再发布新版。</p>'+
-      '<div class="staff-rest-rows">'+rows.join('')+'</div>'+
-      '<p class="staff-merge-note">仅写本机 Sushi 2026-10-12 当周，不修改 Sala、Cloud Head 或原始发布 v1；发现与现有记录冲突会停止。</p>'+
-      '<button class="btn primary large" type="button" data-rest-apply>核对 8 人后恢复本机周休</button>';
-    if(!d.open)d.showModal();
+    const signature=frozen.map(p=>String(p.id)+'\u0001'+String(p.name)).join('\u0002');
+    const digest=await globalThis.crypto.subtle.digest('SHA-256',new globalThis.TextEncoder().encode(signature));
+    const fingerprint=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(fingerprint!==VERIFIED_PDF_ROSTER_SHA256)
+      throw new Error('发布名册不符合已核对的原 PDF；不会按照错误顺序恢复');
+    return frozen.map((p,i)=>({personId:String(p.id),name:p.name,date:'2026-10-'+VERIFIED_PDF_REST_DAYS[i]}));
   }
-  function applyRestSelection(){
-    const rows=[...document.querySelectorAll('[data-rest-person]')].map(el=>({personId:el.dataset.restPerson,date:el.value}));
-    if(rows.length!==8||rows.some(x=>!x.date)){alert('请对照 PDF 为每位员工选择休息日（共 8 人）。尚未写入任何记录。');return}
-    const source=legacy(),names=new Map((source.people||[]).map(p=>[p.id,p.name]));
-    const lines=rows.map(row=>(names.get(row.personId)||'未知人员')+'：'+row.date).join('\n');
-    if(!confirm('请最后对照 10/12 周原 PDF 核实：\n\n'+lines+'\n\n确认创建本机备份并恢复以上休息日？原已发布 v1 不变。'))return;
+  async function openRestRecovery(){
+    if(pdfRecoveryBusy)return;
+    pdfRecoveryBusy=true;
+    const button=document.getElementById('staffPdfRestButton');
+    if(button){button.disabled=true;button.textContent='⏳ 正在核对原 PDF 名册…'}
     try{
-      const done=window.CassolaStaff?.applyVerifiedRestWeek?.(rows);
-      if(!done)throw new Error('Staff 恢复接口不可用');
-      document.getElementById('staffPdfRestDialog')?.close();
-      alert(done.inserted?'✅ 已恢复 '+done.inserted+' 条本机 Sushi 休息记录。原 v1 未改写；请核实并重新发布新版。':'本机已包含这些休息记录，无需重复恢复。');
-    }catch(e){alert('🛑 已阻止恢复：'+(e?.message||e))}
+      const rows=await buildVerifiedPdfRows(legacy());
+      const schedule=rows.map(r=>r.name+'：'+r.date.slice(5).replace('-','/')+' 休息').join('\n');
+      if(!confirm('已与 Pietro 确认的 10/12–10/18 Sushi PDF 自动对齐八人。\n\n'+schedule+
+        '\n\n确认一键恢复到【本机】？会先自动备份，不修改原发布 v1 或 Cloud。'))return;
+      const result=window.CassolaStaff?.applyVerifiedRestWeek?.(rows.map(({personId,date})=>({personId,date})));
+      if(!result)throw new Error('Staff 数据恢复接口尚未准备好');
+      alert(result.inserted?'✅ 已自动恢复 '+result.inserted+' 条 Sushi 休息记录。原发布 v1 保留，修改仅在本机。':'✅ 本机八人的休息记录已存在，无需重复恢复。');
+    }catch(err){alert('🛑 未改动排休：'+(err?.message||err))}
+    finally{
+      pdfRecoveryBusy=false;
+      if(button){button.disabled=false;button.textContent='⚡ 一键恢复已核对周休'}
+    }
   }
   function exportCombinedBackup(){
     const payload={format:'cassola-staff-departments-bridge-backup-v1',exportedAt:new Date().toISOString(),legacy:legacy(),departments:read(),warning:'Includes personal Staff data; does not contain IndexedDB avatars. Use original Staff full backup for avatars.'};
@@ -175,7 +186,7 @@
     const sushi=document.getElementById('staffWeekLegacyContent');
     if(sushi&&!document.getElementById('staffPdfRestButton')){
       const strip=document.createElement('div');strip.className='staff-rest-recover-banner';
-      strip.innerHTML='<span>📄 10/12 Sushi 旧 PDF 已核对，但旧 v1 没有保存休息单元格。</span><button class="btn secondary" type="button" id="staffPdfRestButton">🛟 从 PDF 恢复周休</button>';
+      strip.innerHTML='<span>📄 10/12 Sushi PDF 已确认，可以自动核对旧 v1 名册并恢复休息日。</span><button class="btn primary" type="button" id="staffPdfRestButton">⚡ 一键恢复已核对周休</button>';
       sushi.insertBefore(strip,sushi.firstChild);strip.querySelector('button').addEventListener('click',openRestRecovery);
     }
     renderExtraPeople();
