@@ -32,6 +32,13 @@
 - After Staff v2 migration, wire the same selector to `staff:sushi`, `staff:sala`, `staff:cucina` respectively. Each tab must show independently versioned weekly attendance, people membership and publication history, with selected department in exported PDF filenames; unauthorized departments should be disabled/hidden according to *server-side* grants, not frontend-only visibility.
 - Existing Staff v1 data, Cloud rollback and `staff` Head remain untouched by the selector, which must never trigger a download on tap.
 
+## 2026-10-13 · v0.4.8 local migration bridge and v19 Cloud freeze
+
+- `staff-departments.js` is a **functional local-only** merge preview for historic shared Staff versions. It reads old Cloud through `list_versions` / `get_version_state`, requires selecting a target department, and saves a distinct `cassola_staff_departments_v01` local workspace while leaving `cassola_staff_v01` untouched. It rejects overlapping person IDs and occupied department slots, takes a timestamped local backup, and displays imported departments without silently merging them into Sushi.
+- The Sushi old PDF has real verified days off but legacy publication `snapshot.cells` is empty. The `applyVerifiedRestWeek` UI needs all eight people and date selections confirmed against the PDF, backs up old local Staff first and refuses conflicting records. It preserves old v1 and allows later explicit local publication v2. **Do not claim schedule restoration happens automatically on app update.**
+- The local sidecar is not yet uploaded or shared: Staff V2 directory + per-department server Head + Supervisor grants remain to be built. Other supervisors cannot automatically receive this local import. The future migration must read sidecar alongside legacy state and deduplicate provenance.
+- Edge `cassola-cloud` **ACTIVE v19** freezes `staff` whole-scope upload, download and history restore server-side (HTTP 409) even for old cached PWAs; it preserves authorized read-only history APIs, Inventory scope actions and employee counting. Old Staff local publication no longer auto-uploads. These safeguards stay in force until V2 migration passes acceptance gates.
+
 ## 1. Goal and non-goals
 
 One **global person directory**, three independently versioned **department Staff workspaces**, and explicit supervisor permissions. Supervisors may collaborate on the same department. Staff Cloud download **must never silently replace the other departments**, and importing people is a separate **preview + explicit merge** operation.
