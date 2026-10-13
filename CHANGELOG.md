@@ -2,6 +2,16 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff Department Partition · Architecture Approved (Design Only)
+**2026-10-13**
+
+- Pietro 确认 **Sushi / Cucina / Sala** 是 Staff 正式业务分区；不能根据 Supervisor 设备划分排休账。
+- 已创建 `STAFF_DEPARTMENT_MIGRATION_PLAN.md`，定义独立三部门 Cloud scope、共享人员目录、人员身份映射、旧版历史周表保全、JSON/Cloud 三方合并、跨部门冲突、独立 PDF 与多 Supervisor 并发分支。
+- Legacy 单一 `staff` scope 中发现两个无共同 personId 的不同名册；迁移必须在本机预览后，由 Supervisor 明确选择旧版本对应部门以及重复身份的 link / new / archive，禁止按姓名或岗位自动判断。
+- **设计文档提交，不是代码部署。** 没有创建生产 Cloud scope、运行数据库 migration、覆盖 Cloud Head、本机 Staff 数据或员工 PIN/任务。现有 v0.4.6 下载防覆盖保护继续生效。
+
+---
+
 ## Staff v0.4.6 · Prevent Cross-Supervisor Staff Download Data Loss
 **2026-10-13**
 
