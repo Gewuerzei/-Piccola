@@ -2,6 +2,20 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4.6 · Prevent Cross-Supervisor Staff Download Data Loss
+**2026-10-13**
+
+- 收到实机报告：从别的 Supervisor 下载 Staff 后，本机已发布的**周排休表**消失，另一 Supervisor 的人员也未按预期合并。
+- 根因确认为 Cloud 仅有一个 `staff` scope：`staffDownload()` → `mergeScope('staff')` → `CassolaStaff.applyCloudState()` 是**整份替换**，不支持多 Supervisor 人员合并或部门分区。历史上不同 supervisor 传到同一 scope 的 roster 会互相替换。
+- 检查生产 Cloud 历史仅访问只读元数据和版本 materialize：不同链路有两组彼此 personId 完全不重叠的 8 人名单，2026-10-12 13:30 的版本仍包含 10/12 当周发布 v1；2026-10-13 14:49 Cloud 被手动恢复为缺少 weekPublications 的另一个历史版本。未恢复或修改 Cloud。
+- `cloud-sync.js` 新增 `staffDownloadRisk`：整份下载前先比较 roster id、已有 attendance、已发布 weekPublications 的 id。检测到不同人员组、少人、排休记录丢失或周表发布缺失时拒绝应用，避免覆盖本机；允许操作也重新明确提示这不是合并。
+- Staff Cloud 页面增加单一 scope 警告，下载按钮改为“替换下载 Staff”。
+- 不清除 `cassola_staff_v01` / Inventory / IndexedDB，不自动恢复本机快照，不创建或覆盖 Cloud Head。
+- 正式“按部门独立排休 + 跨 Supervisor 人员合并”暂未实现；需要确定分区定义，再设计 schema / migration / import preview。
+- JavaScript 语法与破坏性下载门禁模拟测试通过，iPhone 现场验证待完成。Service Worker cache 升级为 `cassola-suite-v094`。
+
+---
+
 ## Staff v0.4.5 · Weekly Rest PDF Readability
 **2026-10-11**
 
