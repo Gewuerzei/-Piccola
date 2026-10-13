@@ -156,13 +156,21 @@
       alert(done.inserted?'✅ 已恢复 '+done.inserted+' 条本机 Sushi 休息记录。原 v1 未改写；请核实并重新发布新版。':'本机已包含这些休息记录，无需重复恢复。');
     }catch(e){alert('🛑 已阻止恢复：'+(e?.message||e))}
   }
+  function exportCombinedBackup(){
+    const payload={format:'cassola-staff-departments-bridge-backup-v1',exportedAt:new Date().toISOString(),legacy:legacy(),departments:read(),warning:'Includes personal Staff data; does not contain IndexedDB avatars. Use original Staff full backup for avatars.'};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='cassola-staff-all-departments-'+new Date().toISOString().slice(0,10)+'.json';
+    a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+    alert('已生成合并 Staff 备份文件（包含旧 Sushi 工作本与本机部门副本，但不含头像）。请保存到安全位置。');
+  }
   function init(){
     const parent=document.querySelector('#staff-view-settings .staff-settings-stack');
     if(parent&&!document.getElementById('staffSafeMergeCard')){
       const card=document.createElement('div');card.className='staff-settings-card';card.id='staffSafeMergeCard';
       card.innerHTML='<h3>🛡️ Staff 跨部门安全合并</h3><p>从 Cloud 历史版本只读提取人员，预览后导入独立本机部门副本。不会用「替换下载」，不会清空 Sushi 排休。部门 Cloud 正式分区尚未上线。</p>'+
-        '<div class="staff-settings-actions"><button class="btn primary" type="button" id="staffOpenSafeMerge">☁️ 历史版本安全导入</button></div>';
-      parent.insertBefore(card,parent.firstChild);card.querySelector('button').addEventListener('click',openMerge);
+        '<div class="staff-settings-actions"><button class="btn primary" type="button" id="staffOpenSafeMerge">☁️ 历史版本安全导入</button><button class="btn secondary" type="button" id="staffExportDeptBackup">📦 备份合并数据 JSON</button></div>';
+      parent.insertBefore(card,parent.firstChild);card.querySelector('#staffOpenSafeMerge').addEventListener('click',openMerge);card.querySelector('#staffExportDeptBackup').addEventListener('click',exportCombinedBackup);
     }
     const sushi=document.getElementById('staffWeekLegacyContent');
     if(sushi&&!document.getElementById('staffPdfRestButton')){
