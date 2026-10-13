@@ -721,6 +721,20 @@
     return statusInfo('staff',head);
   }
   async function staffHistory(){return openHistory('staff')}
+  // READ-ONLY legacy Staff versions for local department import preview.
+  // Never call restore_version or write to legacy shared Head in this flow.
+  async function staffLegacyVersions(){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('list_versions',{scopeId:'staff',limit:100},12000);
+  }
+  async function staffLegacyVersionState(versionId){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    const id=String(versionId||'');
+    if(!/^[0-9a-f-]{36}$/i.test(id))throw new Error('invalid_staff_version_id');
+    const data=await api('get_version_state',{versionId:id},15000);
+    if(data.version?.scope_id!=='staff'||!Array.isArray(data.state?.people))throw new Error('invalid_legacy_staff_version');
+    return data;
+  }
 
   async function flushOutbox(){
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
@@ -900,7 +914,7 @@
     staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,staffAccessSetRole,syncStaffRoleRoster,
     inventoryTaskOptions,publishInventoryTask,listInventoryTasks,revokeInventoryTask,
     publishRoleInventoryTask,listRoleInventoryTasks,revokeRoleInventoryTask,
-    staffUpload,staffDownload,staffStatus,staffHistory,
+    staffUpload,staffDownload,staffStatus,staffHistory,staffLegacyVersions,staffLegacyVersionState,
     inventoryRollbackInfo,restoreInventoryRollback,
     queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
     rememberAccessCode,reconnect,cachedIdentity,
