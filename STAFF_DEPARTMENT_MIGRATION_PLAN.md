@@ -6,6 +6,15 @@
 >
 > Public repository: this document may contain **schema and anonymous examples only**. Never store live employee names, PINs, avatars, shifts, attendance, proprietary business figures, session tokens, or raw Cloud snapshots here.
 
+## 2026-10-13 · Legacy Sushi source verification (design-only evidence)
+
+- Pietro has explicitly identified the **2026-10-12 published v1 Staff roster** as **Sushi**. It is a verified **source-level department assignment**, not permission to move/overwrite an active Cloud Head or to infer that another roster belongs to Sala / Cucina.
+- A read-only `cassola_materialize_version` check found one publication object for the 2026-10-12 week, but its frozen `snapshot.cells` contains **0 attendance entries**. There were also **0 attendance entries** for 2026-10-12 through 2026-10-18 in the candidate source state. Hence its publication label alone cannot reconstruct actual days off.
+- The historical weekly PDF image previously shared by Pietro is an **external recovery evidence source**. Actual day-off cells require **manual review and approval** using that image and any local JSON / rollback; the migration must not fabricate the missing cells from the publication metadata.
+- Add a migration preview warning: `published_version_exists_but_attendance_missing`. Keep the legacy publication immutable; a corrected working week must be a new, explicitly approved record/version, not silently rewrite v1.
+- Staff role task rules already support a frozen active SKU basket following workers assigned to a matching `primaryRole`, with first successful submission winning. They are **one-shot tasks**, not recurring permanent templates; do not accidentally classify them as new persistent department schedules. `staff_role_inventory_task_rules` currently has no rule rows in production (checked 2026-10-13).
+- The staff-partition transition still requires unique supervisor identities / server-side department grants. Today the production Cloud has one supervisor credential; relying on device names would not enforce separation.
+
 ## 1. Goal and non-goals
 
 One **global person directory**, three independently versioned **department Staff workspaces**, and explicit supervisor permissions. Supervisors may collaborate on the same department. Staff Cloud download **must never silently replace the other departments**, and importing people is a separate **preview + explicit merge** operation.
