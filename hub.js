@@ -466,11 +466,11 @@
     employeeUploadBusy=true;
     employeeUploadNotice='⏳ 正在提交盘货，请不要重复点击；约 12 秒未确认则保存为待发送。';
     renderEmployee();
-    // Allow WebKit to paint the loading state before waiting for network I/O.
-    if(typeof requestAnimationFrame==='function'){
-      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-    }
     try{
+      // Allow WebKit to paint the loading state before network work.
+      if(typeof requestAnimationFrame==='function'){
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      }
       await window.CassolaCloud.submitEmployee(payload);
       const draft=loadEmployeeDraft();
       draft.lastCloudSubmissionId=payload.submissionId;
