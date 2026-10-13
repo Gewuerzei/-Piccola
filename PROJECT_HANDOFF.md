@@ -13,6 +13,8 @@
 > **2026-10-13 员工盘货提交 UX v096：** v095 的提交文字误放在长 SKU 列表最末尾、固定上传底栏外，员工点击后可能根本看不到反馈。已移入固定四按钮 dock 内的全宽小提示，并在按钮上直接标记「⏳ 正在提交」，在实际网络调用前允许 WebKit 渲染一帧。未填满 SKU 时保留「⚠️ 尚未提交」；成功仅以 Edge 明确答复显示「✅ Cloud 已确认接收」，超时/离线严格区分为本机待发送。不清理草稿 / Cloud Outbox。
 > **Sushi 恢复核对：** Pietro 已于 2026-10-13 明确确认从旧 PDF 读出的 10/12–10/18 周休安排正确。这是独立于 Cloud 空白 `snapshot.cells` 的**人工核对证据**，后续需在私有迁移清单用原 personId 映射并展示预览；不得把真实姓名 / 周休日期提交公开仓库，亦未取得直接覆盖生产 Staff 的授权。
 
+> **2026-10-13 Staff 双来源归属已获 Pietro 确认：**旧 A 来源共 8 人属于 Sushi；旧 B 来源共 8 人**全部属于 Sala（跑堂）**。B 来源遗留的 `primaryRole = cassa / cucina / maki` 仅表示负责端菜的出餐区域，不是真实的 Cucina / Sushi 部门，更不能据此给员工授予厨房岗位盘货权限。正式 v2 模型需分开 `department`、`serviceStation` 和真实 `jobRole`。两来源共 16 个不同 personId，但仍需核验真实身份映射。迁移方案已更正，**尚未向生产 Staff Cloud 合并或覆盖**；参见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
