@@ -339,11 +339,11 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffAddRole">＋ 岗位</button></div>
             </div>
             <div class="staff-settings-card staff-cloud-card">
-              <div class="staff-cloud-head"><div><h3>☁️ Staff Cloud</h3><p>同步人员表、出勤、换休、排班与发布版本。头像继续只留本机 / 完整备份。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
+              <div class="staff-cloud-head"><div><h3>☁️ Staff Cloud</h3><p>⚠️ 目前共用单一 Staff 数据区，下载是整份替换，不会合并另一位 Supervisor 的人员或排休。头像继续只留本机。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
               <div id="staffCloudDetail" class="staff-cloud-detail">Staff Cloud 不会自动覆盖本机。</div>
               <div class="staff-settings-actions">
                 <button class="btn primary" id="staffCloudUpload">☁️ 上传 Staff</button>
-                <button class="btn secondary" id="staffCloudDownload">⬇️ 下载 Staff</button>
+                <button class="btn secondary" id="staffCloudDownload">⬇️ 替换下载 Staff</button>
                 <button class="btn secondary" id="staffCloudHistory">🕘 云端历史</button>
                 <button class="btn secondary" id="staffCloudRollback">↩️ 恢复下载前版本</button>
               </div>
@@ -372,7 +372,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.4.4</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
+              <h3>Staff v0.4.6</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
             </div>
           </div>
         </section>
@@ -1241,7 +1241,7 @@
     if(!ready){badge.textContent='☁️ 未连接';badge.className='';detail.textContent='输入 Supervisor Access Code 并连接 Cloud 后可同步。';return}
     const st=window.CassolaCloud?.staffStatus?.()||{icon:'☁️',text:'等待检查',cls:'empty'};
     badge.textContent=st.icon+' '+st.text;badge.className=st.cls||'';
-    detail.textContent=st.cls==='conflict'?'本机和云端都有修改，不会自动覆盖。上传只会形成分支。':'Cloud 只在你明确上传 / 下载 / 发布时改变 Staff 数据。';
+    detail.textContent=st.cls==='conflict'?'本机和云端都有修改，不会自动覆盖。上传只会形成分支。':'⚠️ Staff 尚未按部门分区：跨 Supervisor 下载不是人员合并。缺失排休 / 发布记录时程序会阻止覆盖。';
   }
   async function refreshPersonAccess(){
     const body=document.getElementById('staffAccessBody'),badge=document.getElementById('staffAccessBadge');
