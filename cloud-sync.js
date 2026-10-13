@@ -663,12 +663,49 @@
     window.dispatchEvent(new CustomEvent('cassola-cloud-staff-change'));
     return data;
   }
+  // Staff Cloud is still one legacy shared scope. Reject downloads that would
+  // silently remove local people/rest plans/publications until area partition
+  // and explicit merge/import flows have been implemented.
+  function staffDownloadRisk(local,remote){
+    const a=local||{},b=remote||{};
+    const localIds=new Set((a.people||[]).map(p=>String(p.id||'')).filter(Boolean));
+    const remoteIds=new Set((b.people||[]).map(p=>String(p.id||'')).filter(Boolean));
+    const shared=[...localIds].filter(id=>remoteIds.has(id)).length;
+    if(localIds.size&&remoteIds.size&&!shared)return 'different_rosters';
+    const missingPeople=[...localIds].filter(id=>!remoteIds.has(id));
+    if(missingPeople.length)return 'missing_people';
+    const localDates=a.attendance||{},remoteDates=b.attendance||{};
+    for(const [date,records] of Object.entries(localDates)){
+      for(const [id,rec] of Object.entries(records||{})){
+        if(rec&&!remoteDates?.[date]?.[id])return 'missing_rest_records';
+      }
+    }
+    const localPubs=a.weekPublications||{},remotePubs=b.weekPublications||{};
+    for(const [week,versions] of Object.entries(localPubs)){
+      const remoteVersions=remotePubs[week]||[];
+      for(const version of versions||[]){
+        if(version?.id&&!remoteVersions.some(v=>v.id===version.id))return 'missing_publications';
+      }
+    }
+    return '';
+  }
   async function staffDownload(){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
-    if(!confirm('下载云端 Staff 会覆盖本机人员 / 出勤 / 换休 / 发布版本。\n\n应用前会在本设备保存一份回滚快照，不会强制下载 JSON 文件。继续？'))return null;
     const data=await api('download_scopes',{scopeIds:['staff']},15000);
     const row=(data.scopes||[]).find(x=>x.scope_id==='staff'&&x.head_version_id);
     if(!row){if(typeof showToast==='function')showToast('Staff Cloud 还没有正式数据');return null}
+    const local=captureStaffScope(),reason=staffDownloadRisk(local,row.state);
+    if(reason){
+      const names={
+        different_rosters:'云端与本机是两组不同的员工，下载会把本机整组人员换掉。',
+        missing_people:'云端缺少本机现有员工，下载会删掉本机人员。',
+        missing_rest_records:'云端缺少本机已经录入的排休/出勤记录。',
+        missing_publications:'云端缺少本机已经发布的周休表版本。'
+      };
+      alert('🛑 Staff Cloud 已阻止覆盖\n\n'+(names[reason]||'检测到数据丢失风险。')+'\n\n这不是合并导入。请先用 Staff → 设置 → 导出 Staff JSON / 完整备份保存当前数据，再处理分区或历史恢复。\n\n本机没有进行任何覆盖，云端也未修改。');
+      return {blocked:true,reason};
+    }
+    if(!confirm('当前 Staff Cloud 是【整份替换】，不是合并人员或分区下载。\n\n本次没有检测到人员/排休记录删除，但云端可能存在对已有记录的修改。\n\n先确认已有本机备份，再继续？'))return null;
     window.CassolaStaff?.saveCloudRollback?.();
     mergeScope('staff',row.state);
     mutateMeta(meta=>{
