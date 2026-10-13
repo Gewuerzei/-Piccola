@@ -397,7 +397,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.4.7</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
+              <h3>Staff v0.4.8</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
             </div>
           </div>
         </section>
@@ -613,14 +613,16 @@
     if(weekDepartment==='sushi'){
       legacy.hidden=false;
       message.className='staff-department-message legacy';
-      message.textContent='⚠️ 这里仍是本机旧版 Staff 工作副本，未完成 Sushi 数据归属校验。请先核对人员，再编辑或发布；切换卡不会同步或迁移 Cloud。';
+      message.textContent='⚠️ 本机旧版 Staff（Sushi 来源已核对），仍未完成部门云迁移。请先核对人员，恢复/导入不会自动上云。';
+      window.CassolaStaffDepartments?.renderDepartment?.('sushi');
     }else{
       legacy.hidden=true;
       message.className='staff-department-message pending';
       message.innerHTML='<div class="staff-department-pending-icon">'+selected.icon+'</div>'+
         '<strong>'+selected.label+' · 独立排休区尚未启用</strong>'+
         '<p>已规划独立人员、周休与发布版本，但 Staff v2 部门 Cloud 尚未迁移。这里不显示旧共享表，防止把其他部门人员误当成本部门数据。</p>'+
-        '<small>没有下载或覆盖任何 Staff 数据。部署部门 Cloud 后，这里会接入对应正式周表。</small>';
+        '<small>没有下载或覆盖任何 Staff 数据。可在设置中安全导入历史人员的本机部门副本。</small>';
+      window.CassolaStaffDepartments?.renderDepartment?.(weekDepartment);
     }
   }
   function showView(name){
@@ -1516,6 +1518,7 @@
     list.querySelectorAll('[data-person-records]').forEach(b=>b.addEventListener('click',()=>openPersonRecords(b.dataset.personRecords)));
     list.querySelectorAll('[data-person-task]').forEach(b=>b.addEventListener('click',()=>openTaskPublisher(b.dataset.personTask)));
     hydrateAvatars(list);
+    window.CassolaStaffDepartments?.renderExtraPeople?.();
   }
 
   function personRecordRows(personId){
@@ -1831,6 +1834,41 @@
     renderAll();toast('↩️ 已恢复 Staff 下载前版本');
     return true;
   }
+  // Restore Supervisor-verified PDF rest cells; preserve published v1 unchanged.
+  function applyVerifiedRestWeek(entries){
+    const week='2026-10-12',people=state.people.filter(p=>p.active!==false);
+    if(!Array.isArray(entries)||people.length!==8||entries.length!==people.length)throw new Error('当前人员与已核对 PDF 的八人名册不一致，请停止恢复');
+    const valid=new Set(people.map(p=>String(p.id))),found=new Set();
+    const next=cloneJson(state);
+    for(const row of entries){
+      const id=String(row.personId||''),date=String(row.date||'');
+      if(!valid.has(id)||found.has(id)||!/^2026-10-1[2-8]$/.test(date))throw new Error('恢复名单或日期有误，请重新核对');
+      found.add(id);
+      const rec=next.attendance?.[date]?.[id];
+      if(rec&&rec.status!=='rest')throw new Error('存在不一致的既有排休，未覆盖，请先人工核对');
+    }
+    // Reject existing off-days that disagree, do not silently double-book.
+    for(const p of people){
+      for(let i=12;i<=18;i++){
+        const date='2026-10-'+String(i),existing=next.attendance?.[date]?.[p.id];
+        if(existing?.status==='rest'&&!entries.some(r=>r.personId===p.id&&r.date===date))
+          throw new Error('本机已有不同日期的休息记录，未执行覆盖');
+      }
+    }
+    let inserted=0;
+    for(const row of entries){
+      const map=next.attendance[row.date]||(next.attendance[row.date]={});
+      if(!map[row.personId]){map[row.personId]={status:'rest',portion:'full',note:'经 Supervisor 核对 PDF 的历史恢复',updatedAt:now()};inserted++}
+    }
+    if(!inserted)return {inserted:0,week};
+    const key='cassola_staff_pre_pdf_recovery_'+new Date().toISOString().replace(/[:.]/g,'-');
+    localStorage.setItem(key,JSON.stringify({savedAt:now(),data:state}));
+    state=normalize(next);
+    log('recovery','纸质/PDF 周休恢复 · '+week,'Supervisor 逐人确认；原发布 v1 保留',week,'all');
+    save();renderAll();
+    return {inserted,week,backupKey:key};
+  }
+
   function applyCloudState(cloud){
     if(!cloud||typeof cloud!=='object')throw new Error('invalid_staff_cloud_state');
     const device=state?.syncMeta?.deviceName||'本设备',oldRev=num(state?.syncMeta?.revision)||1;
@@ -2039,12 +2077,12 @@
   }
 
   function renderAll(){renderWeek();renderMonth();renderBoard();renderPeople();renderHistory();renderSettings();showView(currentView)}
-  function init(){load();buildApp();renderAll()}
+  function init(){load();buildApp();window.CassolaStaffDepartments?.init?.();renderAll()}
   function show(){if(!state)init();document.getElementById('staffApp')?.removeAttribute('aria-hidden');renderAll()}
   function hide(){document.getElementById('staffApp')?.setAttribute('aria-hidden','true')}
 
   window.addEventListener('cassola-cloud-staff-change',()=>{if(state){renderStaffCloudState();renderPeople()}});
   document.addEventListener('cassola-cloud-reconnected',()=>{if(state)renderStaffCloudState()});
   document.addEventListener('DOMContentLoaded',init);
-  window.CassolaStaff={show,hide,render:renderAll,applyCloudState,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
+  window.CassolaStaff={show,hide,render:renderAll,applyCloudState,applyVerifiedRestWeek,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
 })();
