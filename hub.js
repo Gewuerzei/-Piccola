@@ -225,11 +225,11 @@
       }).join(''):'<div class="empty">这个责任区没有可盘 SKU。</div>')+
       '</div>'+
       '<div class="cassola-employee-foot">'+(queued?('📵 本机还有 '+queued+' 份待发送 · 点底部“待'+queued+'”手动提交'):'联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用')+'</div>'+
-      '<div id="cassolaEmployeeUploadNotice" class="cassola-employee-upload-notice" role="status" aria-live="polite">'+(employeeUploadNotice?escapeHtml(employeeUploadNotice):'')+'</div>'+
       '<div class="cassola-employee-upload-dock">'+
+        '<div id="cassolaEmployeeUploadNotice" class="cassola-employee-upload-notice" role="status" aria-live="polite">'+(employeeUploadNotice?escapeHtml(employeeUploadNotice):'')+'</div>'+
         '<button type="button" class="btn secondary employee-dock-btn" data-employee-clear><span>🧹</span><small>清空</small></button>'+
         '<button type="button" class="btn secondary employee-dock-btn" data-employee-new-sku><span>＋</span><small>新 SKU</small></button>'+
-        '<div class="cassola-employee-dock-cell"><button type="button" class="btn primary employee-dock-btn employee-dock-upload" data-employee-cloud '+(employeeUploadBusy?'disabled aria-busy="true"':'')+'><span>'+(employeeUploadBusy?'⏳':'☁️')+'</span><small>'+(employeeUploadBusy?'发送中':'上传')+'</small></button>'+(queued?'<button type="button" class="employee-outbox-badge" data-employee-outbox aria-label="上传待发送 '+queued+'">待'+queued+'</button>':'')+'</div>'+
+        '<div class="cassola-employee-dock-cell"><button type="button" class="btn primary employee-dock-btn employee-dock-upload" data-employee-cloud '+(employeeUploadBusy?'disabled aria-busy="true"':'')+'><span>'+(employeeUploadBusy?'⏳':'☁️')+'</span><small>'+(employeeUploadBusy?'正在提交':'上传')+'</small></button>'+(queued?'<button type="button" class="employee-outbox-badge" data-employee-outbox aria-label="上传待发送 '+queued+'">待'+queued+'</button>':'')+'</div>'+
         '<button type="button" class="btn secondary employee-dock-btn" data-employee-export><span>📄</span><small>JSON</small></button>'+
       '</div>';
   }
@@ -445,7 +445,12 @@
   }
   async function uploadEmployeeCount(){
     if(employeeUploadBusy)return;
-    const payload=buildEmployeePayload();if(!payload)return;
+    const payload=buildEmployeePayload();
+    if(!payload){
+      employeeUploadNotice='⚠️ 尚未提交：请确认所有 SKU 都已填写有效数量；没有任务时请联系 Supervisor。';
+      renderEmployee();
+      return;
+    }
     if(!window.CassolaCloud?.connected?.()){
       try{
         window.CassolaCloud?.queueEmployeeSubmission?.(payload);
@@ -459,8 +464,12 @@
       return;
     }
     employeeUploadBusy=true;
-    employeeUploadNotice='⏳ 正在向 Cloud 提交盘货，请不要重复点击；超过约 12 秒会转为待发送。';
+    employeeUploadNotice='⏳ 正在提交盘货，请不要重复点击；约 12 秒未确认则保存为待发送。';
     renderEmployee();
+    // Allow WebKit to paint the loading state before waiting for network I/O.
+    if(typeof requestAnimationFrame==='function'){
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    }
     try{
       await window.CassolaCloud.submitEmployee(payload);
       const draft=loadEmployeeDraft();
