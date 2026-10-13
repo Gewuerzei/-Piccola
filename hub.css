@@ -544,3 +544,21 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
   opacity:.72;
   cursor:progress;
 }
+
+/* Employee submission v096: the notice lives inside the fixed four-button dock,
+   so it remains visible while the supervisor's long SKU task is scrolled. */
+.cassola-employee-upload-dock > .cassola-employee-upload-notice{
+  grid-column:1 / -1;
+  min-width:0;
+}
+.cassola-employee-upload-dock > .cassola-employee-upload-notice:not(:empty){
+  margin:0 1px 3px;
+  padding:9px 11px;
+  font-size:11px;
+  border-radius:14px;
+  background:color-mix(in srgb,var(--accent) 9%,var(--panel));
+  border-color:color-mix(in srgb,var(--accent) 23%,var(--line));
+}
+:root[data-theme="light"] .cassola-employee-upload-dock > .cassola-employee-upload-notice:not(:empty){
+  background:rgba(75,115,90,.09);
+}
