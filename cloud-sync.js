@@ -494,7 +494,7 @@
   async function openHistory(scopeId){
     const dlg=document.getElementById('cloudHistoryDialog'),box=document.getElementById('cloudHistoryBody'),title=document.getElementById('cloudHistoryTitle');
     if(!dlg||!box)return;
-    title.textContent=scopeLabel(scopeId)+' · 云端版本';
+    title.textContent=scopeLabel(scopeId)+' · 云端版本'+(scopeId==='staff'?'（只读，禁止整份恢复）':'');
     box.innerHTML='<div class="cloud-loading">正在读取时间机器…</div>';dlg.dataset.scope=scopeId;dlg.showModal();
     try{
       const data=await listVersions(scopeId),cpByVersion=new Map();
@@ -505,11 +505,15 @@
       box.innerHTML=(data.versions||[]).length?(data.versions||[]).map(v=>{
         const cps=cpByVersion.get(v.id)||[],current=v.id===data.headVersionId;
         const tags=[current?'👑 当前 Head':'',v.canonical_at_creation?'正式链':'🌿 分支',v.source_kind==='restore'?'♻️ 恢复':'',...cps.map(c=>c.checkpoint_type==='manual'?'📸 手动 checkpoint':'🤖 自动 checkpoint')].filter(Boolean);
-        return '<article class="cloud-version '+(current?'current':'')+'"><div class="cloud-version-top"><div><strong>'+esc(new Date(v.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</strong><small>'+esc(v.actor_credential_id)+' · '+esc(String(v.id).slice(0,8))+'</small></div><div class="cloud-version-tags">'+tags.map(t=>'<span>'+esc(t)+'</span>').join('')+'</div></div>'+(v.note?'<p>'+esc(v.note)+'</p>':'')+cps.map(c=>c.note?'<p class="cloud-cp-note">'+esc(c.note)+'</p>':'').join('')+(!current?'<button type="button" class="btn secondary" data-cloud-restore="'+esc(v.id)+'">从这个状态恢复云端</button>':'')+'</article>';
+        return '<article class="cloud-version '+(current?'current':'')+'"><div class="cloud-version-top"><div><strong>'+esc(new Date(v.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</strong><small>'+esc(v.actor_credential_id)+' · '+esc(String(v.id).slice(0,8))+'</small></div><div class="cloud-version-tags">'+tags.map(t=>'<span>'+esc(t)+'</span>').join('')+'</div></div>'+(v.note?'<p>'+esc(v.note)+'</p>':'')+cps.map(c=>c.note?'<p class="cloud-cp-note">'+esc(c.note)+'</p>':'').join('')+(!current&&scopeId!=='staff'?'<button type="button" class="btn secondary" data-cloud-restore="'+esc(v.id)+'">从这个状态恢复云端</button>':'')+'</article>';
       }).join(''):'<div class="empty">这个区域还没有云端版本。</div>';
     }catch(e){box.innerHTML='<div class="empty">读取失败：'+esc(e.message)+'</div>'}
   }
   async function restoreVersion(id){
+    if(document.getElementById('cloudHistoryDialog')?.dataset.scope==='staff'){
+      alert('🛑 旧共享 Staff Cloud 禁止整体恢复。请从 Staff → 设置 → 历史版本安全导入选择部门。');
+      return;
+    }
     if(!confirm('从这个历史状态恢复云端？\n\n不会删除后面的历史，而是创建一个新的恢复版本。本机也不会自动下载。'))return;
     await api('restore_version',{versionId:id,deviceId:deviceId(),note:'Manual restore from history'},15000);
     if(typeof showToast==='function')showToast('♻️ 云端已创建恢复版本 · 本机未自动下载');
