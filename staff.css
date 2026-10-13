@@ -432,3 +432,67 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
   background:linear-gradient(145deg,rgba(200,95,103,.065),rgba(246,243,237,.98));
   border-color:rgba(200,95,103,.25);
 }
+
+
+/* Staff week department large switch v0.4.7.
+   These tabs are deliberately a safe preview until the department cloud
+   workspaces exist; never imply a tab changes the legacy data ownership. */
+.staff-department-switch{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  margin:2px 0 11px;
+}
+.staff-department-choice{
+  min-width:0;min-height:88px;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  gap:6px;padding:12px 7px;border-radius:24px;
+  border:1px solid var(--line);
+  color:var(--text);
+  background:var(--panel2);
+  box-shadow:0 6px 15px rgba(0,0,0,.04);
+  cursor:pointer;
+  transition:transform .15s ease,border-color .15s ease,background .15s ease;
+}
+.staff-department-choice:active{transform:scale(.975)}
+.staff-department-choice:focus-visible{outline:3px solid var(--soft-blue);outline-offset:2px}
+.staff-department-choice.active{
+  border:2px solid var(--soft-blue);
+  background:color-mix(in srgb,var(--soft-blue-bg) 60%,var(--panel2));
+  box-shadow:0 8px 22px rgba(100,130,220,.10);
+}
+.staff-department-emoji{font-size:28px;line-height:1}
+.staff-department-text{display:flex;align-items:center;flex-direction:column;gap:3px;min-width:0}
+.staff-department-text b{font-size:14px;line-height:1.1}
+.staff-department-text small{font-size:9px;line-height:1.2;color:var(--muted)}
+.staff-department-message{
+  margin:0 0 14px;padding:11px 13px;border-radius:18px;
+  font-size:11px;line-height:1.55;
+}
+.staff-department-message.legacy{
+  background:var(--warn-bg);
+  border:1px solid color-mix(in srgb,var(--warn) 30%,var(--line));
+  color:var(--text);
+}
+.staff-department-message.pending{
+  text-align:center;
+  padding:28px 18px;
+  border:1px dashed var(--line);
+  background:var(--panel2);
+}
+.staff-department-pending-icon{font-size:37px;margin-bottom:8px}
+.staff-department-message.pending strong{display:block;font-size:16px}
+.staff-department-message.pending p{margin:12px auto;max-width:470px;color:var(--muted);font-size:12px}
+.staff-department-message.pending small{display:block;color:var(--muted);font-size:10px}
+#staffWeekLegacyContent[hidden]{display:none!important}
+:root[data-theme="light"] .staff-department-choice.active{
+  background:rgba(79,139,96,.11);
+  border-color:rgba(62,120,84,.62);
+}
+@media(max-width:420px){
+  .staff-department-switch{gap:6px}
+  .staff-department-choice{min-height:85px;border-radius:20px;padding:10px 4px}
+  .staff-department-emoji{font-size:25px}
+  .staff-department-text b{font-size:12px}
+  .staff-department-text small{font-size:8px}
+}
