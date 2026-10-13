@@ -25,6 +25,13 @@
 - The old role catalog / `primaryRole` is not safe as a global task authorization key. Existing job-linked credentials, tasks and historical publications need explicit compatibility mapping; existing production records must remain unchanged until migration preview is approved.
 - This is an approved **classification for a private import preview**, not permission to replace the production global `staff` Head. Require complete Staff JSON/backups and Edge server-side department grants before implementing V2.
 
+## 2026-10-13 · Approved weekly rest department selector (UI staged)
+
+- Pietro requests **three large top-level weekly rest tabs**: **🍣 Sushi / 🍷 Bar-Sala / 🍳 Cucina**, visibly selectable above the week navigation, not a buried dropdown.
+- Staff v0.4.7 stages these tabs **as a navigation shell only**. Sushi shows the current **legacy, unverified** Staff local workspace with an explicit caution; Sala and Cucina show a blocked/empty migration-pending panel. Do not imply there are already real separate department stores, silently reuse the legacy roster, or let those pending tabs publish/upload/edit/export the wrong department's data.
+- After Staff v2 migration, wire the same selector to `staff:sushi`, `staff:sala`, `staff:cucina` respectively. Each tab must show independently versioned weekly attendance, people membership and publication history, with selected department in exported PDF filenames; unauthorized departments should be disabled/hidden according to *server-side* grants, not frontend-only visibility.
+- Existing Staff v1 data, Cloud rollback and `staff` Head remain untouched by the selector, which must never trigger a download on tap.
+
 ## 1. Goal and non-goals
 
 One **global person directory**, three independently versioned **department Staff workspaces**, and explicit supervisor permissions. Supervisors may collaborate on the same department. Staff Cloud download **must never silently replace the other departments**, and importing people is a separate **preview + explicit merge** operation.
