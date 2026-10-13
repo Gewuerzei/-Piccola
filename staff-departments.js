@@ -118,6 +118,44 @@
     work.querySelector('[data-dept-prev]').addEventListener('click',()=>{week=dayIso(week,-7);renderDepartment(dept)});
     work.querySelector('[data-dept-next]').addEventListener('click',()=>{week=dayIso(week,7);renderDepartment(dept)});
   }
+  function openRestRecovery(){
+    const people=(legacy().people||[]).filter(p=>p.active!==false);
+    if(people.length!==8){alert('此工具只适用于 Pietro 已核对的 2026-10-12 Sushi 八人 PDF。当前人员数不匹配，已阻止恢复。');return}
+    let d=document.getElementById('staffPdfRestDialog');
+    if(!d){
+      d=document.createElement('dialog');d.id='staffPdfRestDialog';d.className='staff-dialog staff-safe-merge-dialog';
+      d.innerHTML='<div class="dialog-head"><div><div class="eyebrow">PDF WEEK RECOVERY</div><h3>🛟 恢复 10/12–10/18 Sushi 周休</h3></div><button type="button" class="icon-btn" data-rest-close>✕</button></div><div id="staffPdfRestContent"></div>';
+      document.body.appendChild(d);
+      d.addEventListener('click',ev=>{
+        if(ev.target.closest('[data-rest-close]'))d.close();
+        if(ev.target.closest('[data-rest-apply]'))applyRestSelection();
+      });
+    }
+    const rows=people.map(p=>{
+      let existing='';
+      for(let i=12;i<=18;i++)if(legacy().attendance?.['2026-10-'+i]?.[p.id]?.status==='rest')existing='2026-10-'+i;
+      return '<label class="staff-rest-row"><b>'+esc(p.name)+'</b><select data-rest-person="'+esc(p.id)+'"><option value="">选择 PDF 上的休息日</option>'+
+      Array.from({length:7},(_,i)=>{const day=12+i,v='2026-10-'+day;return '<option value="'+v+'" '+(existing===v?'selected':'')+'>周'+['一','二','三','四','五','六','日'][i]+' 10/'+day+'</option>'}).join('')+'</select></label>';
+    });
+    d.querySelector('#staffPdfRestContent').innerHTML='<p class="staff-merge-alert">原 Cloud v1 只保存了发布记录，没有休息单元格。请按已确认的 PDF 为每人选择休息日。恢复前自动备份，保存后会显示为与旧 v1 不一致，可再发布新版。</p>'+
+      '<div class="staff-rest-rows">'+rows.join('')+'</div>'+
+      '<p class="staff-merge-note">仅写本机 Sushi 2026-10-12 当周，不修改 Sala、Cloud Head 或原始发布 v1；发现与现有记录冲突会停止。</p>'+
+      '<button class="btn primary large" type="button" data-rest-apply>核对 8 人后恢复本机周休</button>';
+    if(!d.open)d.showModal();
+  }
+  function applyRestSelection(){
+    const rows=[...document.querySelectorAll('[data-rest-person]')].map(el=>({personId:el.dataset.restPerson,date:el.value}));
+    if(rows.length!==8||rows.some(x=>!x.date)){alert('请对照 PDF 为每位员工选择休息日（共 8 人）。尚未写入任何记录。');return}
+    const source=legacy(),names=new Map((source.people||[]).map(p=>[p.id,p.name]));
+    const lines=rows.map(row=>(names.get(row.personId)||'未知人员')+'：'+row.date).join('\n');
+    if(!confirm('请最后对照 10/12 周原 PDF 核实：\n\n'+lines+'\n\n确认创建本机备份并恢复以上休息日？原已发布 v1 不变。'))return;
+    try{
+      const done=window.CassolaStaff?.applyVerifiedRestWeek?.(rows);
+      if(!done)throw new Error('Staff 恢复接口不可用');
+      document.getElementById('staffPdfRestDialog')?.close();
+      alert(done.inserted?'✅ 已恢复 '+done.inserted+' 条本机 Sushi 休息记录。原 v1 未改写；请核实并重新发布新版。':'本机已包含这些休息记录，无需重复恢复。');
+    }catch(e){alert('🛑 已阻止恢复：'+(e?.message||e))}
+  }
   function init(){
     const parent=document.querySelector('#staff-view-settings .staff-settings-stack');
     if(parent&&!document.getElementById('staffSafeMergeCard')){
@@ -125,6 +163,12 @@
       card.innerHTML='<h3>🛡️ Staff 跨部门安全合并</h3><p>从 Cloud 历史版本只读提取人员，预览后导入独立本机部门副本。不会用「替换下载」，不会清空 Sushi 排休。部门 Cloud 正式分区尚未上线。</p>'+
         '<div class="staff-settings-actions"><button class="btn primary" type="button" id="staffOpenSafeMerge">☁️ 历史版本安全导入</button></div>';
       parent.insertBefore(card,parent.firstChild);card.querySelector('button').addEventListener('click',openMerge);
+    }
+    const sushi=document.getElementById('staffWeekLegacyContent');
+    if(sushi&&!document.getElementById('staffPdfRestButton')){
+      const strip=document.createElement('div');strip.className='staff-rest-recover-banner';
+      strip.innerHTML='<span>📄 10/12 Sushi 旧 PDF 已核对，但旧 v1 没有保存休息单元格。</span><button class="btn secondary" type="button" id="staffPdfRestButton">🛟 从 PDF 恢复周休</button>';
+      sushi.insertBefore(strip,sushi.firstChild);strip.querySelector('button').addEventListener('click',openRestRecovery);
     }
     renderExtraPeople();
   }
