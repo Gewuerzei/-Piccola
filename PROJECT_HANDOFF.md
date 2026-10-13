@@ -22,6 +22,8 @@
 > **2026-10-12 PDF 周休恢复：**Sushi 页新增「🛟 从 PDF 恢复周休」，从**本机当前 8 人**生成逐人选择 10/12–10/18 休息日的表单；须人工核对 PDF、确认 8 人全部选定后调用 `CassolaStaff.applyVerifiedRestWeek`。程序先检查名册人数/日期/本地冲突并建立时间戳旧账备份，再把 rest 记录写到 `cassola_staff_v01`。保留旧发布 v1 对象，恢复后如需发布须显式创建新版。该功能不附带用户私人姓名/日期映射硬编码至公开 GitHub；未经过 Pietro 的实际点选不会自动恢复。
 > **限制：**现阶段部门人员合并**仅存在本机**；独立部门仍为只读预览，不能上传新部门 Cloud / 正式发布排休 / 分享到其他 Supervisor。后续实现完整 Staff v2、Edge 部门授权、版本合并及 migration commit 前，不得称之为多端正式同步。新 PWA cache v098，源码核对和本机模拟操作通过，iPhone 实机待验。
 
+> **2026-10-13 服务端防覆写最终检查：cassola-cloud ACTIVE v19。** 为防旧 iPhone/PWA 继续写/下载共享 `staff` Head，Edge 对 `upload_scopes` 含 `staff` 返回 `legacy_staff_write_frozen` (409)，对 `download_scopes` 含 `staff` 返回 `legacy_staff_download_frozen` (409)，对 `restore_version` 指向旧 `staff` 历史返回 `legacy_staff_restore_frozen` (409)；因此旧客户端也无法再整体覆盖正式 Staff 或自身本机排休。**仍允许**以 Supervisor 身份执行 `list_versions` / `get_version_state` 只读历史导入、Inventory 的独立 scope 上传下载，以及员工盘货事务。生产 `staff` Head/8 人数据未更改，v19 已复读确认 ACTIVE。以后做真正的 Staff v2 前不得移除这些拦截，必须先完成部门作用域和服务端权限验收。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
@@ -372,7 +374,7 @@ Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v17；支持 Inventory/Staff lineage、managed Staff Access、personal + shared first-wins role task basket、employee count / packaging + brand SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
+- `cassola-cloud`（当前生产 v19；支持 Inventory/Staff lineage、managed Staff Access、personal + shared first-wins role task basket、employee count / packaging + brand SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
