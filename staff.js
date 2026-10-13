@@ -367,7 +367,7 @@
               <div class="staff-cloud-head"><div><h3>☁️ Staff Cloud</h3><p>⚠️ 目前共用单一 Staff 数据区，下载是整份替换，不会合并另一位 Supervisor 的人员或排休。头像继续只留本机。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
               <div id="staffCloudDetail" class="staff-cloud-detail">Staff Cloud 不会自动覆盖本机。</div>
               <div class="staff-settings-actions">
-                <button class="btn primary" id="staffCloudUpload">☁️ 上传 Staff</button>
+                <button class="btn primary" id="staffCloudUpload" disabled title="旧 Staff Cloud 未分区，整份上传已冻结">🔒 旧整份上传已停用</button>
                 <button class="btn secondary" id="staffCloudDownload" disabled title="共享 Staff 整份替换已停用。请使用历史版本安全导入。">🔒 旧整份下载已停用</button>
                 <button class="btn secondary" id="staffCloudHistory">🕘 云端历史</button>
                 <button class="btn secondary" id="staffCloudRollback">↩️ 恢复下载前版本</button>
@@ -791,13 +791,7 @@
     });
     log('publish','发布周休表 v'+version,note,snap.weekStart,'all');
     save();renderWeek();renderHistory();
-    toast(version===1?'周休表 v1 已发布':'修改版 v'+version+' 已发布');
-    if(cloudReady()){
-      window.CassolaCloud.staffUpload('Published week '+snap.weekStart+' v'+version).catch(err=>{
-        console.warn('Staff publication Cloud upload failed',err);
-        toast('本地已发布 v'+version+' · Cloud 未同步');
-      });
-    }
+    toast('本机已发布 v'+version+' · 旧共享 Staff Cloud 已冻结，请导出 JSON 备份');
   }
   function openWeekVersions(){
     const ws=weekStartIso(currentDate),list=weekPublications(currentDate,false).slice().reverse();
@@ -1290,7 +1284,7 @@
   }
   function renderStaffCloudState(){
     const badge=document.getElementById('staffCloudBadge'),detail=document.getElementById('staffCloudDetail');
-    const buttons=['staffCloudUpload','staffCloudHistory'].map(id=>document.getElementById(id)).filter(Boolean);
+    const buttons=['staffCloudHistory'].map(id=>document.getElementById(id)).filter(Boolean);
     const rollback=document.getElementById('staffCloudRollback');
     const ready=cloudReady();buttons.forEach(b=>b.disabled=!ready);
     if(rollback){const info=cloudRollbackInfo();rollback.disabled=!info;rollback.textContent=info?'↩️ 恢复下载前版本':'↩️ 暂无回滚快照'}
@@ -2056,7 +2050,7 @@
     });
     document.getElementById('staffCopyPrev').addEventListener('click',copyPreviousDay);
     document.getElementById('staffPdfBtn').addEventListener('click',generatePdf);
-    document.getElementById('staffCloudUpload').addEventListener('click',async()=>{try{await window.CassolaCloud.staffUpload('Manual Staff upload');renderStaffCloudState()}catch(err){alert('Staff Cloud 上传失败：'+(err?.message||'未知错误'))}});
+    // Legacy full-roster Staff Cloud upload is frozen until scoped V2 migration.
     // Legacy replace-download is permanently disabled; use read-only historical import.
     document.getElementById('staffCloudHistory').addEventListener('click',async()=>{try{await window.CassolaCloud.staffHistory()}catch(err){alert('读取 Staff Cloud 历史失败：'+(err?.message||'未知错误'))}});
     document.getElementById('staffCloudRollback').addEventListener('click',restoreCloudRollback);
