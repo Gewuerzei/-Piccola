@@ -2,6 +2,17 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4.7 · Large Sushi / Bar-Sala / Cucina Weekly Selector (Safe UI Stage)
+**2026-10-13**
+
+- Pietro 要求周排休表最上方是三个醒目的大卡，而非小下拉：🍣 Sushi、🍷 Bar/Sala、🍳 Cucina。已在 `staff.js` 增加带 `aria-pressed` 的可点击选区和大尺寸移动端 CSS。
+- 本次**只建设入口，不假装已经完成 Staff v2 数据隔离**。Sushi 卡显示原本的旧 Staff 本机工作副本，并标明旧版未验证人员所属；切到 Bar/Sala 或 Cucina，展示独立数据区尚未启用，隐藏共享旧排休表、修改、版本、发布、PDF 操作，避免误改其他部门。
+- 部门点击仅切换前端展示，不读写 `cassola_staff_v01`、不更改现有 Cloud Head 或 Supervisor/员工权限，不做 Cloud 上传/下载或自动迁移。其他 V1 导航模块尚未做部门分区。
+- 正式目标仍为 Directory + `staff:sushi` / `staff:sala` / `staff:cucina` + Edge grants；之后可把这一选择器接入真实数据，而不能只按岗位 / 端菜区域筛选 legacy Staff。
+- 静态 JS 语法、按钮切换、旧版显示与未迁移隐藏逻辑检查通过；iPhone 实机部署待验。PWA cache 升级 `cassola-suite-v097`。
+
+---
+
 ## Staff V2 Data Mapping · Sushi / Sala Legacy Roster Confirmed (Design Only)
 **2026-10-13**
 
