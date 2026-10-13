@@ -3,6 +3,9 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
+> **2026-10-13 Staff 新架构已定稿，但尚未执行迁移：**正式按照 **Sushi / Cucina / Sala** 三部门隔离排休数据，多 Supervisor 可管理同一部门；共享人员目录与独立部门周排休/发布版本。完整的安全迁移步骤、数据模型、身份映射与三方合并冲突规则见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
+> **重要：**这只是设计批准，不代表 Supabase 新 scope、Access 权限或 Staff v2 数据已上线。现有 `staff` legacy scope / `cassola_staff_v01` 及历史版本应保持原样，继续使用 v0.4.6 的危险下载拦截。不得把旧 Cloud 两组名单自动猜测归到任一部门。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
