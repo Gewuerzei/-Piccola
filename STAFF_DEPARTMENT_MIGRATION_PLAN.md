@@ -16,6 +16,15 @@
 - Staff role task rules already support a frozen active SKU basket following workers assigned to a matching `primaryRole`, with first successful submission winning. They are **one-shot tasks**, not recurring permanent templates; do not accidentally classify them as new persistent department schedules. `staff_role_inventory_task_rules` currently has no rule rows in production (checked 2026-10-13).
 - The staff-partition transition still requires unique supervisor identities / server-side department grants. Today the production Cloud has one supervisor credential; relying on device names would not enforce separation.
 
+## 2026-10-13 · Confirmed legacy staff roster ownership and serving stations
+
+- Pietro explicitly confirmed two **source rosters**, each with eight distinct legacy person IDs: **A source = Sushi department**, **B source = Sala department**. Do not infer Cucina membership from an old `primaryRole` value. No Cucina department roster has been confirmed in those two sources.
+- All eight **B-source staff are front-of-house / floor service**. Their legacy `primaryRole` values `cassa` (3), `cucina` (2), and `maki` (3) are **serving / dish-running stations**, *not* job roles, *not* employment departments, and *not* permission to work in kitchen / sushi inventory tasks.
+- Stage a lossless sixteen-person global directory with stable source IDs and separate department memberships (`sushi` or `sala`). Because legacy IDs do not overlap, no mechanical ID collision exists; this alone does not prove real-person uniqueness. Don't auto-collapse by name.
+- **Critical migration separation:** map B-source legacy `primaryRole` to `serviceStation` (legacy string preserved with provenance), map employment `department` to `sala`, and track actual professional `jobRole` separately (front-of-house unless explicitly detailed). Never reinterpret station label `maki` as Sushi kitchen `staff_role_id=maki` for shared inventory tasks or Access scopes; deny such grants until separately reviewed.
+- The old role catalog / `primaryRole` is not safe as a global task authorization key. Existing job-linked credentials, tasks and historical publications need explicit compatibility mapping; existing production records must remain unchanged until migration preview is approved.
+- This is an approved **classification for a private import preview**, not permission to replace the production global `staff` Head. Require complete Staff JSON/backups and Edge server-side department grants before implementing V2.
+
 ## 1. Goal and non-goals
 
 One **global person directory**, three independently versioned **department Staff workspaces**, and explicit supervisor permissions. Supervisors may collaborate on the same department. Staff Cloud download **must never silently replace the other departments**, and importing people is a separate **preview + explicit merge** operation.
