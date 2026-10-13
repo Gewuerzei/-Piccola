@@ -690,31 +690,9 @@
     return '';
   }
   async function staffDownload(){
-    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
-    const data=await api('download_scopes',{scopeIds:['staff']},15000);
-    const row=(data.scopes||[]).find(x=>x.scope_id==='staff'&&x.head_version_id);
-    if(!row){if(typeof showToast==='function')showToast('Staff Cloud 还没有正式数据');return null}
-    const local=captureStaffScope(),reason=staffDownloadRisk(local,row.state);
-    if(reason){
-      const names={
-        different_rosters:'云端与本机是两组不同的员工，下载会把本机整组人员换掉。',
-        missing_people:'云端缺少本机现有员工，下载会删掉本机人员。',
-        missing_rest_records:'云端缺少本机已经录入的排休/出勤记录。',
-        missing_publications:'云端缺少本机已经发布的周休表版本。'
-      };
-      alert('🛑 Staff Cloud 已阻止覆盖\n\n'+(names[reason]||'检测到数据丢失风险。')+'\n\n这不是合并导入。请先用 Staff → 设置 → 导出 Staff JSON / 完整备份保存当前数据，再处理分区或历史恢复。\n\n本机没有进行任何覆盖，云端也未修改。');
-      return {blocked:true,reason};
-    }
-    if(!confirm('当前 Staff Cloud 是【整份替换】，不是合并人员或分区下载。\n\n本次没有检测到人员/排休记录删除，但云端可能存在对已有记录的修改。\n\n先确认已有本机备份，再继续？'))return null;
-    window.CassolaStaff?.saveCloudRollback?.();
-    mergeScope('staff',row.state);
-    mutateMeta(meta=>{
-      meta.scopes.staff={...(meta.scopes.staff||{}),baseVersionId:row.head_version_id,fingerprint:scopeFingerprint('staff'),cloudContentHash:row.content_hash,lastSyncAt:new Date().toISOString(),branch:false,canonicalHeadVersionId:row.head_version_id};
-    });
-    if(typeof showToast==='function')showToast('👥 已下载 Staff Cloud');
-    await refreshStatus({silent:true}).catch(()=>{});
-    window.dispatchEvent(new CustomEvent('cassola-cloud-staff-change'));
-    return row;
+    // Staff legacy is a shared cross-supervisor scope. Never allow the old
+    // full replacement now that the read-only merge workflow is available.
+    throw new Error('旧 Staff 整份覆盖下载已停用，请使用 Staff → 设置 → 历史版本安全导入。');
   }
   function staffStatus(){
     const head=(lastStatus?.heads||[]).find(x=>x.scope_id==='staff');
