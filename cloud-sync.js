@@ -629,39 +629,10 @@
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     return api('role_inventory_task_revoke',{ruleId},10000);
   }
-  async function staffUpload(note='Manual Staff upload'){
-    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
-    const id='staff',m=readMeta(),staffState=captureStaffScope();
-    const item={scopeId:id,baseVersionId:m.scopes?.[id]?.baseVersionId||null,state:staffState,summary:{peopleCount:(staffState.people||[]).length},note};
-    const data=await api('upload_scopes',{deviceId:deviceId(),items:[item],note},20000);
-    const row=(data.results||[])[0];
-    if(row){
-      mutateMeta(meta=>{
-        const current=meta.scopes[id]||{};
-        if(row.status==='canonical'||row.status==='branch'){
-          current.baseVersionId=row.versionId;current.fingerprint=scopeFingerprint(id);current.cloudContentHash=row.contentHash;current.lastSyncAt=new Date().toISOString();current.branch=row.status==='branch';current.canonicalHeadVersionId=row.headAfter||null;
-        }else if(row.status==='same_as_head'){
-          current.baseVersionId=row.headVersionId;current.fingerprint=scopeFingerprint(id);current.cloudContentHash=row.contentHash;current.lastSyncAt=new Date().toISOString();current.branch=false;current.canonicalHeadVersionId=row.headVersionId;
-        }else if(row.status==='noop'){
-          current.fingerprint=scopeFingerprint(id);current.lastSyncAt=new Date().toISOString();
-        }
-        meta.scopes[id]=current;
-      });
-      if(row.status==='branch')alert('🌿 Staff 已上传为分支。云端正式 Staff Head 没有被覆盖，请先核对另一台 Supervisor 的修改。');
-      else{
-        const roleMap=new Map((staffState.roles||[]).map(r=>[String(r.id),r]));
-        const roster=(staffState.people||[]).filter(p=>p.active!==false).map(p=>({
-          personId:p.id,personName:p.name||'',roleId:p.primaryRole||'',roleName:roleMap.get(String(p.primaryRole||''))?.name||''
-        }));
-        const sync=await syncStaffRoleRoster(roster).catch(err=>({ok:false,error:err?.message||'role_sync_failed'}));
-        const conflicts=(sync?.results||[]).filter(x=>x.ok===false&&x.error==='role_task_overlap');
-        if(conflicts.length)alert('⚠️ Staff 已上传，但有 '+conflicts.length+' 名员工的岗位任务与个人任务重叠。\n\n请到 Staff 检查这些人的任务后再同步岗位。');
-        if(typeof showToast==='function')showToast('👥 Staff 已上传云端');
-      }
-    }
-    await refreshStatus({silent:true}).catch(()=>{});
-    window.dispatchEvent(new CustomEvent('cassola-cloud-staff-change'));
-    return data;
+  async function staffUpload(){
+    // Legacy Staff is a single shared scope: until department-qualified Edge
+    // auth is deployed, do not allow any old full-roster writes.
+    throw new Error('旧 Staff 整份上传已停用。当前只能本机保存和导出 Staff JSON，等待部门 Cloud 安全迁移。');
   }
   // Staff Cloud is still one legacy shared scope. Reject downloads that would
   // silently remove local people/rest plans/publications until area partition
