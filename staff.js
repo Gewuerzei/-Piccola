@@ -9,6 +9,14 @@
   let currentDate=todayLocal();
   let currentShift='dinner';
   let currentView='week';
+  // UI-only preview until Staff v2 directory + department scopes are deployed.
+  // Never treat legacy state as department-qualified Cloud data.
+  let weekDepartment='sushi';
+  const WEEK_DEPARTMENTS={
+    sushi:{icon:'🍣',label:'Sushi'},
+    sala:{icon:'🍷',label:'Bar / Sala'},
+    cucina:{icon:'🍳',label:'Cucina'}
+  };
   let attendanceEdit={personId:null,date:null};
   let swapLifecycleEditId=null;
   let personRecordsView={personId:null,filter:'all'};
@@ -257,27 +265,44 @@
       </header>
       <main class="staff-main">
         <section class="staff-view active" id="staff-view-week">
-          <div class="staff-week-tools">
-            <button id="staffPrevWeek">‹</button>
-            <div>
-              <strong id="staffWeekLabel">本周</strong>
-              <small>点格子记录休息 / 请假 / 调休 / 缺勤</small>
-            </div>
-            <button id="staffNextWeek">›</button>
-            <button id="staffThisWeek" class="btn secondary">本周</button>
+          <div class="staff-department-switch" id="staffDepartmentSwitch" role="group" aria-label="周休表部门切换">
+            <button type="button" class="staff-department-choice active" data-staff-department="sushi" aria-pressed="true">
+              <span class="staff-department-emoji">🍣</span>
+              <span class="staff-department-text"><b>Sushi</b><small>寿司部</small></span>
+            </button>
+            <button type="button" class="staff-department-choice" data-staff-department="sala" aria-pressed="false">
+              <span class="staff-department-emoji">🍷</span>
+              <span class="staff-department-text"><b>Bar/Sala</b><small>跑堂 / 吧台</small></span>
+            </button>
+            <button type="button" class="staff-department-choice" data-staff-department="cucina" aria-pressed="false">
+              <span class="staff-department-emoji">🍳</span>
+              <span class="staff-department-text"><b>Cucina</b><small>厨房</small></span>
+            </button>
           </div>
-          <div class="staff-section-head">
-            <div><h2>周休息表</h2><p>空白默认视为上班；改完可以发布新版再发群。</p></div>
-            <div class="staff-section-actions">
-              <button class="btn secondary" id="staffWeekVersionsBtn">🕘 版本</button>
-              <button class="btn primary" id="staffPublishWeekBtn">📣 发布</button>
-              <button class="btn secondary" id="staffWeekPdfBtn">📄 PDF</button>
+          <div id="staffDepartmentMessage" class="staff-department-message" role="status" aria-live="polite"></div>
+          <div id="staffWeekLegacyContent">
+            <div class="staff-week-tools">
+              <button id="staffPrevWeek">‹</button>
+              <div>
+                <strong id="staffWeekLabel">本周</strong>
+                <small>点格子记录休息 / 请假 / 调休 / 缺勤</small>
+              </div>
+              <button id="staffNextWeek">›</button>
+              <button id="staffThisWeek" class="btn secondary">本周</button>
             </div>
-          </div>
-          <div class="staff-week-release" id="staffWeekRelease"></div>
-          <div class="staff-week-wrap" id="staffWeekTable"></div>
-          <div class="staff-status-legend">
-            <span>· 上班</span><span>💤 休息</span><span>📝 请假</span><span>🔁 调休</span><span>❌ 缺勤</span><span>↔ 换休</span>
+            <div class="staff-section-head">
+              <div><h2>周休息表</h2><p>空白默认视为上班；改完可以发布新版再发群。</p></div>
+              <div class="staff-section-actions">
+                <button class="btn secondary" id="staffWeekVersionsBtn">🕘 版本</button>
+                <button class="btn primary" id="staffPublishWeekBtn">📣 发布</button>
+                <button class="btn secondary" id="staffWeekPdfBtn">📄 PDF</button>
+              </div>
+            </div>
+            <div class="staff-week-release" id="staffWeekRelease"></div>
+            <div class="staff-week-wrap" id="staffWeekTable"></div>
+            <div class="staff-status-legend">
+              <span>· 上班</span><span>💤 休息</span><span>📝 请假</span><span>🔁 调休</span><span>❌ 缺勤</span><span>↔ 换休</span>
+            </div>
           </div>
         </section>
 
@@ -570,6 +595,34 @@
     bindUi();
   }
 
+  function selectWeekDepartment(department){
+    if(!Object.prototype.hasOwnProperty.call(WEEK_DEPARTMENTS,department))return;
+    weekDepartment=department;
+    renderWeekDepartment();
+  }
+  function renderWeekDepartment(){
+    const legacy=document.getElementById('staffWeekLegacyContent');
+    const message=document.getElementById('staffDepartmentMessage');
+    if(!legacy||!message)return;
+    document.querySelectorAll('[data-staff-department]').forEach(btn=>{
+      const active=btn.dataset.staffDepartment===weekDepartment;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-pressed',active?'true':'false');
+    });
+    const selected=WEEK_DEPARTMENTS[weekDepartment];
+    if(weekDepartment==='sushi'){
+      legacy.hidden=false;
+      message.className='staff-department-message legacy';
+      message.textContent='⚠️ 这里仍是本机旧版 Staff 工作副本，未完成 Sushi 数据归属校验。请先核对人员，再编辑或发布；切换卡不会同步或迁移 Cloud。';
+    }else{
+      legacy.hidden=true;
+      message.className='staff-department-message pending';
+      message.innerHTML='<div class="staff-department-pending-icon">'+selected.icon+'</div>'+
+        '<strong>'+selected.label+' · 独立排休区尚未启用</strong>'+
+        '<p>已规划独立人员、周休与发布版本，但 Staff v2 部门 Cloud 尚未迁移。这里不显示旧共享表，防止把其他部门人员误当成本部门数据。</p>'+
+        '<small>没有下载或覆盖任何 Staff 数据。部署部门 Cloud 后，这里会接入对应正式周表。</small>';
+    }
+  }
   function showView(name){
     currentView=name;
     document.querySelectorAll('.staff-view').forEach(v=>v.classList.toggle('active',v.id==='staff-view-'+name));
@@ -932,6 +985,8 @@
     }).length;
   }
   function renderWeek(){
+    renderWeekDepartment();
+    if(weekDepartment!=='sushi')return;
     const box=document.getElementById('staffWeekTable');if(!box)return;
     renderWeekRelease();
     const dates=weekDates(currentDate),days=['一','二','三','四','五','六','日'];
@@ -1884,6 +1939,7 @@
   function bindUi(){
     document.getElementById('staffHomeBtn').addEventListener('click',()=>window.CassolaHub?.show());
     document.querySelectorAll('.staff-nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.staffView)));
+    document.querySelectorAll('[data-staff-department]').forEach(btn=>btn.addEventListener('click',()=>selectWeekDepartment(btn.dataset.staffDepartment)));
     document.getElementById('staffPrevWeek').addEventListener('click',()=>moveWeek(-1));
     document.getElementById('staffNextWeek').addEventListener('click',()=>moveWeek(1));
     document.getElementById('staffThisWeek').addEventListener('click',()=>{currentDate=todayLocal();renderWeek()});
