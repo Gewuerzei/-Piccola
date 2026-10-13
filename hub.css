@@ -526,3 +526,21 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 }
 .cassola-employee-receipt-spec:active{transform:scale(.985);background:rgba(185,201,255,.07)}
 :root[data-theme="light"] .cassola-employee-receipt-spec{background:rgba(64,91,148,.045)}
+
+/* Employee count submit progress v095 · small, readable and not overlaying SKU cards */
+.cassola-employee-upload-notice:empty{display:none}
+.cassola-employee-upload-notice:not(:empty){
+  margin:12px 5px 8px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:var(--panel2,rgba(130,150,180,.1));
+  border:1px solid var(--line);
+  color:var(--text);
+  font-size:12px;
+  font-weight:750;
+  line-height:1.55;
+}
+.cassola-employee-dock-upload:disabled{
+  opacity:.72;
+  cursor:progress;
+}
