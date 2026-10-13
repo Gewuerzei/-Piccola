@@ -6,6 +6,10 @@
 > **2026-10-13 Staff 新架构已定稿，但尚未执行迁移：**正式按照 **Sushi / Cucina / Sala** 三部门隔离排休数据，多 Supervisor 可管理同一部门；共享人员目录与独立部门周排休/发布版本。完整的安全迁移步骤、数据模型、身份映射与三方合并冲突规则见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
 > **重要：**这只是设计批准，不代表 Supabase 新 scope、Access 权限或 Staff v2 数据已上线。现有 `staff` legacy scope / `cassola_staff_v01` 及历史版本应保持原样，继续使用 v0.4.6 的危险下载拦截。不得把旧 Cloud 两组名单自动猜测归到任一部门。
 
+> **2026-10-13 员工端性能/提交反馈（PWA cache v095）：** `hub.js` 将员工盘货卡的 eventCount 统计改成每次渲染遍历一次已加载 draft.events，避免为每个 SKU 重新 localStorage JSON.parse。员工切换收货/SKU 标签先用本机缓存立即渲染，再异步刷新 Cloud；盘货点击上传时按钮锁定并提供持久“发送中 / 服务端已确认 / 待手动发送”状态。网络超时仍沿用原来的 Outbox 去重/手动发送，不丢草稿、不暗中重试或自动提交。
+> **此修复不代表后端已收到特定员工盘货**：2026-10-13 只读检查生产 `employee_submissions` 总数为 0，`staff_role_inventory_task_rules` 为 0。近期 Edge Function 请求耗时正常不能证明某次提交成功。现场需确认“✅ Cloud 已确认接收”或待发送计数，并结合 Supervisor 收件箱验收；切忌见到页面加载完就误认为上传成功。
+> **Sushi 恢复细节**：Pietro 已确认 2026-10-12 的发布 v1 名册归 Sushi，但该 Cloud 历史版本的 `weekPublications[2026-10-12][0].snapshot.cells` 是空对象，发布元数据无法独立还原休息日。需要本地回滚/备份或旧 PDF 图像人工核对。完整说明见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
@@ -1099,7 +1103,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v094
+cassola-suite-v095
 ```
 
 当前 CORE 必须包含：
