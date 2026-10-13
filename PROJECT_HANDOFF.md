@@ -10,6 +10,9 @@
 > **此修复不代表后端已收到特定员工盘货**：2026-10-13 只读检查生产 `employee_submissions` 总数为 0，`staff_role_inventory_task_rules` 为 0。近期 Edge Function 请求耗时正常不能证明某次提交成功。现场需确认“✅ Cloud 已确认接收”或待发送计数，并结合 Supervisor 收件箱验收；切忌见到页面加载完就误认为上传成功。
 > **Sushi 恢复细节**：Pietro 已确认 2026-10-12 的发布 v1 名册归 Sushi，但该 Cloud 历史版本的 `weekPublications[2026-10-12][0].snapshot.cells` 是空对象，发布元数据无法独立还原休息日。需要本地回滚/备份或旧 PDF 图像人工核对。完整说明见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
 
+> **2026-10-13 员工盘货提交 UX v096：** v095 的提交文字误放在长 SKU 列表最末尾、固定上传底栏外，员工点击后可能根本看不到反馈。已移入固定四按钮 dock 内的全宽小提示，并在按钮上直接标记「⏳ 正在提交」，在实际网络调用前允许 WebKit 渲染一帧。未填满 SKU 时保留「⚠️ 尚未提交」；成功仅以 Edge 明确答复显示「✅ Cloud 已确认接收」，超时/离线严格区分为本机待发送。不清理草稿 / Cloud Outbox。
+> **Sushi 恢复核对：** Pietro 已于 2026-10-13 明确确认从旧 PDF 读出的 10/12–10/18 周休安排正确。这是独立于 Cloud 空白 `snapshot.cells` 的**人工核对证据**，后续需在私有迁移清单用原 personId 映射并展示预览；不得把真实姓名 / 周休日期提交公开仓库，亦未取得直接覆盖生产 Staff 的授权。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
@@ -1103,7 +1106,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v095
+cassola-suite-v096
 ```
 
 当前 CORE 必须包含：
