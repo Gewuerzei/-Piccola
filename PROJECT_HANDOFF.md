@@ -305,7 +305,7 @@ Cloud v0.1 的核心规则：
 - **紧急安全修复（2026-10-13）**：旧 staffDownload() 把整个云端 Staff state 交给 CassolaStaff.applyCloudState()，完全替换本机人员、attendance、restMoves、weekPublications 等。这是**全量替换而非合并**，跨 Supervisor 使用相同唯一 `staff` scope 会互相覆盖。
 - **v0.4.6 临时保护**：读完 Cloud Head 后执行 staffDownloadRisk(local,remote)；若两组 personId 完全不重合，或 Cloud 缺失本地人员、出勤/排休记录、已发布周表 version id，则拒绝调用 applyCloudState、不更改 Cloud metadata。允许通过的下载仍显示“整份替换，不是人员合并”。后续还要建立真正的部门隔离，不可视为已解决协作模型。
 - **恢复注意**：2026-10-13 已确认云端 2026-10-12 v1 周排休仍可从历史版本 materialize；云端也存在两套彼此 personId 完全不重叠的 8 人名册。不要未经明确批准就通过“恢复历史版本”把整个正式 Head 切换到另一 Supervisor 的名册。先导出本机 JSON / 完整备份，必要时使用已有 cassola_staff_cloud_rollback_v01 回滚。严禁把真实人员姓名、PIN 和排休详情提交到公开 GitHub。
-- **正式分区待设计**：需要明确按部门还是按 Supervisor 划分业务范围；持久化必须隔离排休 / 版本 / 换休，并可显式导入人员，不可只靠 UI 过滤或 Cloud 全量替换。不清空本机 Staff / Inventory，不覆盖 Cloud Head。
+- **正式分区设计已批准（尚未实施）**：Staff 按 Sushi / Cucina / Sala 部门隔离，使用统一人员目录；Supervisor 必须具有独立身份并经服务端授予部门权限。迁移/合并契约详见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。保留原 `staff` Cloud Head/版本/备份，不清空本机 Staff 或 Inventory。仅 UI 筛选不算完成部门分区。
 
 - **Staff 周表发布是显式 Cloud 动作**：本地生成 v1/v2/v3 后，如果 Supervisor Cloud 已连接，会同时尝试上传 Staff Working Head。遇到 lineage 分叉只生成 branch，不抢 canonical Staff Head。
 - **Staff 任务发布与 Staff Head 分开**：给员工发布盘货 SKU 使用 `employee_inventory_tasks` 事务表，不把“今天谁盘什么”硬塞进 Staff 主数据。
