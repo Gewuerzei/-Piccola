@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.4.9 · One-Tap Sushi PDF Week Recovery (No Manual Selection)
+**2026-10-13**
+
+- Pietro 明确要求从已确认的 2026-10-12~10-18 Sushi PDF **一键恢复**，不要重新给八个人逐项选择日期。
+- 用 Supabase 历史只读查询证实：原 10/12 已发布 v1 `snapshot.people` 的 8 人顺序、原始 Cloud 名册与当前 Cloud Head 相符，并与用户此前核对的 PDF 八行一致；无需因原 `snapshot.cells={}` 而再次手动录入。
+- `staff-departments.js` 取消逐人 select 表单，使用**八人 id+姓名组合的 SHA-256 校验指纹**及 PDF 原行顺序的休息日期映射自动生成 8 条 `{personId,date}`。仓库不出现姓名/id 私人字面值；任何名册人数、姓名-ID、顺序、冻结发布时间所属周或 SHA 不一致，都拒绝自动恢复。
+- 用户只需要点击「⚡ 一键恢复已核对周休」，阅读生成的逐人日期摘要并按一次确认；随后沿用原 Staff `applyVerifiedRestWeek` 先建立本机备份、验证本地排休冲突、幂等写入 rest 记录。旧发布 v1 保留，Cloud Head 不写入。
+- 程序模拟：一键生成八条核对日期、一键执行接口、成功反馈、复位按钮及异常名册拒绝均通过。iPhone 真实浏览器及 GitHub Pages 部署仍需验收。
+- PWA Service Worker 缓存升级到 `cassola-suite-v099`，Staff 显示版本 v0.4.9。
+
+---
+
 ## Cloud Safety v19 · Freeze All Legacy Staff Whole-Scope Mutations
 **2026-10-13**
 
