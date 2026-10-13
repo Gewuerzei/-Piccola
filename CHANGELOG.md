@@ -2,6 +2,17 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Employee UX v096 · Visible Fixed-Dock Submission State
+**2026-10-13**
+
+- 实机反馈：点击员工盘货「上传」后看不到“正在提交”，像无反应。检查发现 v095 状态条处于长 SKU 列表末尾、但在固定底栏之外，因此页面滚动时员工常常看不到。
+- 将 #cassolaEmployeeUploadNotice 放进固定的四格按钮底栏顶部并跨四列显示；按钮在网络提交期间立即显示「⏳ 正在提交」并锁定，避免双击。
+- 在启动网络请求前留 WebKit 绘制机会；只在 Cloud 确认响应后显示绿色成功语义，断网 / 超时只显示本机待发送状态。盘货不完整等验证失败时同位置显示「⚠️ 尚未提交」。原草稿、Outbox 幂等和 supervisor 审核逻辑不变。
+- Pietro 已确认先前 PDF 读取出的 10/12–10/18 Sushi 周休日期分布正确，作为**人工批准的恢复依据**，不等于 Cloud 空的 snapshot.cells 有记录。未来恢复需私有 source→personId mapping 和预览，禁止把真实排休、姓名写入公开 GitHub；本次没有应用任何正式排休。
+- JS 语法及模拟成功、离线、超时、未填完整四种情况均通过；iPhone 最终验收待做。PWA cache 升级为 `cassola-suite-v096`。
+
+---
+
 ## Employee UX Hotfix · Submission Feedback + Cached Panel (v095)
 **2026-10-13**
 
