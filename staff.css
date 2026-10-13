@@ -496,3 +496,46 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
   .staff-department-text b{font-size:12px}
   .staff-department-text small{font-size:8px}
 }
+
+
+/* Staff v0.4.8 · non-destructive local department merge and PDF recovery */
+.staff-safe-merge-dialog{width:min(94vw,690px);max-height:85dvh;overflow:auto}
+.staff-merge-alert,.staff-rest-recover-banner{
+  padding:12px 14px;border-radius:17px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--text);font-size:12px;line-height:1.55
+}
+.staff-rest-recover-banner{display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:space-between;margin:2px 0 14px}
+.staff-rest-recover-banner span{flex:1 1 190px}
+.staff-rest-recover-banner button{flex:0 1 auto}
+.staff-merge-note{color:var(--muted);font-size:11px;line-height:1.55;margin:9px 0}
+.staff-merge-version{
+  display:flex;justify-content:space-between;gap:12px;align-items:center;
+  padding:10px 2px;border-bottom:1px solid var(--line)
+}
+.staff-merge-version>div{min-width:0}.staff-merge-version b{display:block;font-size:13px}
+.staff-merge-version small{display:block;color:var(--muted);font-size:10px;overflow-wrap:anywhere}
+.staff-merge-people{max-height:32dvh;overflow:auto;margin:11px 0;border:1px solid var(--line);border-radius:17px;padding:5px 12px}
+.staff-merge-people>div,.staff-merge-people-row{
+ display:flex;justify-content:space-between;gap:9px;padding:9px 3px;border-bottom:1px solid var(--line);align-items:center
+}
+.staff-merge-people>div:last-child,.staff-merge-people-row:last-child{border-bottom:0}
+.staff-merge-people b,.staff-merge-people-row b{font-size:12px}
+.staff-merge-people small,.staff-merge-people-row small{color:var(--muted);font-size:10px;text-align:right}
+.staff-merge-error{color:var(--danger);font-size:12px}
+.staff-merge-people-panel{margin:15px 0;border:1px solid var(--line);border-radius:23px;padding:14px;background:var(--panel2)}
+.staff-merge-people-panel h3{font-size:17px;margin:0 0 10px}
+.staff-merge-people-panel h3 small{font-size:10px;color:var(--muted)}
+.staff-merge-week-nav{display:flex;justify-content:space-between;gap:6px;align-items:center;margin:10px 0}
+.staff-merge-week-nav button{border:1px solid var(--line);border-radius:13px;padding:11px;color:var(--text);background:var(--panel2)}
+.staff-merge-week-nav b{font-size:12px}
+.staff-merge-week-table{overflow-x:auto;border:1px solid var(--line);border-radius:17px}
+.staff-merge-week-table table{border-collapse:collapse;width:100%;min-width:570px}
+.staff-merge-week-table th,.staff-merge-week-table td{font-size:11px;padding:12px 7px;border-bottom:1px solid var(--line);text-align:center}
+.staff-merge-week-table th:first-child{position:sticky;left:0;background:var(--panel2);text-align:left}
+.staff-rest-rows{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.staff-rest-row{display:grid!important;grid-template-columns:minmax(90px,1fr) minmax(165px,2fr);align-items:center;gap:8px}
+.staff-rest-row select{min-width:0;min-height:44px}
+:root[data-theme="light"] .staff-merge-people-panel,
+:root[data-theme="light"] .staff-merge-alert,
+:root[data-theme="light"] .staff-rest-recover-banner{background:rgba(60,85,115,.06)}
+@media(max-width:400px){.staff-rest-row{grid-template-columns:1fr}.staff-merge-version{align-items:flex-start;flex-direction:column}}
