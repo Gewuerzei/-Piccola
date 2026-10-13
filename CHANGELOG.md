@@ -2,6 +2,16 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff V2 Data Mapping · Sushi / Sala Legacy Roster Confirmed (Design Only)
+**2026-10-13**
+
+- Pietro 已确认旧 A 人员来源（8 个 personId）归 Sushi，旧 B 人员来源（8 个 personId）**全是 Sala 跑堂**。B 名单的旧 `primaryRole`（cassa 3 / cucina 2 / maki 3）是**负责端菜的出餐区域**，不是厨师岗位 / 就业部门。
+- 迁移设计采用 `department`（Sushi / Cucina / Sala）与 `serviceStation`（跑堂端菜区）分离，实际 `jobRole` 另行维护。特别禁止将 B 来源 `maki` 当成 Sushi Maki 任务授权依据。
+- 确认了两条旧来源合计 16 个不同历史人员 ID；先准备私有、安全导入预览，不能通过旧 `staffDownload` 合并，也不能凭同名自动合并个人。
+- 本次仅更新迁移方案和交接文档；**没有修改生产 Staff Cloud、Inventory、员工 PIN 或本机人员数据**。分部门 Cloud / Staff v2 仍未上线。
+
+---
+
 ## Employee UX v096 · Visible Fixed-Dock Submission State
 **2026-10-13**
 
