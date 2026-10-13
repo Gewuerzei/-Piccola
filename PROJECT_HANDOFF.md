@@ -15,6 +15,8 @@
 
 > **2026-10-13 Staff 双来源归属已获 Pietro 确认：**旧 A 来源共 8 人属于 Sushi；旧 B 来源共 8 人**全部属于 Sala（跑堂）**。B 来源遗留的 `primaryRole = cassa / cucina / maki` 仅表示负责端菜的出餐区域，不是真实的 Cucina / Sushi 部门，更不能据此给员工授予厨房岗位盘货权限。正式 v2 模型需分开 `department`、`serviceStation` 和真实 `jobRole`。两来源共 16 个不同 personId，但仍需核验真实身份映射。迁移方案已更正，**尚未向生产 Staff Cloud 合并或覆盖**；参见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
 
+> **2026-10-13 Staff v0.4.7 部门大切换卡（界面预备，不是分区完成）：**周休首页新增三个醒目可点击卡片 🍣 Sushi / 🍷 Bar-Sala / 🍳 Cucina。旧版 `cassola_staff_v01` 未能证明一定是 Sushi，因此 Sushi 标签下保留现有 legacy 工作副本并有醒目的未校验警告；Sala 和 Cucina 显示独立工作区尚未迁移提示，完全隐藏旧周表编辑、PDF、发布按钮。点击任一卡片只切换前端内容，不触发 Cloud 下载/上传或更改本机 Staff 状态。**正式启用**仍必须完成 Staff v2 Directory+部门 scope + Edge 部门权限+安全迁移；其他 Staff v1 功能尚未部门化，不得宣传已上线多部门排休。详见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
@@ -22,7 +24,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.7.6 · iPhone Native SKU Category Picker + Cold Room Groups**
-- Staff: **v0.4.6 · Non-destructive Staff Download Guard + Weekly PDF**
+- Staff: **v0.4.7 · Large Department Week Selector (UI Preview) + Download Guard**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
@@ -1108,7 +1110,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v096
+cassola-suite-v097
 ```
 
 当前 CORE 必须包含：
