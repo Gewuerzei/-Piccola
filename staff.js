@@ -368,7 +368,7 @@
               <div id="staffCloudDetail" class="staff-cloud-detail">Staff Cloud 不会自动覆盖本机。</div>
               <div class="staff-settings-actions">
                 <button class="btn primary" id="staffCloudUpload">☁️ 上传 Staff</button>
-                <button class="btn secondary" id="staffCloudDownload">⬇️ 替换下载 Staff</button>
+                <button class="btn secondary" id="staffCloudDownload" disabled title="共享 Staff 整份替换已停用。请使用历史版本安全导入。">🔒 旧整份下载已停用</button>
                 <button class="btn secondary" id="staffCloudHistory">🕘 云端历史</button>
                 <button class="btn secondary" id="staffCloudRollback">↩️ 恢复下载前版本</button>
               </div>
@@ -1290,7 +1290,7 @@
   }
   function renderStaffCloudState(){
     const badge=document.getElementById('staffCloudBadge'),detail=document.getElementById('staffCloudDetail');
-    const buttons=['staffCloudUpload','staffCloudDownload','staffCloudHistory'].map(id=>document.getElementById(id)).filter(Boolean);
+    const buttons=['staffCloudUpload','staffCloudHistory'].map(id=>document.getElementById(id)).filter(Boolean);
     const rollback=document.getElementById('staffCloudRollback');
     const ready=cloudReady();buttons.forEach(b=>b.disabled=!ready);
     if(rollback){const info=cloudRollbackInfo();rollback.disabled=!info;rollback.textContent=info?'↩️ 恢复下载前版本':'↩️ 暂无回滚快照'}
@@ -2057,7 +2057,7 @@
     document.getElementById('staffCopyPrev').addEventListener('click',copyPreviousDay);
     document.getElementById('staffPdfBtn').addEventListener('click',generatePdf);
     document.getElementById('staffCloudUpload').addEventListener('click',async()=>{try{await window.CassolaCloud.staffUpload('Manual Staff upload');renderStaffCloudState()}catch(err){alert('Staff Cloud 上传失败：'+(err?.message||'未知错误'))}});
-    document.getElementById('staffCloudDownload').addEventListener('click',async()=>{try{await window.CassolaCloud.staffDownload();renderStaffCloudState()}catch(err){alert('Staff Cloud 下载失败：'+(err?.message||'未知错误'))}});
+    // Legacy replace-download is permanently disabled; use read-only historical import.
     document.getElementById('staffCloudHistory').addEventListener('click',async()=>{try{await window.CassolaCloud.staffHistory()}catch(err){alert('读取 Staff Cloud 历史失败：'+(err?.message||'未知错误'))}});
     document.getElementById('staffCloudRollback').addEventListener('click',restoreCloudRollback);
     document.getElementById('staffExportBtn').addEventListener('click',()=>exportJson(false));
