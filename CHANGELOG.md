@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Cloud Safety v19 · Freeze All Legacy Staff Whole-Scope Mutations
+**2026-10-13**
+
+- 生产 Supabase Edge Function `cassola-cloud` 由 ACTIVE v17 升至 **ACTIVE v19**，保留自有 x-cassola-session 登录协议（原 `verify_jwt=false` 不变）；只做旧共享 Staff 作用域的三条拒绝规则：
+  - `upload_scopes` 如含 `scopeId='staff'`，返回 HTTP 409 `legacy_staff_write_frozen`；
+  - `download_scopes` 如请求 `scopeId='staff'`，返回 HTTP 409 `legacy_staff_download_frozen`（防止旧版 PWA 用整份下载覆盖本机）；
+  - `restore_version` 目标历史属于 `staff`，返回 HTTP 409 `legacy_staff_restore_frozen`。
+- `list_versions` 与 `get_version_state` 只读历史接口保持可用，供新 Staff 本机部门导入预览；Inventory scope 的上传/下载、员工盘货/收货/授权及 Staff Access 独立事务不受这三条作用域拦截影响。
+- 生产 Edge Function 已复核 **ACTIVE v19**、三个拦截字符串均存在；生产旧 `staff` Head 未修改，人员数仍为 8。将来正式 Staff v2 必须走独立 scope + 服务端部门权限，不允许重新启用 legacy 整份写入。
+
+---
+
 ## Staff v0.4.8 · Safe Local Historical Merge + Verified PDF Week Recovery
 **2026-10-13**
 
