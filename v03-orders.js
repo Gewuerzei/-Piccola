@@ -549,6 +549,8 @@ function v4RenderReceiptAuthPreview(){
   if(!o||!recipient){box.innerHTML='<div class="empty">没有可选'+(roleMode?'岗位':'员工')+'。</div>';return}
   const lines=roleMode?v4ReceiptEligibleRoleLines(o):v4ReceiptTaskLinesForEmployee(o,emp.scope);
   dlg._eligibleLines=lines;
+  const actionBtn=document.getElementById('v4ReceiptAuthorizeBtn');
+  if(actionBtn)actionBtn.disabled=!lines.length;
   box.innerHTML=lines.length?`
     <div class="v4-employee-receipt-summary"><b>${escapeHtml(o.supplier||'供应商')}</b><span>${lines.length} 项授权给 ${escapeHtml(roleMode?('👥 '+role.name):v4EmployeeReceiptName(emp))}</span></div>
     ${lines.map(i=>{
@@ -577,7 +579,7 @@ async function v4OpenEmployeeReceiptAuthorize(orderId){
     roleSelect.innerHTML=dlg._roles.length?dlg._roles.map(r=>'<option value="'+escapeHtml(r.id)+'">'+escapeHtml((r.icon||'📍')+' '+r.name)+'</option>').join(''):'<option value="">先在 Staff → 岗位里新增岗位</option>';
     document.getElementById('v4ReceiptTargetMode').value='person';
     sel.innerHTML=employees.length?employees.map(e=>`<option value="${escapeHtml(e.id)}">${escapeHtml(v4EmployeeReceiptName(e))} · ${escapeHtml(e.scope?.label||e.id)}</option>`).join(''):'<option value="">没有符合责任区的员工</option>';
-    document.getElementById('v4ReceiptAuthorizeBtn').disabled=!employees.length;
+    document.getElementById('v4ReceiptAuthorizeBtn').disabled=!employees.length&&!dlg._roles.length;
     v4RenderReceiptExisting();v4RenderReceiptAuthPreview();
   }catch(err){
     box.innerHTML='<div class="empty">读取员工失败：'+escapeHtml(err?.message||'未知错误')+'</div>';
