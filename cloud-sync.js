@@ -549,6 +549,12 @@
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     return api('employee_directory',{},8000);
   }
+  async function claimRoleReceiptTask(taskId){
+    if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
+    const data=await api('receipt_claim_role',{taskId},12000);
+    await refreshStatus({silent:true});
+    return data;
+  }
   async function authorizeReceiptTask(task){
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     const data=await api('receipt_authorize',{task},10000);
@@ -863,7 +869,7 @@
     login,logout,connected,role,refreshStatus,upload,download,checkpoint,
     submitEmployee,reviewEmployee,openPending,
     submitSkuProposal,listSkuProposals,reviewSkuProposal,
-    listEmployeeDirectory,authorizeReceiptTask,revokeReceiptTask,listReceiptTasks,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
+    listEmployeeDirectory,claimRoleReceiptTask,authorizeReceiptTask,revokeReceiptTask,listReceiptTasks,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
     staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,staffAccessSetRole,syncStaffRoleRoster,
     inventoryTaskOptions,publishInventoryTask,listInventoryTasks,revokeInventoryTask,
     publishRoleInventoryTask,listRoleInventoryTasks,revokeRoleInventoryTask,
