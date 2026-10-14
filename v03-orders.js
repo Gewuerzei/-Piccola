@@ -495,10 +495,15 @@ function v4EnsureEmployeeReceiptDialogs(){
     const d=document.createElement('dialog');d.id='v4EmployeeReceiptAuthDialog';d.className='v45-dialog v4-employee-receipt-dialog';
     d.innerHTML=`
       <form method="dialog">
-        <div class="dialog-head"><div><div class="eyebrow">EMPLOYEE RECEIVING</div><h3>👷 授权员工收货</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
+        <div class="dialog-head"><div><div class="eyebrow">EMPLOYEE RECEIVING</div><h3>👷 发布收货任务</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
         <div class="v4-employee-receipt-note">只有 Supervisor 明确授权后，员工“收货”页才会出现任务。员工提交后仍需 Supervisor 确认才会正式入库。</div>
         <div id="v4ReceiptExisting" class="v4-employee-receipt-existing"></div>
-        <label>授权给<select id="v4ReceiptEmployeeSelect"></select></label>
+        <div class="v4-receipt-recipient-mode">
+          <label>发布对象<select id="v4ReceiptTargetMode"><option value="person">👤 指定员工</option><option value="role">👥 岗位共享（人员可更换）</option></select></label>
+          <label id="v4ReceiptPersonWrap">选择员工<select id="v4ReceiptEmployeeSelect"></select></label>
+          <label id="v4ReceiptRoleWrap" class="hidden">选择岗位<select id="v4ReceiptRoleSelect"></select></label>
+        </div>
+        <p id="v4ReceiptRoleHint" class="v4-employee-receipt-note">员工授权只绑定本人 PIN；岗位授权则由持有岗位 Employee PIN 的员工自行领取，先领取者获得任务。</p>
         <div id="v4ReceiptAuthPreview" class="v4-employee-receipt-preview"></div>
         <button type="button" class="btn primary large" id="v4ReceiptAuthorizeBtn">授权这次收货</button>
         <button value="cancel" formnovalidate class="btn secondary large">取消</button>
@@ -526,15 +531,26 @@ function v4RenderReceiptExisting(){
     return '<div class="v4-existing-task"><div><b>'+escapeHtml(t.displayName||t.credential_id)+'</b><small>'+count+' 项 · '+escapeHtml(t.status==='submitted'?'已提交待审核':'已授权未提交')+'</small></div>'+(t.status==='authorized'?'<button type="button" class="btn danger ghost" data-v4-receipt-revoke-task="'+escapeHtml(t.task_id)+'">撤销</button>':'<span>等待审核</span>')+'</div>';
   }).join(''):'';
 }
+function v4ReceiptEligibleRoleLines(o){
+  return (o.items||[]).filter(i=>!v4LineClosed(i)&&!!sku(i.skuId));
+}
 function v4RenderReceiptAuthPreview(){
   const dlg=document.getElementById('v4EmployeeReceiptAuthDialog'),sel=document.getElementById('v4ReceiptEmployeeSelect'),box=document.getElementById('v4ReceiptAuthPreview');
   if(!dlg||!sel||!box)return;
+  const mode=document.getElementById('v4ReceiptTargetMode')?.value||'person';
+  const roleMode=mode==='role';
+  const roles=dlg._roles||[],role=roles.find(x=>x.id===document.getElementById('v4ReceiptRoleSelect')?.value);
   const o=(state.placedOrders||[]).find(x=>String(x.id)===String(dlg._orderId)),emp=(dlg._employees||[]).find(x=>String(x.id)===String(sel.value));
-  if(!o||!emp){box.innerHTML='<div class="empty">没有可授权员工。</div>';return}
-  const lines=v4ReceiptTaskLinesForEmployee(o,emp.scope);
+  document.getElementById('v4ReceiptPersonWrap')?.classList.toggle('hidden',roleMode);
+  document.getElementById('v4ReceiptRoleWrap')?.classList.toggle('hidden',!roleMode);
+  const hint=document.getElementById('v4ReceiptRoleHint');
+  if(hint)hint.textContent=roleMode?'👥 岗位任务不会指定当前员工。符合岗位权限的 PIN 可以看见并领取；第一人领取后其他人不能重复领取。收货仍需主管审核。注意 Sala 端菜区域不是厨房岗位。':'👤 个人任务绑定此员工 PIN。';
+  const recipient=roleMode?role:emp;
+  if(!o||!recipient){box.innerHTML='<div class="empty">没有可选'+(roleMode?'岗位':'员工')+'。</div>';return}
+  const lines=roleMode?v4ReceiptEligibleRoleLines(o):v4ReceiptTaskLinesForEmployee(o,emp.scope);
   dlg._eligibleLines=lines;
   box.innerHTML=lines.length?`
-    <div class="v4-employee-receipt-summary"><b>${escapeHtml(o.supplier||'供应商')}</b><span>${lines.length} 项授权给 ${escapeHtml(v4EmployeeReceiptName(emp))}</span></div>
+    <div class="v4-employee-receipt-summary"><b>${escapeHtml(o.supplier||'供应商')}</b><span>${lines.length} 项授权给 ${escapeHtml(roleMode?('👥 '+role.name):v4EmployeeReceiptName(emp))}</span></div>
     ${lines.map(i=>{
       const remaining=Math.max(0,(Number(i.orderedQty)||0)-(Number(i.creditedQty)||0));
       const orderQty=v5ItemOrderQty(i,remaining);
@@ -556,7 +572,10 @@ async function v4OpenEmployeeReceiptAuthorize(orderId){
       window.CassolaCloud.listReceiptTasks(['authorized','submitted'],o.id)
     ]);
     const employees=(directory.employees||[]).filter(e=>v4ReceiptTaskLinesForEmployee(o,e.scope).length>0);
-    dlg._employees=employees;dlg._existingTasks=existing.tasks||[];
+    dlg._employees=employees;dlg._roles=window.CassolaStaff?.taskRoles?.()||[];dlg._existingTasks=existing.tasks||[];
+    const roleSelect=document.getElementById('v4ReceiptRoleSelect');
+    roleSelect.innerHTML=dlg._roles.length?dlg._roles.map(r=>'<option value="'+escapeHtml(r.id)+'">'+escapeHtml((r.icon||'📍')+' '+r.name)+'</option>').join(''):'<option value="">先在 Staff → 岗位里新增岗位</option>';
+    document.getElementById('v4ReceiptTargetMode').value='person';
     sel.innerHTML=employees.length?employees.map(e=>`<option value="${escapeHtml(e.id)}">${escapeHtml(v4EmployeeReceiptName(e))} · ${escapeHtml(e.scope?.label||e.id)}</option>`).join(''):'<option value="">没有符合责任区的员工</option>';
     document.getElementById('v4ReceiptAuthorizeBtn').disabled=!employees.length;
     v4RenderReceiptExisting();v4RenderReceiptAuthPreview();
@@ -566,14 +585,17 @@ async function v4OpenEmployeeReceiptAuthorize(orderId){
 }
 async function v4AuthorizeEmployeeReceipt(){
   const dlg=document.getElementById('v4EmployeeReceiptAuthDialog'),sel=document.getElementById('v4ReceiptEmployeeSelect');
+  const roleMode=document.getElementById('v4ReceiptTargetMode')?.value==='role';
+  const role=(dlg?._roles||[]).find(x=>x.id===document.getElementById('v4ReceiptRoleSelect')?.value);
   const o=(state.placedOrders||[]).find(x=>String(x.id)===String(dlg?._orderId)),emp=(dlg?._employees||[]).find(x=>String(x.id)===String(sel?.value));
-  if(!o||!emp)return;
+  if(!o||(roleMode?!role:!emp))return;
   if(v4OrderDirty(o).length){showToast('本机收货状态刚刚变了，请先保存再授权');return}
-  const lines=v4ReceiptTaskLinesForEmployee(o,emp.scope);
+  const lines=roleMode?v4ReceiptEligibleRoleLines(o):v4ReceiptTaskLinesForEmployee(o,emp.scope);
   if(!lines.length){showToast('没有可授权的待收 SKU');return}
   const task={
     taskId:crypto.randomUUID?.()||String(Date.now()+Math.random()),
-    orderId:o.id,supplier:o.supplier||'',credentialId:emp.id,
+    orderId:o.id,supplier:o.supplier||'',credentialId:roleMode?null:emp.id,
+    roleId:roleMode?role.id:null,roleName:roleMode?role.name:null,
     orderSnapshot:{
       createdAt:o.createdAt,
       items:lines.map(i=>({
@@ -586,7 +608,7 @@ async function v4AuthorizeEmployeeReceipt(){
   try{
     await window.CassolaCloud.authorizeReceiptTask(task);
     dlg.close();
-    showToast('🚚 已授权 '+v4EmployeeReceiptName(emp)+' 收货 · '+lines.length+' 项');
+    showToast('🚚 已授权 '+(roleMode?'👥 '+role.name:v4EmployeeReceiptName(emp))+' 收货 · '+lines.length+' 项');
   }catch(err){
     if(err?.data?.error==='receipt_task_exists'||err?.data?.error==='receipt_lines_already_assigned')alert('这张订单里的部分 SKU 已经有未完成的员工收货授权。可在上方“当前授权”里撤销旧任务，或等员工提交 / Supervisor 审核后再授权。');
     else alert('授权失败：'+(err?.data?.detail||err?.message||'未知错误'));
@@ -698,7 +720,7 @@ async function v4RejectEmployeeReceiptTask(taskId){
 }
 
 document.addEventListener('change',e=>{
-  if(e.target?.id==='v4ReceiptEmployeeSelect')v4RenderReceiptAuthPreview();
+  if(['v4ReceiptEmployeeSelect','v4ReceiptRoleSelect','v4ReceiptTargetMode'].includes(e.target?.id))v4RenderReceiptAuthPreview();
 });
 document.addEventListener('click',async e=>{
   const auth=e.target.closest('[data-v4-authorize-receipt]');if(auth){await v4OpenEmployeeReceiptAuthorize(auth.dataset.v4AuthorizeReceipt);return}
