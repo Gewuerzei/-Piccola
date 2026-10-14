@@ -26,6 +26,13 @@
 
 > **2026-10-13 Staff v0.4.9 / PWA cache v099 · Sushi 周休一键恢复：**Pietro 不愿逐人填写八个日期。经只读核对，Cloud 历史 2026-10-12 v1 的发布 `snapshot.people` 及当前 Head 都属于相同的八人名册，顺序与已获 Pietro 确认的原 PDF 完全一致。已把 `staff-departments.js` 的表单恢复入口换成「⚡ 一键恢复已核对周休」：客户端使用旧 v1 冻结的 8 人姓名+personId 严格校验以及固定 SHA-256 指纹（公开仓库**不存原人员 ID 与姓名映射**），再按原 PDF 的 8 行休息日期位置自动生成 `{personId,date}`。一次显示核对摘要并确认，即调用原 `applyVerifiedRestWeek`，先备份旧本机 Staff、阻止冲突、保存 8 条周休、不动旧发布 v1 / Cloud。名单、顺序、记录冲突或 SHA 不一致时坚决拒绝，不能猜测恢复。模拟八人恢复与不匹配名册拒绝通过；iPhone 真机仍待验收。**无需逐人选择日期，也不是悄悄自动改数据，用户须主动确认执行。**
 
+> **2026-10-14 Staff v0.5.0 / PWA cache v100：岗位任务在两个发布窗口都能直接选择。**
+> - Staff → 人员 → 📋 发布盘货：新增「发布对象」个人 / 岗位共享切换，岗位从本机 `state.roles` 取（支持 Staff → 岗位新建），选角色后复用现有 `role_inventory_task_publish` 冻结 SKU 篮子和成员任务展示；个人任务保持原流程。该岗位共享盘货为一次性任务，先提交者完成，已发布清单不会随着 SKU 增减改变。
+> - Inventory → 已下单 → 授权员工收货：新增个人 / 岗位共享 + 真实 Staff 工作岗位选择。Supervisor 仍从订单待收行冻结快照；岗位任务初始 `credential_id=NULL`，当前匹配 `access_credentials.staff_role_id` 的已激活受管员工登录后看到「👷 领取本岗位收货」，通过 Edge 原子 CAS 抢占 `credential_id`，只能一人领取，之后沿用原 `receipt_submit` → `receipt_review` → Supervisor 手动入库。个人授权 / 已提交 / 已接受收货不迁移不改变。
+> - Supabase `cassola-cloud` **ACTIVE v20** 已部署：`receipt_authorize` 仅接受 credentialId / roleId 二选一，`receipt_claim_role` 必须当前有效岗位凭据、须 `staff_person_id`，`is('credential_id',null).eq('status','authorized')` 的原子 UPDATE 确保首人领取；员工 `status` 添加本岗位未认领的收货预览。生产 schema 按 [20261014_shared_role_receiving.sql](./supabase/migrations/20261014_shared_role_receiving.sql) 扩充三个可空字段并将 receipt credential_id 允许 NULL。不得将 Sala 历史的 Cassa/Cucina/Maki 端菜位置当成 Staff 工作岗位或 PIN 授权。
+> - **分清岗位与责任区**：照片里 Francesco / Angelo 标注「🥬 蔬果」是旧 Access 责任区标签，不等于 `staff_role_id`。必须在 Staff 明确建立/选择实际岗位，并为当前员工生成 Employee PIN / 赋予主要岗位，使 roleId 真实匹配后才能见到共享任务；换岗要同步凭据并重新登录。无岗位成员时任务发布可暂存，暂无人收到。
+> - **生产验收状态**：JS 静态语法与收货个人/岗位预览两分支模拟通过；Edge ACTIVE v20 / 数据库字段核查通过；已存在的 4 条收货历史分布维持不变，尚未向生产发布新的岗位收货或盘货任务。真实 iPhone PWA / 多员并发领取 / 主管确认未实机验收，不能声称已完成实战验收；原共享 Staff Cloud 上传 / 下载 / 整体恢复服务端禁止规则继续有效，Inventory Cloud 不受影响。
+
 ## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
@@ -33,7 +40,7 @@
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
 - Inventory: **v0.7.6 · iPhone Native SKU Category Picker + Cold Room Groups**
-- Staff: **v0.4.9 · One-Tap Verified Sushi PDF Week Restoration**
+- Staff: **v0.5.0 · Direct Role Task Publishing for Counting & Receiving**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
 - iPhone 优先 PWA，offline-first
@@ -376,7 +383,7 @@ Inventory 的“上传全店”仍只指前四个 Inventory scope；Staff 用自
 - `cassola_employee_review`
 
 Edge Function：
-- `cassola-cloud`（当前生产 v19；支持 Inventory/Staff lineage、managed Staff Access、personal + shared first-wins role task basket、employee count / packaging + brand SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
+- `cassola-cloud`（当前生产 v20；支持 Inventory/Staff lineage、managed Staff Access、personal + shared first-wins role task basket、employee count / packaging + brand SKU proposal / Supervisor-authorized receiving，并由 Edge 再验证 credential / task / scope）
 - 自定义 Access Code → 短期 Cloud session
 - 浏览器只持有临时 session token；数据库 secret 只存在 Edge 环境
 - public / anon / authenticated 对 Cloud 表没有直接访问权限
@@ -1119,7 +1126,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v099
+cassola-suite-v100
 ```
 
 当前 CORE 必须包含：
