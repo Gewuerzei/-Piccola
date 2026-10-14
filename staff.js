@@ -447,6 +447,21 @@
         <form method="dialog">
           <div class="dialog-head"><div><div class="eyebrow">PUBLISH TASK</div><h3 id="staffTaskTitle">📋 发布盘货任务</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
           <div class="staff-task-note">任务按发布瞬间冻结 SKU 清单。以后新增同分类 / 同供应商 SKU，不会偷偷塞进已经发布的任务。</div>
+          <div class="staff-task-recipient">
+            <label>📣 发布对象
+              <select id="staffTaskRecipientMode">
+                <option value="person">👤 指定员工（个人任务）</option>
+                <option value="role">👥 岗位共享（人员可更换）</option>
+              </select>
+            </label>
+            <label id="staffTaskRolePickerWrap" class="hidden">选择岗位
+              <select id="staffTaskRolePicker"></select>
+            </label>
+            <label id="staffTaskPersonPickerWrap">选择员工
+              <select id="staffTaskPersonPicker"></select>
+            </label>
+            <small id="staffTaskRecipientHint">个人任务绑定特定 Employee PIN。岗位共享任务会随该岗位 Employee PIN 自动分配；先到先提交，员工换岗时会更新。</small>
+          </div>
           <div class="staff-task-builder">
             <div class="staff-form-grid">
               <label>加入方式
@@ -1422,9 +1437,29 @@
     }).join(''):'<div class="empty">还没有有效盘货任务。</div>';
     renderTaskPreview();
   }
+  function syncTaskRecipientPicker(){
+    const roleMode=!!taskPublisherRoleId;
+    const mode=document.getElementById('staffTaskRecipientMode');
+    const roleWrap=document.getElementById('staffTaskRolePickerWrap');
+    const personWrap=document.getElementById('staffTaskPersonPickerWrap');
+    const rolePicker=document.getElementById('staffTaskRolePicker');
+    const personPicker=document.getElementById('staffTaskPersonPicker');
+    if(!mode||!rolePicker||!personPicker)return;
+    mode.value=roleMode?'role':'person';
+    roleWrap?.classList.toggle('hidden',!roleMode);
+    personWrap?.classList.toggle('hidden',roleMode);
+    rolePicker.innerHTML=state.roles.map(r=>'<option value="'+esc(r.id)+'">'+esc((r.icon||'📍')+' '+r.name)+'</option>').join('');
+    personPicker.innerHTML=state.people.filter(p=>p.active!==false).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+    if(roleMode)rolePicker.value=taskPublisherRoleId;
+    else personPicker.value=taskPublisherPersonId||'';
+    document.getElementById('staffTaskRecipientHint').textContent=roleMode
+      ?'👥 任务绑定岗位 ID；今天谁持有该岗位的 Employee PIN，谁就能接到同一份共享盘货任务。不是给当前所有人员各发一份。'
+      :'👤 只发给指定员工。想让人员轮换，请改选「岗位共享」。';
+  }
   async function openTaskPublisher(personId){
     const p=personById(personId);if(!p)return;
     taskPublisherPersonId=personId;taskPublisherRoleId=null;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
+    syncTaskRecipientPicker();
     const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList'),basket=document.getElementById('staffTaskBasket');
     document.getElementById('staffTaskTitle').textContent='📋 '+p.name+' · 发布个人盘货任务';
     document.getElementById('staffTaskLabel').value='';
@@ -1444,6 +1479,7 @@
   async function openRoleTaskPublisher(roleId){
     const role=roleById(roleId);if(!role)return;
     taskPublisherPersonId=null;taskPublisherRoleId=roleId;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
+    syncTaskRecipientPicker();
     const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList'),basket=document.getElementById('staffTaskBasket');
     document.getElementById('staffTaskTitle').textContent='📋 '+role.icon+' '+role.name+' · 岗位盘货任务';
     document.getElementById('staffTaskLabel').value='';
@@ -2036,6 +2072,19 @@
     document.getElementById('staffTaskAddSelector').addEventListener('click',addTaskSelector);
     document.getElementById('staffTaskBasket').addEventListener('click',e=>{const b=e.target.closest('[data-staff-task-selector-remove]');if(b)removeTaskSelector(b.dataset.staffTaskSelectorRemove)});
     document.getElementById('staffTaskPublish').addEventListener('click',publishPersonTask);
+    document.getElementById('staffTaskRecipientMode').addEventListener('change',e=>{
+      const selected=e.target.value;
+      if(selected==='role'){
+        const role=document.getElementById('staffTaskRolePicker').value||state.roles[0]?.id;
+        if(role)openRoleTaskPublisher(role);
+        else{e.target.value='person';toast('请先在 Staff → 岗位里建立岗位');}
+      }else{
+        const person=document.getElementById('staffTaskPersonPicker').value||state.people.find(p=>p.active!==false)?.id;
+        if(person)openTaskPublisher(person);
+      }
+    });
+    document.getElementById('staffTaskRolePicker').addEventListener('change',e=>{if(e.target.value)openRoleTaskPublisher(e.target.value)});
+    document.getElementById('staffTaskPersonPicker').addEventListener('change',e=>{if(e.target.value)openTaskPublisher(e.target.value)});
     document.getElementById('staffTaskList').addEventListener('click',e=>{const b=e.target.closest('[data-staff-task-revoke]');if(b)revokePersonTask(b.dataset.staffTaskRevoke)});
     document.getElementById('staffDeletePerson').addEventListener('click',deletePerson);
     document.getElementById('staffPhotoInput').addEventListener('change',async e=>{
