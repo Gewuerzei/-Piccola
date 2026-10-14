@@ -562,3 +562,8 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 :root[data-theme="light"] .cassola-employee-upload-dock > .cassola-employee-upload-notice:not(:empty){
   background:rgba(75,115,90,.09);
 }
+
+/* Employee v0.7.7 · shared role receipt claiming */
+.cassola-role-receipt-claim{border:1px solid var(--line)}
+.cassola-role-receipt-claim .cassola-employee-note{font-size:12px;line-height:1.65}
+.cassola-role-receipt-claim [data-employee-receipt-claim]{min-height:54px}
