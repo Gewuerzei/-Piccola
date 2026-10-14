@@ -233,9 +233,32 @@
         '<button type="button" class="btn secondary employee-dock-btn" data-employee-export><span>📄</span><small>JSON</small></button>'+
       '</div>';
   }
+  async function claimRoleReceiptTask(taskId){
+    const btn=document.querySelector('[data-employee-receipt-claim="'+CSS.escape(String(taskId))+'"]');
+    if(!window.CassolaCloud?.connected?.()){alert('领取岗位收货需要联网确认。离线时不会占用任务，请联网后再试。');return}
+    if(btn){btn.disabled=true;btn.textContent='⏳ 正在领取…'}
+    try{
+      await window.CassolaCloud.claimRoleReceiptTask(taskId);
+      if(typeof showToast==='function')showToast('👷 岗位收货已领取，仅你可以提交这份任务');
+      renderEmployee();
+    }catch(err){
+      if(err?.data?.error==='role_receipt_already_claimed_or_unavailable')
+        alert('这份岗位收货已被同岗位其他员工领取或撤销。请刷新收货列表。');
+      else alert('领取岗位任务失败：'+(err?.message||'未知错误'));
+      await window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{});
+      renderEmployee();
+    }
+  }
   function employeeReceiptTaskHtml(task){
     const lines=Array.isArray(task.order_snapshot?.items)?task.order_snapshot.items:[],draft=loadReceiptDraft(task);
     const queued=window.CassolaCloud?.employeeReceiptQueued?.(task.task_id,accessSession?.id);
+    if(task.claim_required){
+      return '<article class="cassola-employee-receipt-task cassola-role-receipt-claim">'+
+        '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">👥 岗位共享 · 待领取</span><h2>🚚 '+escapeHtml(task.supplier||'收货任务')+'</h2><small>岗位：'+escapeHtml(task.source_role_name||'当前岗位')+' · '+(task.order_snapshot?.items?.length||0)+' 项待收</small></div></div>'+
+        '<p class="cassola-employee-note">任务不绑定特定员工。第一位符合岗位权限并成功领取的人负责提交，其他人不能重复领取；提交后仍由 Supervisor 审核。</p>'+
+        '<button type="button" class="btn primary large" data-employee-receipt-claim="'+escapeHtml(task.task_id)+'">👷 领取本岗位收货</button>'+
+      '</article>';
+    }
     return '<article class="cassola-employee-receipt-task" data-employee-receipt-task="'+escapeHtml(task.task_id)+'">'+
       '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">AUTHORIZED RECEIVING</span><h2>🚚 '+escapeHtml(task.supplier||'收货任务')+'</h2><small>Supervisor 授权 · '+escapeHtml(new Date(task.authorized_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cassola-role-pill">'+(queued?'📵 待发送':'👷 已授权')+'</span></div>'+
       '<div class="cassola-employee-note">只记录这次现场实际收到的货。提交后不会直接入库，仍要 Supervisor 确认。</div>'+
@@ -618,6 +641,7 @@
       const panel=e.target.closest('[data-employee-panel]');if(panel){switchEmployeePanel(panel.dataset.employeePanel);return}
       const countTask=e.target.closest('[data-employee-count-task]');if(countTask){employeeCountTaskId=countTask.dataset.employeeCountTask;renderEmployee();return}
       const receiptStatus=e.target.closest('[data-employee-receipt-status]');if(receiptStatus){setEmployeeReceiptStatus(receiptStatus.dataset.taskId,receiptStatus.dataset.skuId,receiptStatus.dataset.employeeReceiptStatus);return}
+      const receiptClaim=e.target.closest('[data-employee-receipt-claim]');if(receiptClaim){claimRoleReceiptTask(receiptClaim.dataset.employeeReceiptClaim);return}
       const receiptSubmit=e.target.closest('[data-employee-receipt-submit]');if(receiptSubmit){submitEmployeeReceiptTask(receiptSubmit.dataset.employeeReceiptSubmit);return}
       if(e.target.closest('[data-employee-clear]')){clearEmployeeDraft();return}
       if(e.target.closest('[data-employee-cloud]')){uploadEmployeeCount();return}
