@@ -2127,5 +2127,5 @@
   window.addEventListener('cassola-cloud-staff-change',()=>{if(state){renderStaffCloudState();renderPeople()}});
   document.addEventListener('cassola-cloud-reconnected',()=>{if(state)renderStaffCloudState()});
   document.addEventListener('DOMContentLoaded',init);
-  window.CassolaStaff={show,hide,render:renderAll,applyCloudState,applyVerifiedRestWeek,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
+  window.CassolaStaff={show,hide,render:renderAll,taskRoles:()=>state?.roles?.map(r=>({id:r.id,name:r.name,icon:r.icon}))||[],applyCloudState,applyVerifiedRestWeek,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
 })();
