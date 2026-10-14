@@ -2,6 +2,21 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.5.0 / Inventory v0.7.7 · Direct Job-based Count & Receiving Tasks
+**2026-10-14**
+
+- Pietro 反馈两个常用窗口都只能看到“个人盘货 / 授权员工收货”，找不到“按岗位发布”，希望**任务绑定岗位、人员可以轮换**。此前盘货确有岗位任务，但只藏在 Staff 岗位管理页；收货完全没有岗位任务后端。
+- Staff 个人盘货发布弹窗新增醒目的 **「👤 指定员工 / 👥 岗位共享」** 下拉，可直接选择 Staff 工作岗位、沿用原 `role_inventory_task_publish` 与岗位冻结 SKU 篮子/首人成功提交的行为。个人发布仍保留，切换接收者重新加载各自任务，避免重复 SKU。
+- Inventory 已下单的 **「授权员工收货」** 弹窗增加个人 / 岗位共享选择；角色来自 `CassolaStaff.taskRoles()`。按角色授权将未结案订单行冻结为单份任务，先由对应 Employee PIN 领取，**原子领取成功后仅该人能填单/提交**。主管仍需最终审核才入库；未产生任何库存变化。
+- Supabase schema 迁移 [20261014_shared_role_receiving.sql](./supabase/migrations/20261014_shared_role_receiving.sql) 已应用生产：`employee_receipt_tasks.credential_id` 对待领取岗位任务允许 NULL，新增 `source_role_id`、`source_role_name`、`claimed_at`。原个人任务数据没有改写。
+- 生产 Edge Function `cassola-cloud` **ACTIVE v20**：旧 `receipt_authorize` 支持严格的个人 / 岗位二选一，新增 `receipt_claim_role` 对当前已激活 `staff_role_id` 匹配、`staff_person_id` 有效的受管员工执行条件更新 `status=authorized AND credential_id IS NULL`；员工 status 仅返回本人可见的未领取岗位单；已领取任务沿用原 receipt_submit/review。原 Staff legacy 上传/下载/整体历史恢复冻结规则保留。
+- 员工「🚚 收货」页增加 **👥 岗位待领取**卡和明确「👷 领取本岗位收货」，断网不能抢占；领取失败会显示被别人领取或已撤销。原个人收货、待发送与 Supervisor 审核流程不变。
+- 重要：目前工作人员现有「蔬果」等可能只是 Employee Access 责任区/端菜位置，不等于 Staff **真实岗位**。岗位规则需要 Staff 角色及匹配的有效 Employee PIN；Sala 历史端菜 `Maki/Cucina/Cassa` 绝不能自动当作厨房工作岗位授予任务。岗位盘货是一轮冻结任务，岗位收货绑定具体订单，均不会自行无限循环。
+- 验收：JS 静态语法、个人/岗位收货 UI 模拟及 Edge v20 ACTIVE/原子 CAS 代码检查通过；无真实岗位任务发布，无原库存/Staff Cloud Head 变更。生产收货历史仍按原状态保留。**iPhone 实机、员工 PIN 角色配对及双人争抢尚待现场验收**。
+- PWA 缓存更新 `cassola-suite-v100`。
+
+---
+
 ## Staff v0.4.9 · One-Tap Sushi PDF Week Recovery (No Manual Selection)
 **2026-10-13**
 
