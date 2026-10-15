@@ -338,13 +338,9 @@
             </button>
           </div>
           <div id="staffDepartmentMessage" class="staff-department-message" role="status" aria-live="polite"></div>
-          <div class="staff-department-cloud-box">
-            <div class="staff-department-cloud-title"><b id="staffDeptCloudTitle">☁️ 本部门 Cloud</b><small id="staffDeptCloudStatus">独立保存 · 手动同步</small></div>
-            <div class="staff-department-cloud-actions">
-              <button type="button" class="btn primary" id="staffDeptUpload">⬆ 上传本部门</button>
-              <button type="button" class="btn secondary" id="staffDeptDownload">⬇ 下载本部门</button>
-            </div>
-            <small class="staff-department-cloud-note">仅同步选中的部门。检测到本机改动或版本冲突会阻止覆盖；不使用旧版共享 Staff。</small>
+          <div class="staff-department-cloud-shortcut">
+            <div><b>☁️ 本部门 Cloud</b><small id="staffDeptWeekCloudStatus">同步由 Supervisor 手动确认</small></div>
+            <button type="button" class="btn secondary" id="staffWeekCloudSettings">管理 Cloud <span aria-hidden="true">›</span></button>
           </div>
           <div id="staffWeekLegacyContent">
             <div class="staff-week-tools">
@@ -429,15 +425,36 @@
               <div class="staff-role-list" id="staffRoleList"></div>
               <div class="staff-settings-actions"><button class="btn secondary" id="staffAddRole">＋ 岗位</button></div>
             </div>
-            <div class="staff-settings-card staff-cloud-card">
-              <div class="staff-cloud-head"><div><h3>🗄️ 旧版 Staff Cloud 档案</h3><p>旧共享 Staff 已冻结，禁止整份上传/下载。请使用周休页顶部对应部门的独立 Cloud 按钮，头像只留本机。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
-              <div id="staffCloudDetail" class="staff-cloud-detail">Staff Cloud 不会自动覆盖本机。</div>
-              <div class="staff-settings-actions">
-                <button class="btn primary" id="staffCloudUpload" disabled title="旧 Staff Cloud 未分区，整份上传已冻结">🔒 旧整份上传已停用</button>
-                <button class="btn secondary" id="staffCloudDownload" disabled title="共享 Staff 整份替换已停用。请使用历史版本安全导入。">🔒 旧整份下载已停用</button>
-                <button class="btn secondary" id="staffCloudHistory">🕘 云端历史</button>
-                <button class="btn secondary" id="staffCloudRollback">↩️ 恢复下载前版本</button>
+            <div class="staff-settings-card staff-cloud-card" id="staffCloudUnifiedCard">
+              <div class="staff-cloud-head"><div><h3>☁️ Staff Cloud 管理</h3><p>一个入口管理三个部门。人员、排休与发布版本各自保存，旧 Staff 历史单独只读保留。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
+              <div id="staffCloudDetail" class="staff-cloud-detail">部门 Cloud 使用手动同步，任何覆盖前都要检查本机修改。</div>
+              <div class="staff-cloud-department-switch" role="group" aria-label="选择 Staff Cloud 管理部门">
+                <button class="staff-cloud-department-choice active" type="button" data-staff-cloud-department="sushi" aria-pressed="true">🍣 Sushi</button>
+                <button class="staff-cloud-department-choice" type="button" data-staff-cloud-department="sala" aria-pressed="false">🍷 Bar/Sala</button>
+                <button class="staff-cloud-department-choice" type="button" data-staff-cloud-department="cucina" aria-pressed="false">🍳 Cucina</button>
               </div>
+              <div class="staff-cloud-active-status" role="status" aria-live="polite">
+                <div class="staff-department-cloud-title"><b id="staffDeptCloudTitle">🍣 Sushi · 独立 Cloud</b><small id="staffDeptCloudStatus">检查本机同步状态中</small></div>
+                <p id="staffDeptRemoteStatus">云端状态尚未读取，点击「检查云端」只读查看。</p>
+              </div>
+              <div class="staff-department-cloud-actions">
+                <button type="button" class="btn primary" id="staffDeptUpload">⬆ 上传选中部门</button>
+                <button type="button" class="btn secondary" id="staffDeptDownload">⬇ 下载选中部门</button>
+              </div>
+              <div class="staff-settings-actions">
+                <button type="button" class="btn secondary" id="staffDeptCheck">🔍 检查云端状态</button>
+                <button type="button" class="btn secondary" id="staffExportDeptBackup">📦 备份全部部门 JSON</button>
+              </div>
+              <p class="staff-department-cloud-note">下载不是合并。只同步当前部门，发生版本冲突或本机未同步更改时停止，不会自动覆盖其他部门。</p>
+              <details class="staff-cloud-archive">
+                <summary>🗄️ 旧 Staff Cloud 历史与迁移</summary>
+                <p>原共享 Staff 总账已冻结，不能整份上传、下载或恢复云端。旧版本只供查询和安全导入到指定部门，绝不替换当前排休。</p>
+                <div class="staff-settings-actions" id="staffCloudArchiveActions">
+                  <button class="btn secondary" id="staffCloudHistory">🕘 查看旧 Cloud 历史</button>
+                  <button class="btn secondary" id="staffOpenSafeMerge">🧩 从旧历史安全导入</button>
+                  <button class="btn secondary" id="staffCloudRollback">↩️ 恢复旧本机备份（仅 Sushi）</button>
+                </div>
+              </details>
             </div>
             <div class="staff-settings-card">
               <h3>📨 群聊 JSON 交接</h3><p>和 Inventory 一样，用版本号防止旧文件静默覆盖。普通 Staff JSON 不带头像；只有“完整备份”才会打包压缩头像。</p>
