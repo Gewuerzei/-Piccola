@@ -1,8 +1,8 @@
 # Cassola Staff · Department Workspaces Migration Plan
 
-> Status: **APPROVED ARCHITECTURE / DESIGN ONLY** (2026-10-13)  
+> Status: **DEPARTMENT EDITOR + MANUAL ISOLATED CLOUD DEPLOYED 2026-10-15; FULL STAFF V2 DIRECTORY / MULTI-SUPERVISOR STILL PENDING**  
 > Business partition: **Sushi / Cucina / Sala**.  
-> **Not yet implemented or migrated.** Existing `staff` Cloud Head, localStorage, checkpoints, historic publications, and employee credentials remain unchanged.
+> New staff:sushi / staff:sala / staff:cucina empty Heads and per-department grants are deployed. The original `staff` Cloud Head, legacy `cassola_staff_v01`, historical versions, and existing credentials are preserved; local Sala sidecar becomes an editable copy only on-device. The V2 shared directory, alias migration, and per-person Supervisor credentials are not yet implemented.
 >
 > Public repository: this document may contain **schema and anonymous examples only**. Never store live employee names, PINs, avatars, shifts, attendance, proprietary business figures, session tokens, or raw Cloud snapshots here.
 
@@ -38,6 +38,15 @@
 - The Sushi old PDF has real verified days off but legacy publication `snapshot.cells` is empty. The `applyVerifiedRestWeek` UI needs all eight people and date selections confirmed against the PDF, backs up old local Staff first and refuses conflicting records. It preserves old v1 and allows later explicit local publication v2. **Do not claim schedule restoration happens automatically on app update.**
 - The local sidecar is not yet uploaded or shared: Staff V2 directory + per-department server Head + Supervisor grants remain to be built. Other supervisors cannot automatically receive this local import. The future migration must read sidecar alongside legacy state and deduplicate provenance.
 - Edge `cassola-cloud` **ACTIVE v19** freezes `staff` whole-scope upload, download and history restore server-side (HTTP 409) even for old cached PWAs; it preserves authorized read-only history APIs, Inventory scope actions and employee counting. Old Staff local publication no longer auto-uploads. These safeguards stay in force until V2 migration passes acceptance gates.
+
+## 2026-10-15 · Functional department workspaces and secure interim Cloud deployment
+
+- The screenshot-requested **large department switch now changes editable active Staff state**, not a read-only preview. Legacy Sushi keeps `cassola_staff_v01`; Sala/Cucina use separate local keys, seeded non-destructively from the approved sidecar or a blank default. Each department independently edits people, attendance, swaps, schedules, publication versions, exports.
+- Interim Cloud transport uses `staff:sushi / staff:sala / staff:cucina` with separate append-only lineages and Heads. These Heads are **empty until Supervisor manually uploads** from an actual device. API `staff_department_download/upload` on Edge ACTIVE v22 checks `staff_department_grants` for actor credential and requested department; generic scope interfaces are blocked for `staff:*`. Upload requires parent Head match, and local download blocks dirty unsynced states. Original shared `staff` remains frozen with archives intact.
+- Current single Supervisor credential was granted all 3 scopes so Pietro can operate. Multi-Supervisor individual identity provisioning remains a prerequisite for independently revocable permission. A shared PIN is not separate users.
+- This is an **interim, working departmental snapshot solution**, **not final V2 unified directory**. Each department still holds an own people roster for runtime compatibility; cross-department identity aliases, staff:directory, three-way merge, role/credential rebinding, and role-specific permissions remain future stages.
+- Never automatically transfer original published Sushi v1 or sidecar Sala to production Cloud without an explicit on-device Supervisor upload. Current implementation offers scope-local backups and labels PDF/JSON with the department. A separate combined local backup includes current editable states.
+- Local and backend structural tests passed, iPhone two-Supervisor acceptance and conflict-resolution UI are pending.
 
 ## 1. Goal and non-goals
 
