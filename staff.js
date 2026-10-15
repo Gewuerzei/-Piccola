@@ -676,6 +676,27 @@
     bindUi();
   }
 
+  // Complete a previously approved history import into an otherwise empty
+  // editable department key. Never replace an occupied local workspace.
+  function activateImportedDepartment(dept){
+    if(!DEPARTMENT_KEY[dept]||dept==='sushi')return false;
+    const key=DEPARTMENT_KEY[dept],prev=localStorage.getItem(key);
+    if(prev){
+      let old;
+      try{old=JSON.parse(prev)}catch(_){return false}
+      if((old.people||[]).length||Object.keys(old.attendance||{}).length||
+         Object.keys(old.weekPublications||{}).length)return false;
+    }
+    const seed=departmentSeed(dept);
+    if(!seed.people.length)return false;
+    const next=normalize(seed);
+    // Capture current empty draft and original sidecar before any replacement.
+    localStorage.setItem('cassola_staff_import_bridge_backup_'+dept+'_'+Date.now(),
+      JSON.stringify({savedAt:now(),previous:prev,source:localStorage.getItem(SIDE_CAR_KEY)}));
+    localStorage.setItem(key,JSON.stringify(next));
+    if(weekDepartment===dept){state=next;renderAll()}
+    return true;
+  }
   const DEPARTMENT_CLOUD_META='cassola_staff_department_cloud_meta_v01';
   let departmentCloudBusy=false;
   function departmentCloudMeta(){try{return JSON.parse(localStorage.getItem(DEPARTMENT_CLOUD_META)||'{}')||{}}catch(_){return{}}}
@@ -2273,5 +2294,5 @@
   window.addEventListener('cassola-cloud-staff-change',()=>{if(state){renderStaffCloudState();renderPeople()}});
   document.addEventListener('cassola-cloud-reconnected',()=>{if(state)renderStaffCloudState()});
   document.addEventListener('DOMContentLoaded',init);
-  window.CassolaStaff={show,hide,render:renderAll,taskRoles:()=>state?.roles?.map(r=>({id:r.id,name:r.name,icon:r.icon}))||[],applyCloudState,applyVerifiedRestWeek,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
+  window.CassolaStaff={show,hide,render:renderAll,departmentWorkspacesEnabled:()=>true,activateImportedDepartment,taskRoles:()=>state?.roles?.map(r=>({id:r.id,name:r.name,icon:r.icon}))||[],applyCloudState,applyVerifiedRestWeek,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
 })();
