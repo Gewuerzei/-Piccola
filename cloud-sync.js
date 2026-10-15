@@ -639,6 +639,16 @@
     if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
     return api('role_inventory_task_revoke',{ruleId},10000);
   }
+  async function staffDepartmentDownload(department){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_department_download',{department},14000);
+  }
+  async function staffDepartmentUpload(department,state,baseVersionId){
+    if(!token||role()!=='supervisor')throw new Error('cloud_supervisor_session_required');
+    return api('staff_department_upload',{
+      department,state,baseVersionId:baseVersionId||null,deviceId:deviceId()
+    },16000);
+  }
   async function staffUpload(){
     // Legacy Staff is a single shared scope: until department-qualified Edge
     // auth is deployed, do not allow any old full-roster writes.
@@ -873,7 +883,7 @@
     staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,staffAccessSetRole,syncStaffRoleRoster,
     inventoryTaskOptions,publishInventoryTask,listInventoryTasks,revokeInventoryTask,
     publishRoleInventoryTask,listRoleInventoryTasks,revokeRoleInventoryTask,
-    staffUpload,staffDownload,staffStatus,staffHistory,staffLegacyVersions,staffLegacyVersionState,
+    staffUpload,staffDownload,staffDepartmentUpload,staffDepartmentDownload,staffStatus,staffHistory,staffLegacyVersions,staffLegacyVersionState,
     inventoryRollbackInfo,restoreInventoryRollback,
     queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
     rememberAccessCode,reconnect,cachedIdentity,
