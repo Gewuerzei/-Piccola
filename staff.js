@@ -338,6 +338,14 @@
             </button>
           </div>
           <div id="staffDepartmentMessage" class="staff-department-message" role="status" aria-live="polite"></div>
+          <div class="staff-department-cloud-box">
+            <div class="staff-department-cloud-title"><b id="staffDeptCloudTitle">☁️ 本部门 Cloud</b><small id="staffDeptCloudStatus">独立保存 · 手动同步</small></div>
+            <div class="staff-department-cloud-actions">
+              <button type="button" class="btn primary" id="staffDeptUpload">⬆ 上传本部门</button>
+              <button type="button" class="btn secondary" id="staffDeptDownload">⬇ 下载本部门</button>
+            </div>
+            <small class="staff-department-cloud-note">仅同步选中的部门。检测到本机改动或版本冲突会阻止覆盖；不使用旧版共享 Staff。</small>
+          </div>
           <div id="staffWeekLegacyContent">
             <div class="staff-week-tools">
               <button id="staffPrevWeek">‹</button>
@@ -455,7 +463,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.5.0</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
+              <h3>Staff v0.5.1</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
             </div>
           </div>
         </section>
@@ -668,6 +676,82 @@
     bindUi();
   }
 
+  const DEPARTMENT_CLOUD_META='cassola_staff_department_cloud_meta_v01';
+  let departmentCloudBusy=false;
+  function departmentCloudMeta(){try{return JSON.parse(localStorage.getItem(DEPARTMENT_CLOUD_META)||'{}')||{}}catch(_){return{}}}
+  function setDepartmentCloudMeta(dept,entry){
+    const meta=departmentCloudMeta();meta[dept]=entry;
+    localStorage.setItem(DEPARTMENT_CLOUD_META,JSON.stringify(meta));
+  }
+  function departmentCloudSnapshot(dept=weekDepartment){
+    return {schemaVersion:2,scopeId:'staff:'+dept,...cloneJson(snapshot(state))};
+  }
+  function localDepartmentDirty(dept=weekDepartment){
+    const base=departmentCloudMeta()[dept];
+    return !base?.fingerprint||base.fingerprint!==fingerprint(state);
+  }
+  function renderDepartmentCloud(){
+    const status=document.getElementById('staffDeptCloudStatus'),title=document.getElementById('staffDeptCloudTitle');
+    if(!status||!title)return;
+    title.textContent='☁️ '+WEEK_DEPARTMENTS[weekDepartment].label+' · 独立 Cloud';
+    const meta=departmentCloudMeta()[weekDepartment];
+    status.textContent=meta?.versionId
+      ?(localDepartmentDirty()?'📱 本机有待同步修改':'✅ 本机与上次同步版本一致')
+      :'☁️ 本部门尚未建立本机同步基线';
+    for(const id of ['staffDeptUpload','staffDeptDownload']){
+      const button=document.getElementById(id);if(button)button.disabled=departmentCloudBusy;
+    }
+  }
+  async function uploadCurrentDepartment(){
+    if(departmentCloudBusy)return;
+    const cloud=window.CassolaCloud;
+    if(!cloud?.connected?.()||cloud.role?.()!=='supervisor'){alert('需要 Supervisor Cloud 登录才能上传部门 Staff');return}
+    departmentCloudBusy=true;renderDepartmentCloud();
+    const dept=weekDepartment;
+    try{
+      const localMeta=departmentCloudMeta()[dept]||{},remote=await cloud.staffDepartmentDownload(dept);
+      const current=remote.scope?.head_version_id||null,base=localMeta.versionId||null;
+      if(current!==base)throw new Error(current
+        ?'云端已有更新版本，但本机没有对应同步基线。已阻止覆盖，请先备份并处理差异。'
+        :'本机同步基线与云端不一致，停止上传');
+      if(!confirm('确认仅上传 '+WEEK_DEPARTMENTS[dept].label+' 的 '+state.people.length+' 人和本部门排休、版本？\n不会改动其他部门。'))return;
+      save();
+      const fp=fingerprint(state);
+      const r=await cloud.staffDepartmentUpload(dept,departmentCloudSnapshot(dept),base);
+      const result=r.result||{},next=result.headAfter||result.headVersionId;
+      if(!next)throw new Error('Cloud 没有确认版本号，未标记成功');
+      setDepartmentCloudMeta(dept,{versionId:next,fingerprint:fp,syncedAt:now()});
+      toast('✅ '+WEEK_DEPARTMENTS[dept].label+' 已上传 Cloud');
+    }catch(e){alert('🛑 部门上传未完成：'+(e?.data?.error||e?.message||e))}
+    finally{departmentCloudBusy=false;renderDepartmentCloud()}
+  }
+  async function downloadCurrentDepartment(){
+    if(departmentCloudBusy)return;
+    const cloud=window.CassolaCloud;
+    if(!cloud?.connected?.()||cloud.role?.()!=='supervisor'){alert('需要 Supervisor Cloud 登录才能下载部门 Staff');return}
+    departmentCloudBusy=true;renderDepartmentCloud();
+    const dept=weekDepartment;
+    try{
+      const remote=await cloud.staffDepartmentDownload(dept),head=remote.scope;
+      if(!head?.head_version_id||!head?.state?.people?.length){alert('该部门 Cloud 目前没有正式排休数据，当前本机没有被修改。');return}
+      const base=departmentCloudMeta()[dept];
+      if(localDepartmentDirty(dept)&&(state.people.length||Object.keys(state.attendance||{}).length))
+        throw new Error('本机有尚未同步的人员或排休，已阻止整份下载。先导出本部门 Staff JSON，再由主管处理冲突。');
+      if(base?.versionId&&base.versionId===head.head_version_id){toast('本部门已是当前 Cloud 版本');return}
+      const incoming=head.state;
+      if(incoming.scopeId!=='staff:'+dept||incoming.schemaVersion!==2||!Array.isArray(incoming.people))throw new Error('云端部门数据格式不匹配');
+      if(!confirm('将 '+WEEK_DEPARTMENTS[dept].label+' Cloud 的 '+incoming.people.length+' 人恢复到本设备对应部门？\n原本机状态将自动备份，其他部门完全不变。'))return;
+      const key='cassola_staff_department_pre_download_'+dept+'_'+Date.now();
+      localStorage.setItem(key,JSON.stringify({savedAt:now(),department:dept,local:state,cloudVersion:head.head_version_id}));
+      const avatar=new Map(state.people.map(p=>[String(p.id),p.avatarStamp||'']));
+      const replacement=normalize({...incoming,people:incoming.people.map(p=>({...p,avatarStamp:avatar.get(String(p.id))||p.avatarStamp||''})),syncMeta:state.syncMeta});
+      localStorage.setItem(storageKey(),JSON.stringify(replacement));
+      state=replacement;
+      setDepartmentCloudMeta(dept,{versionId:head.head_version_id,fingerprint:fingerprint(replacement),syncedAt:now()});
+      renderAll();toast('✅ 已下载 '+WEEK_DEPARTMENTS[dept].label+' 独立 Cloud');
+    }catch(e){alert('🛑 已阻止部门下载：'+(e?.data?.error||e?.message||e))}
+    finally{departmentCloudBusy=false;renderDepartmentCloud()}
+  }
   function selectWeekDepartment(department){activateDepartment(department)}
   function renderWeekDepartment(){
     const legacy=document.getElementById('staffWeekLegacyContent');
@@ -682,6 +766,7 @@
     message.hidden=false;
     message.className='staff-department-message legacy';
     message.textContent='✍️ '+WEEK_DEPARTMENTS[weekDepartment].label+' · 独立工作区，可编辑、发布及导出 PDF。部门工作本保存在此设备；要让其他主管看见，须使用本部门 Cloud 同步。';
+    renderDepartmentCloud();
     const oldPreview=document.getElementById('staffLocalDepartmentWeek');
     if(oldPreview)oldPreview.hidden=true;
     const oldPdfButton=document.getElementById('staffPdfRestButton');
@@ -1204,7 +1289,7 @@
     });
     ctx.fillStyle='#727d8d';ctx.font='500 19px system-ui,sans-serif';
     ctx.fillText('半天请假 / 休息 / 调休会标记“上午”或“下午” · 换休记录在 Staff 系统中保留',left,H-35);
-    await shareCanvasPdf(canvas,'Cassola-Week-'+dates[0]+'-'+fileVersion+'.pdf');
+    await shareCanvasPdf(canvas,'Cassola-'+weekDepartment+'-Week-'+dates[0]+'-'+fileVersion+'.pdf');
   }
   async function generateMonthPdf(){
     const people=state.people.filter(p=>p.active!==false);if(!people.length){toast('还没有人员');return}
@@ -1225,7 +1310,7 @@
       ctx.fillStyle=req>=3?'#9c5b00':'#222833';ctx.fillText(String(req),cols[5]+18,y+rowH*.64);ctx.fillStyle=move>=3?'#9c5b00':'#222833';ctx.fillText(String(move),cols[6]+18,y+rowH*.64);
     });
     ctx.fillStyle='#6f7785';ctx.font='500 18px system-ui,sans-serif';ctx.fillText('全天=1，上午/下午=0.5；换休发起与个人调休按事件次数统计。',70,H-34);
-    await shareCanvasPdf(canvas,'Cassola-Month-'+month+'-v'+state.syncMeta.revision+'.pdf');
+    await shareCanvasPdf(canvas,'Cassola-'+weekDepartment+'-Month-'+month+'-v'+state.syncMeta.revision+'.pdf');
   }
   function dateLabel(date){
     const d=new Date(date+'T12:00:00');
@@ -1587,7 +1672,7 @@
     const list=document.getElementById('staffPeopleList');if(!list)return;
     const arr=state.people.filter(p=>p.active!==false);
     list.innerHTML=arr.length?arr.map(p=>{
-      const role=roleById(p.primaryRole)?.name||'未设主要岗位';
+      const role=roleById(p.primaryRole)?.name||(p.serviceStation?'负责出餐：'+p.serviceStation:'未设主要岗位');
       return '<div class="staff-person-row"><div class="staff-avatar" data-staff-avatar="'+esc(p.id)+'">👤</div><div class="staff-person-copy"><b>'+esc(p.name)+(p.nickname?' · '+esc(p.nickname):'')+'</b><small>'+esc(role)+(p.note?' · '+esc(p.note):'')+'</small></div><div class="staff-row-actions"><button class="staff-icon-btn" data-person-records="'+esc(p.id)+'" title="人员记录">🕘</button><button class="staff-icon-btn" data-person-task="'+esc(p.id)+'" title="发布盘货任务">📋</button><button class="staff-icon-btn" data-edit-person="'+esc(p.id)+'">✎</button></div></div>';
     }).join(''):'<div class="staff-settings-card"><h3>还没有人员</h3><p>点“＋ 人员”，可以从微信头像开始组建这支臭排班军团🗿。</p></div>';
     list.querySelectorAll('[data-edit-person]').forEach(b=>b.addEventListener('click',()=>openPerson(b.dataset.editPerson)));
@@ -1820,7 +1905,7 @@
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     const dev=(state.syncMeta.deviceName||'device').replace(/[^\w\u4e00-\u9fff-]+/g,'-').slice(0,20);
     const prefix=includeAvatars?'cassola-staff-full-v':'cassola-staff-v';
-    a.download=prefix+state.syncMeta.revision+'-'+dev+'-'+todayLocal()+'.json';
+    a.download=prefix+weekDepartment+'-'+state.syncMeta.revision+'-'+dev+'-'+todayLocal()+'.json';
     a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     toast(includeAvatars?'已导出完整 Staff 备份 #'+state.syncMeta.revision:'已导出 Staff #'+state.syncMeta.revision);
   }
@@ -2025,7 +2110,7 @@
 
     const jpg=canvas.toDataURL('image/jpeg',.92);
     const pdf=jpegCanvasToPdf(jpg,W,H);
-    const file=new File([pdf],'Cassola-Staff-'+currentDate+'-'+currentShift+'-v'+state.syncMeta.revision+'.pdf',{type:'application/pdf'});
+    const file=new File([pdf],'Cassola-'+weekDepartment+'-Staff-'+currentDate+'-'+currentShift+'-v'+state.syncMeta.revision+'.pdf',{type:'application/pdf'});
     try{
       if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Cassola Staff '+currentDate});toast('PDF 已生成')}
       else downloadBlob(file,file.name);
@@ -2057,6 +2142,8 @@
     document.getElementById('staffHomeBtn').addEventListener('click',()=>window.CassolaHub?.show());
     document.querySelectorAll('.staff-nav-btn').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.staffView)));
     document.querySelectorAll('[data-staff-department]').forEach(btn=>btn.addEventListener('click',()=>selectWeekDepartment(btn.dataset.staffDepartment)));
+    document.getElementById('staffDeptUpload').addEventListener('click',uploadCurrentDepartment);
+    document.getElementById('staffDeptDownload').addEventListener('click',downloadCurrentDepartment);
     document.getElementById('staffPrevWeek').addEventListener('click',()=>moveWeek(-1));
     document.getElementById('staffNextWeek').addEventListener('click',()=>moveWeek(1));
     document.getElementById('staffThisWeek').addEventListener('click',()=>{currentDate=todayLocal();renderWeek()});
