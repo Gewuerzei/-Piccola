@@ -116,6 +116,7 @@
       name:p.name||'未命名',
       nickname:p.nickname||'',
       primaryRole:p.primaryRole||'',
+      serviceStation:p.serviceStation||'',
       note:p.note||'',
       active:p.active!==false,
       avatarStamp:p.avatarStamp||''
@@ -1878,7 +1879,7 @@
     state.syncMeta.contentHash=fingerprint(state);
     for(const [id,url] of Object.entries(raw.avatars||{})){try{await avatarPut(id,dataUrlToBlob(url))}catch(_){}}
     state.syncMeta.contentHash=fingerprint(state);
-    localStorage.setItem(KEY,JSON.stringify(state));
+    localStorage.setItem(storageKey(),JSON.stringify(state));
     document.getElementById('staffImportDialog').close();importCandidate=null;
     renderAll();toast(force?'已强制采用，现为 #'+state.syncMeta.revision:'已导入 #'+state.syncMeta.revision);
   }
@@ -1896,6 +1897,7 @@
     }catch(_){return null}
   }
   function restoreCloudRollback(){
+    if(weekDepartment!=='sushi'){toast('旧 Staff 回滚只适用于 Sushi，不会恢复或覆盖其他部门');return false}
     const backup=cloudRollbackInfo();
     if(!backup){toast('没有 Staff Cloud 下载前快照');return false}
     if(!confirm('恢复 '+new Date(backup.savedAt).toLocaleString('zh-CN')+' 的 Staff 本机快照？\n\n当前 Staff 会被替换；头像文件仍保留在本设备。'))return false;
@@ -1905,12 +1907,13 @@
     state.syncMeta.revision=Math.max(1,num(state.syncMeta.revision))+1;
     state.syncMeta.updatedAt=now();
     state.syncMeta.contentHash=fingerprint(state);
-    localStorage.setItem(KEY,JSON.stringify(state));
+    localStorage.setItem(storageKey(),JSON.stringify(state));
     renderAll();toast('↩️ 已恢复 Staff 下载前版本');
     return true;
   }
   // Restore Supervisor-verified PDF rest cells; preserve published v1 unchanged.
   function applyVerifiedRestWeek(entries){
+    if(weekDepartment!=='sushi')throw new Error('已核对的 PDF 只能恢复到 Sushi');
     const week='2026-10-12',people=state.people.filter(p=>p.active!==false);
     if(!Array.isArray(entries)||people.length!==8||entries.length!==people.length)throw new Error('当前人员与已核对 PDF 的八人名册不一致，请停止恢复');
     const valid=new Set(people.map(p=>String(p.id))),found=new Set();
@@ -1945,6 +1948,7 @@
   }
 
   function applyCloudState(cloud){
+    if(weekDepartment!=='sushi')throw new Error('禁止将旧 Staff Cloud 写到其他部门');
     if(!cloud||typeof cloud!=='object')throw new Error('invalid_staff_cloud_state');
     const device=state?.syncMeta?.deviceName||'本设备',oldRev=num(state?.syncMeta?.revision)||1;
     const localAvatars=new Map((state?.people||[]).map(p=>[String(p.id),p.avatarStamp||'']));
@@ -1961,7 +1965,7 @@
       syncMeta:{revision:oldRev+1,updatedAt:now(),contentHash:'',deviceName:device}
     });
     state.syncMeta.contentHash=fingerprint(state);
-    localStorage.setItem(KEY,JSON.stringify(state));
+    localStorage.setItem(storageKey(),JSON.stringify(state));
     renderAll();
   }
 
@@ -1969,7 +1973,7 @@
     if(!confirm('清空 Staff 的人员、岗位自定义、排班和历史？Inventory 不受影响。'))return;
     if(!confirm('再确认一次：这个动作不能撤销，除非你有 Staff JSON。'))return;
     for(const p of state.people)try{await avatarDelete(p.id)}catch(_){}
-    state=defaultState();state.syncMeta.contentHash=fingerprint(state);localStorage.setItem(KEY,JSON.stringify(state));renderAll();toast('Staff 已清空');
+    state=defaultState();state.syncMeta.contentHash=fingerprint(state);localStorage.setItem(storageKey(),JSON.stringify(state));renderAll();toast('Staff 已清空');
   }
 
   async function generatePdf(){
@@ -2156,7 +2160,7 @@
     });
     document.getElementById('staffAcceptImport').addEventListener('click',()=>applyImport(false));
     document.getElementById('staffForceImport').addEventListener('click',()=>applyImport(true));
-    document.getElementById('staffDeviceName').addEventListener('change',e=>{state.syncMeta.deviceName=e.target.value.trim()||'本设备';localStorage.setItem(KEY,JSON.stringify(state));refreshSyncUi();toast('设备名已保存')});
+    document.getElementById('staffDeviceName').addEventListener('change',e=>{state.syncMeta.deviceName=e.target.value.trim()||'本设备';localStorage.setItem(storageKey(),JSON.stringify(state));refreshSyncUi();toast('设备名已保存')});
     document.getElementById('staffResetBtn').addEventListener('click',clearAll);
     document.getElementById('staffClearHistory').addEventListener('click',()=>{
       if(state.history.length<=200){toast('历史还不多，不用清理');return}
