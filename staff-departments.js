@@ -171,7 +171,20 @@
     }
   }
   function exportCombinedBackup(){
-    const payload={format:'cassola-staff-departments-bridge-backup-v1',exportedAt:new Date().toISOString(),legacy:legacy(),departments:read(),warning:'Includes personal Staff data; does not contain IndexedDB avatars. Use original Staff full backup for avatars.'};
+    const getJson=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(_){return null}};
+    const payload={
+      format:'cassola-staff-all-departments-backup-v2',
+      exportedAt:new Date().toISOString(),
+      legacy:legacy(),
+      importedSidecar:read(),
+      editableDepartments:{
+        sushi:legacy(),
+        sala:getJson('cassola_staff_department_sala_v01'),
+        cucina:getJson('cassola_staff_department_cucina_v01')
+      },
+      departmentCloudMeta:getJson('cassola_staff_department_cloud_meta_v01'),
+      warning:'Private Staff backup with all current editable department workspaces. Avatars are not included; export each department full backup for IndexedDB avatars.'
+    };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     a.download='cassola-staff-all-departments-'+new Date().toISOString().slice(0,10)+'.json';
