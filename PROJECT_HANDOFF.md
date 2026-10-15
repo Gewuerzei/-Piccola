@@ -35,9 +35,9 @@
 
 > **2026-10-15 Staff v0.5.1 · 三部门真正可编辑 + 部门独立 Cloud v22（阶段性上线）：**Pietro 明确要求在 🍣 Sushi / 🍷 Bar/Sala / 🍳 Cucina 大卡间**直接切换管理**，不能只有只读预览。现 `staff.js` 的活动 `state` 会随部门切换，所有周/月/人员/换休/岗位/发布/PDF 界面使用当前部门状态；旧 Sushi 原键 `cassola_staff_v01` 继续保留，Sala 为 `cassola_staff_department_sala_v01`，Cucina 为 `cassola_staff_department_cucina_v01`。首次切换 Sala 时只从已批准 `cassola_staff_departments_v01` 旁路导入副本（原 sidecar 不删，建立时间戳备份）；原跑堂 `cassa/cucina/maki` 责任区转 `serviceStation`，不自动设厨房 primaryRole。新加入人员、排休/换休、发布版本、PDF 只写当前部门，PDF/JSON 文件名和 PDF 标题含部门；跨部门或无部门标识的旧 JSON 导入被拦截。
 > **新 Cloud**：生产 Supabase 新增 `staff:sushi` / `staff:sala` / `staff:cucina` scope，各自初始空 Head；`staff_department_grants` 行级授权表（仅已有的一个 active supervisor 凭据获得三部门初始 read/write grant，**新建 supervisor 默认不得自动继承**）。Edge `cassola-cloud` **ACTIVE v22** 增加 `staff_department_download` / `staff_department_upload`，验证当前登录身份 + 每部门授权，上传校验 schemaVersion=2、scopeId 与人名/ID，使用既有 lineage RPC，base/Head 不相同时 HTTP 409。通用 `upload_scopes` / `download_scopes` / `restore_version` 不可绕开部门 ACL，旧共享 `staff` 冻结保持原样。客户端只在 Supervisor 明确点击选中部门的「⬆ 上传本部门」「⬇ 下载本部门」时同步，并记录每部门 `versionId+fingerprint`；任何本机未上传更改、远端版本冲突或首次非空本机无基线的下载都拒绝覆盖；下载前时间戳备份。**没有自动向生产上传个人资料**。
-> **适用范围/下一阶段**：这是**真正可编辑、可手动同步的三部门独立工作区**，不是最终 Staff v2 的**全店统一 Directory、多 Supervisor 独立 PIN、多端三方冲突合并**。目前仅有一个 Supervisor 凭据；若多人共用其 PIN，服务端无法区分个人。必须先给各主管建立独立凭据并分别赋权，才能称为多人权限隔离；分歧版本仍需要人工解决，不进行覆盖。若 Pietro 的 iPhone 还没更新，先等待 GitHub Pages/PWA cache `cassola-suite-v101`，本机 Sala 副本须先在手机上确认，点击「上传本部门」才会上 Cloud。Sushi 旧排休/已发布 v1 不自动改写。验证：三部门独立本机读写及 Cloud 冲突拒绝模拟均通过；**iPhone 双 Supervisor 实机验收待完成**。
+> **适用范围/下一阶段**：这是**真正可编辑、可手动同步的三部门独立工作区**，不是最终 Staff v2 的**全店统一 Directory、多 Supervisor 独立 PIN、多端三方冲突合并**。目前仅有一个 Supervisor 凭据；若多人共用其 PIN，服务端无法区分个人。必须先给各主管建立独立凭据并分别赋权，才能称为多人权限隔离；分歧版本仍需要人工解决，不进行覆盖。若 Pietro 的 iPhone 还没更新，先等待 GitHub Pages/PWA cache `cassola-suite-v102`，本机 Sala 副本须先在手机上确认，点击「上传本部门」才会上 Cloud。Sushi 旧排休/已发布 v1 不自动改写。验证：三部门独立本机读写及 Cloud 冲突拒绝模拟均通过；**iPhone 双 Supervisor 实机验收待完成**。
 
-## 1. 项目身份
+> **补充验收 v102：**部门 Cloud 上传不带设备本地头像的 `avatarStamp` 标记；同步差异判断同样排除该标记，避免两台设备本机照片状态不同就错误认定 Staff 冲突。人像照片仍需要本机保留/额外完整备份。三部门独立读写、版本冲突拦截、已修改本机阻止下载，以及头像变化不触发业务同步差异的模拟测试通过。\n\n## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
 - Default branch: `main`
@@ -1130,7 +1130,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v101
+cassola-suite-v102
 ```
 
 当前 CORE 必须包含：
