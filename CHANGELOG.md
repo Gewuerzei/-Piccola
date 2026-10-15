@@ -12,7 +12,7 @@ All notable changes to the Cassola PWA suite are recorded here.
 - Supabase 生产迁移新增三个独立 scope `staff:sushi`、`staff:sala`、`staff:cucina`，Cloud Head **全部为空**，未自动迁移真实员工或排休到云端；新增 `staff_department_grants`（初始只授权已有的 Supervisor credential，各未来新主管需单独授权）。原 `staff` 历史 Head 不变。
 - `cassola-cloud` **ACTIVE v22** 提供 `staff_department_download/upload`，服务端校验当前 Supervisor credential 对目标部门的 read/write 授权、状态数据结构和 Head 基线。不允许通用 Inventory Cloud 或旧恢复接口绕过部门权限。人员/排休仅由 Supervisor 点击周休页「⬆ 上传本部门」「⬇ 下载本部门」同步；发生基线不一致、同部门多人改动、或本机有未上传修改时拒绝直接覆盖，下载前另留完整本机备份。
 - 已进行 JS 语法、三部门本机状态切换/Sala 编辑持续保存/Sushi 未变、Cloud 初次上传与冲突及未同步下载拦截等模拟测试。**尚未在 Pietro iPhone 上实测，也未实现统一人员目录、独立 Supervisor 多凭据以及自动三方合并**。不可宣传 Staff v2 已完全完成。
-- Service Worker 更新 `cassola-suite-v101`。Inventory 员工任务、PIN、原共享 Staff 版本均没有随代码发布自动改写。
+- Service Worker 更新 `cassola-suite-v102`。最终校验版剔除仅本机的头像 stamp，防止跨设备误判数据分叉。Inventory 员工任务、PIN、原共享 Staff 版本均没有随代码发布自动改写。
 
 ---
 
