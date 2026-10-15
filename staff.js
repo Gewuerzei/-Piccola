@@ -1,6 +1,10 @@
 /* Cassola Staff Board v0.1 */
 (function(){
   const KEY='cassola_staff_v01';
+  const DEPARTMENT_KEY={sushi:KEY,sala:'cassola_staff_department_sala_v01',cucina:'cassola_staff_department_cucina_v01'};
+  const ACTIVE_DEPARTMENT_KEY='cassola_staff_active_department_v01';
+  const SIDE_CAR_KEY='cassola_staff_departments_v01';
+  const storageKey=()=>DEPARTMENT_KEY[weekDepartment]||KEY;
   const CLOUD_ROLLBACK_KEY='cassola_staff_cloud_rollback_v01';
   const DB_NAME='cassola_staff_assets_v01';
   const DB_STORE='avatars';
@@ -121,9 +125,62 @@
     return s;
   }
   function load(){
+    // First launch always reads the original, untouched Sushi storage key.
+    // Imported other-department sidecars become separate editable copies only
+    // on first selection, with their sources kept intact for recovery.
+    weekDepartment='sushi';
     try{state=normalize(JSON.parse(localStorage.getItem(KEY)||'null'))}
     catch(e){state=defaultState();state.syncMeta.contentHash=fingerprint(state)}
     localStorage.setItem(KEY,JSON.stringify(state));
+  }
+  function departmentSeed(dept){
+    const blank=defaultState();
+    let raw;
+    try{raw=JSON.parse(localStorage.getItem(SIDE_CAR_KEY)||'null')?.departments?.[dept]}catch(_){}
+    if(!raw)return blank;
+    let directory={};
+    try{directory=JSON.parse(localStorage.getItem(SIDE_CAR_KEY)||'null')?.directory||{}}catch(_){}
+    return {
+      ...blank,
+      people:(raw.people||[]).map(p=>({
+        ...p,primaryRole:'',serviceStation:dept==='sala'?(directory[String(p.id)]?.serviceStation||''):''
+      })),
+      roles:blank.roles,schedules:raw.schedules||{},
+      attendance:raw.attendance||{},swaps:raw.swaps||[],restMoves:raw.restMoves||[],
+      weekPublications:raw.weekPublications||{},history:raw.history||[],
+      importSourceVersionId:raw.sourceVersionId||null
+    };
+  }
+  function activateDepartment(dept){
+    if(!DEPARTMENT_KEY[dept]||dept===weekDepartment)return true;
+    // Never change department while the user has an unsaved open editor.
+    if(document.querySelector('#staffApp dialog[open]')){toast('先关闭正在编辑的窗口，再切换部门');return false}
+    const target=DEPARTMENT_KEY[dept];
+    let restored;
+    try{
+      if(localStorage.getItem(target)){
+        restored=normalize(JSON.parse(localStorage.getItem(target)));
+      }else{
+        const seed=departmentSeed(dept);
+        // Backup source before creating any editable copy. Never delete sidecar.
+        const backupKey='cassola_staff_department_seed_backup_'+dept+'_'+Date.now();
+        localStorage.setItem(backupKey,JSON.stringify({
+          legacy:localStorage.getItem(KEY),sidecar:localStorage.getItem(SIDE_CAR_KEY),savedAt:now()
+        }));
+        restored=normalize(seed);
+        localStorage.setItem(target,JSON.stringify(restored));
+      }
+    }catch(err){
+      alert('🛑 部门载入失败，原始 Staff 未更改：'+(err?.message||err));
+      return false;
+    }
+    weekDepartment=dept;
+    state=restored;
+    localStorage.setItem(ACTIVE_DEPARTMENT_KEY,dept);
+    attendanceEdit={personId:null,date:null};
+    editPersonId=null;personRecordsView={personId:null,filter:'all'};
+    renderAll();
+    return true;
   }
   function save(){
     const fp=fingerprint(state);
@@ -132,7 +189,7 @@
       state.syncMeta.updatedAt=now();
       state.syncMeta.contentHash=fp;
     }
-    localStorage.setItem(KEY,JSON.stringify(state));
+    localStorage.setItem(storageKey(),JSON.stringify(state));
     refreshSyncUi();
   }
   function log(type,text,note='',date=currentDate,shift=currentShift){
@@ -610,11 +667,7 @@
     bindUi();
   }
 
-  function selectWeekDepartment(department){
-    if(!Object.prototype.hasOwnProperty.call(WEEK_DEPARTMENTS,department))return;
-    weekDepartment=department;
-    renderWeekDepartment();
-  }
+  function selectWeekDepartment(department){activateDepartment(department)}
   function renderWeekDepartment(){
     const legacy=document.getElementById('staffWeekLegacyContent');
     const message=document.getElementById('staffDepartmentMessage');
@@ -624,21 +677,14 @@
       btn.classList.toggle('active',active);
       btn.setAttribute('aria-pressed',active?'true':'false');
     });
-    const selected=WEEK_DEPARTMENTS[weekDepartment];
-    if(weekDepartment==='sushi'){
-      legacy.hidden=false;
-      message.className='staff-department-message legacy';
-      message.textContent='⚠️ 本机旧版 Staff（Sushi 来源已核对），仍未完成部门云迁移。请先核对人员，恢复/导入不会自动上云。';
-      window.CassolaStaffDepartments?.renderDepartment?.('sushi');
-    }else{
-      legacy.hidden=true;
-      message.className='staff-department-message pending';
-      message.innerHTML='<div class="staff-department-pending-icon">'+selected.icon+'</div>'+
-        '<strong>'+selected.label+' · 独立排休区尚未启用</strong>'+
-        '<p>已规划独立人员、周休与发布版本，但 Staff v2 部门 Cloud 尚未迁移。这里不显示旧共享表，防止把其他部门人员误当成本部门数据。</p>'+
-        '<small>没有下载或覆盖任何 Staff 数据。可在设置中安全导入历史人员的本机部门副本。</small>';
-      window.CassolaStaffDepartments?.renderDepartment?.(weekDepartment);
-    }
+    legacy.hidden=false;
+    message.hidden=false;
+    message.className='staff-department-message legacy';
+    message.textContent='✍️ '+WEEK_DEPARTMENTS[weekDepartment].label+' · 独立工作区，可编辑、发布及导出 PDF。部门工作本保存在此设备；要让其他主管看见，须使用本部门 Cloud 同步。';
+    const oldPreview=document.getElementById('staffLocalDepartmentWeek');
+    if(oldPreview)oldPreview.hidden=true;
+    const oldPdfButton=document.getElementById('staffPdfRestButton');
+    if(oldPdfButton)oldPdfButton.closest('.staff-rest-recover-banner').hidden=weekDepartment!=='sushi';
   }
   function showView(name){
     currentView=name;
@@ -997,7 +1043,6 @@
   }
   function renderWeek(){
     renderWeekDepartment();
-    if(weekDepartment!=='sushi')return;
     const box=document.getElementById('staffWeekTable');if(!box)return;
     renderWeekRelease();
     const dates=weekDates(currentDate),days=['一','二','三','四','五','六','日'];
@@ -1548,7 +1593,7 @@
     list.querySelectorAll('[data-person-records]').forEach(b=>b.addEventListener('click',()=>openPersonRecords(b.dataset.personRecords)));
     list.querySelectorAll('[data-person-task]').forEach(b=>b.addEventListener('click',()=>openTaskPublisher(b.dataset.personTask)));
     hydrateAvatars(list);
-    window.CassolaStaffDepartments?.renderExtraPeople?.();
+    document.getElementById('staffMergedPeoplePanel')?.remove();
   }
 
   function personRecordRows(personId){
@@ -2120,7 +2165,11 @@
   }
 
   function renderAll(){renderWeek();renderMonth();renderBoard();renderPeople();renderHistory();renderSettings();showView(currentView)}
-  function init(){load();buildApp();window.CassolaStaffDepartments?.init?.();renderAll()}
+  function init(){
+    load();buildApp();window.CassolaStaffDepartments?.init?.();renderAll();
+    const chosen=localStorage.getItem(ACTIVE_DEPARTMENT_KEY);
+    if(chosen&&chosen!=='sushi'&&DEPARTMENT_KEY[chosen])activateDepartment(chosen);
+  }
   function show(){if(!state)init();document.getElementById('staffApp')?.removeAttribute('aria-hidden');renderAll()}
   function hide(){document.getElementById('staffApp')?.setAttribute('aria-hidden','true')}
 
