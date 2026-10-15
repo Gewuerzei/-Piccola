@@ -10,8 +10,8 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 旧共享 `staff` Head 被放入同一卡的折叠式 **「🗄️ 旧 Staff Cloud 历史与迁移」**。这里仅能查看旧历史、通过已有只读历史 API 安全导入人员，或按原 Sushi 回滚备份恢复本机（不触及云端）；已删除视觉上可误导的两个旧全量上传/下载按钮，**后端对旧 `staff` 的全部禁写、禁整份下载、禁恢复规则仍存在**。
 - 旧 `staff-departments.js` 的独立「历史人员导入」设置卡移除，功能挂到统一管理卡；避免出现第二个看似竞争的 Cloud 控制台。所有人员/周休的原存储键、Cloud scopes、版本 lineage、授权规则都不迁移或修改，纯 UI 合并。
 - 状态提示明确区分「本机与**上次同步版本**一致」和「云端最新版本**尚未检查**」；点击「检查云端」只读查询已发布版本与人数，不把缓存状态冒充实时同步。同步仍执行既有后台部门授权、版本冲突与本机未同步拦截、备份机制。
-- JS 语法及页面单入口/无重复上传下载按钮/旧历史保留/职责分隔代码检查通过；PWA 缓存升级 `cassola-suite-v103`，Staff 版本 v0.5.2；Pages / iPhone 真机视觉验收待确认。
-- 无数据副作用：未自动读取并回写另一个部门名册、未上传生产 Staff、未改 Inventory 与 Supervisor/Employee PIN、未触碰历史版本。
+- JS 语法及页面单入口/无重复上传下载按钮/旧历史保留/职责分隔代码检查通过；PWA 缓存升级 `cassola-suite-v104`，Staff 版本 v0.5.2；Pages / iPhone 真机视觉验收待确认。
+- 云端操作期间统一锁住周休页和设置页的部门切换，底层 `activateDepartment` 也拒绝切换，阻止跨部门数据竞态；模拟测试覆盖请求等待、阻止切换、解锁和最终部门状态不变。\n- 无数据副作用：未自动读取并回写另一个部门名册、未上传生产 Staff、未改 Inventory 与 Supervisor/Employee PIN、未触碰历史版本。
 
 ---
 
