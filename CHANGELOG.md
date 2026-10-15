@@ -2,6 +2,19 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.5.2 · One Unified Cloud Manager for New Departments and Legacy Staff Archive
+**2026-10-15**
+
+- Pietro 指出 Settings 的「旧版 Staff Cloud 档案」与周休页的新「本部门 Cloud」分成两套，且旧版禁用上传/下载按钮容易造成困惑。将 Cloud 管理统一为 **Settings → ☁️ Staff Cloud 管理** 单一卡片；周休页只保留可跳转至同一管理卡的简洁入口，不再复制两套上传/下载按钮。
+- 新卡提供 **🍣 Sushi / 🍷 Bar/Sala / 🍳 Cucina** 三大管理切换、该部门本机同步基线/未同步修改提示、单一「上传选中部门」「下载选中部门」按钮、只读「检查云端状态」、及「备份全部部门 JSON」。部门选择与实际编辑 `state` 同步，不混淆部门。
+- 旧共享 `staff` Head 被放入同一卡的折叠式 **「🗄️ 旧 Staff Cloud 历史与迁移」**。这里仅能查看旧历史、通过已有只读历史 API 安全导入人员，或按原 Sushi 回滚备份恢复本机（不触及云端）；已删除视觉上可误导的两个旧全量上传/下载按钮，**后端对旧 `staff` 的全部禁写、禁整份下载、禁恢复规则仍存在**。
+- 旧 `staff-departments.js` 的独立「历史人员导入」设置卡移除，功能挂到统一管理卡；避免出现第二个看似竞争的 Cloud 控制台。所有人员/周休的原存储键、Cloud scopes、版本 lineage、授权规则都不迁移或修改，纯 UI 合并。
+- 状态提示明确区分「本机与**上次同步版本**一致」和「云端最新版本**尚未检查**」；点击「检查云端」只读查询已发布版本与人数，不把缓存状态冒充实时同步。同步仍执行既有后台部门授权、版本冲突与本机未同步拦截、备份机制。
+- JS 语法及页面单入口/无重复上传下载按钮/旧历史保留/职责分隔代码检查通过；PWA 缓存升级 `cassola-suite-v103`，Staff 版本 v0.5.2；Pages / iPhone 真机视觉验收待确认。
+- 无数据副作用：未自动读取并回写另一个部门名册、未上传生产 Staff、未改 Inventory 与 Supervisor/Employee PIN、未触碰历史版本。
+
+---
+
 ## Staff v0.5.1 · Editable Sushi / Bar-Sala / Cucina + Scoped Cloud Transport
 **2026-10-15**
 
