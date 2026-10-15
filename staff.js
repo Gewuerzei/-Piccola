@@ -480,7 +480,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffOpenHistory">查看历史</button></div>
             </div>
             <div class="staff-settings-card">
-              <h3>Staff v0.5.1</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
+              <h3>Staff v0.5.2</h3><p>Staff Cloud · managed access · shared role tasks · weekly publication history</p>
             </div>
           </div>
         </section>
@@ -735,17 +735,51 @@
     const base=departmentCloudMeta()[dept];
     return !base?.fingerprint||base.fingerprint!==departmentContentFingerprint(dept);
   }
+  const departmentRemoteCache={};
   function renderDepartmentCloud(){
-    const status=document.getElementById('staffDeptCloudStatus'),title=document.getElementById('staffDeptCloudTitle');
-    if(!status||!title)return;
-    title.textContent='☁️ '+WEEK_DEPARTMENTS[weekDepartment].label+' · 独立 Cloud';
+    const status=document.getElementById('staffDeptCloudStatus');
+    const weekStatus=document.getElementById('staffDeptWeekCloudStatus');
+    const title=document.getElementById('staffDeptCloudTitle');
+    const remote=document.getElementById('staffDeptRemoteStatus');
+    const department=WEEK_DEPARTMENTS[weekDepartment];
     const meta=departmentCloudMeta()[weekDepartment];
-    status.textContent=meta?.versionId
-      ?(localDepartmentDirty()?'📱 本机有待同步修改':'✅ 本机与上次同步版本一致')
-      :'☁️ 本部门尚未建立本机同步基线';
-    for(const id of ['staffDeptUpload','staffDeptDownload']){
-      const button=document.getElementById(id);if(button)button.disabled=departmentCloudBusy;
+    const stateText=meta?.versionId
+      ?(localDepartmentDirty()?'📱 本机有待同步的修改':'✅ 本机与上次同步的版本一致（需检查云端最新状态）')
+      :'☁️ 本部门在此设备尚无同步基线';
+    if(status)status.textContent=stateText;
+    if(weekStatus)weekStatus.textContent=stateText;
+    if(title)title.textContent='☁️ '+department.label+' · 独立 Cloud';
+    if(remote){
+      const current=departmentRemoteCache[weekDepartment];
+      remote.textContent=current||'云端最新状态尚未核对。点击「🔍 检查云端状态」只读查询。';
     }
+    document.querySelectorAll('[data-staff-cloud-department]').forEach(btn=>{
+      const active=btn.dataset.staffCloudDepartment===weekDepartment;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-pressed',active?'true':'false');
+    });
+    for(const id of ['staffDeptUpload','staffDeptDownload','staffDeptCheck']){
+      const button=document.getElementById(id);
+      if(button)button.disabled=departmentCloudBusy;
+    }
+  }
+  async function inspectCurrentDepartmentCloud(){
+    if(departmentCloudBusy)return;
+    const cloud=window.CassolaCloud;
+    if(!cloud?.connected?.()||cloud.role?.()!=='supervisor'){
+      alert('请先以 Supervisor 身份连接 Cloud');return;
+    }
+    departmentCloudBusy=true;renderDepartmentCloud();
+    const dept=weekDepartment;
+    try{
+      const result=await cloud.staffDepartmentDownload(dept);
+      const head=result.scope;
+      departmentRemoteCache[dept]=head?.head_version_id
+        ?'☁️ 上次检查：已有 Cloud 版本 · '+(Array.isArray(head.state?.people)?head.state.people.length:0)+' 人 · '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})
+        :'☁️ 上次检查：本部门 Cloud 尚无已发布版本 · '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+    }catch(e){
+      departmentRemoteCache[dept]='⚠️ 云端状态读取失败：'+(e?.data?.error||e?.message||e);
+    }finally{departmentCloudBusy=false;renderDepartmentCloud()}
   }
   async function uploadCurrentDepartment(){
     if(departmentCloudBusy)return;
@@ -766,6 +800,7 @@
       const result=r.result||{},next=result.headAfter||result.headVersionId;
       if(!next)throw new Error('Cloud 没有确认版本号，未标记成功');
       setDepartmentCloudMeta(dept,{versionId:next,fingerprint:fp,syncedAt:now()});
+      delete departmentRemoteCache[dept];
       toast('✅ '+WEEK_DEPARTMENTS[dept].label+' 已上传 Cloud');
     }catch(e){alert('🛑 部门上传未完成：'+(e?.data?.error||e?.message||e))}
     finally{departmentCloudBusy=false;renderDepartmentCloud()}
@@ -796,6 +831,7 @@
       localStorage.setItem(storageKey(),JSON.stringify(replacement));
       state=replacement;
       setDepartmentCloudMeta(dept,{versionId:head.head_version_id,fingerprint:departmentContentFingerprint(dept),syncedAt:now()});
+      delete departmentRemoteCache[dept];
       renderAll();toast('✅ 已下载 '+WEEK_DEPARTMENTS[dept].label+' 独立 Cloud');
     }catch(e){alert('🛑 已阻止部门下载：'+(e?.data?.error||e?.message||e))}
     finally{departmentCloudBusy=false;renderDepartmentCloud()}
@@ -1478,15 +1514,19 @@
   }
   function renderStaffCloudState(){
     const badge=document.getElementById('staffCloudBadge'),detail=document.getElementById('staffCloudDetail');
-    const buttons=['staffCloudHistory'].map(id=>document.getElementById(id)).filter(Boolean);
+    const history=document.getElementById('staffCloudHistory');
     const rollback=document.getElementById('staffCloudRollback');
-    const ready=cloudReady();buttons.forEach(b=>b.disabled=!ready);
-    if(rollback){const info=cloudRollbackInfo();rollback.disabled=!info;rollback.textContent=info?'↩️ 恢复下载前版本':'↩️ 暂无回滚快照'}
-    if(!badge||!detail)return;
-    if(!ready){badge.textContent='☁️ 未连接';badge.className='';detail.textContent='输入 Supervisor Access Code 并连接 Cloud 后可同步。';return}
-    const st=window.CassolaCloud?.staffStatus?.()||{icon:'☁️',text:'等待检查',cls:'empty'};
-    badge.textContent=st.icon+' '+st.text;badge.className=st.cls||'';
-    detail.textContent=st.cls==='conflict'?'本机和云端都有修改，不会自动覆盖。上传只会形成分支。':'⚠️ Staff 尚未按部门分区：跨 Supervisor 下载不是人员合并。缺失排休 / 发布记录时程序会阻止覆盖。';
+    const ready=cloudReady();
+    if(history)history.disabled=!ready;
+    if(rollback){
+      const info=weekDepartment==='sushi'?cloudRollbackInfo():null;
+      rollback.disabled=!info;
+      rollback.textContent=info?'↩️ 恢复旧本机备份（仅 Sushi）':'↩️ 无可用 Sushi 本机备份';
+    }
+    if(badge){badge.textContent=ready?'☁️ Supervisor 已连接':'☁️ 未连接';badge.className=ready?'ok':'empty'}
+    if(detail)detail.textContent=ready
+      ?'✅ 新部门 Cloud 已启用。请选择 Sushi / Bar/Sala / Cucina 操作；旧总账保留只读历史。'
+      :'需要 Supervisor Cloud 登录后才可检查、上传或下载部门数据。旧历史不会自动覆盖本机。';
   }
   async function refreshPersonAccess(){
     const body=document.getElementById('staffAccessBody'),badge=document.getElementById('staffAccessBadge');
@@ -1918,7 +1958,7 @@
       state.roles=state.roles.filter(x=>x.id!==r.id);log('role','删除岗位：'+r.name);save();renderRoles();renderBoard();renderPeople();toast('岗位已删除');
     }));
   }
-  function renderSettings(){renderRoles();refreshSyncUi();renderStaffCloudState()}
+  function renderSettings(){renderRoles();refreshSyncUi();renderStaffCloudState();renderDepartmentCloud()}
   function refreshSyncUi(){
     const r=state?.syncMeta?.revision||1,u=state?.syncMeta?.updatedAt;
     const top=document.getElementById('staffTopVersion');if(top)top.textContent='#'+r;
@@ -2192,6 +2232,16 @@
     document.querySelectorAll('[data-staff-department]').forEach(btn=>btn.addEventListener('click',()=>selectWeekDepartment(btn.dataset.staffDepartment)));
     document.getElementById('staffDeptUpload').addEventListener('click',uploadCurrentDepartment);
     document.getElementById('staffDeptDownload').addEventListener('click',downloadCurrentDepartment);
+    document.getElementById('staffDeptCheck').addEventListener('click',inspectCurrentDepartmentCloud);
+    document.getElementById('staffWeekCloudSettings').addEventListener('click',()=>{
+      showView('settings');
+      document.getElementById('staffCloudUnifiedCard')?.scrollIntoView({block:'start',behavior:'smooth'});
+    });
+    document.querySelectorAll('[data-staff-cloud-department]').forEach(btn=>btn.addEventListener('click',()=>{
+      if(activateDepartment(btn.dataset.staffCloudDepartment)){
+        showView('settings');
+      }
+    }));
     document.getElementById('staffPrevWeek').addEventListener('click',()=>moveWeek(-1));
     document.getElementById('staffNextWeek').addEventListener('click',()=>moveWeek(1));
     document.getElementById('staffThisWeek').addEventListener('click',()=>{currentDate=todayLocal();renderWeek()});
@@ -2286,7 +2336,10 @@
     // Legacy full-roster Staff Cloud upload is frozen until scoped V2 migration.
     // Legacy replace-download is permanently disabled; use read-only historical import.
     document.getElementById('staffCloudHistory').addEventListener('click',async()=>{try{await window.CassolaCloud.staffHistory()}catch(err){alert('读取 Staff Cloud 历史失败：'+(err?.message||'未知错误'))}});
-    document.getElementById('staffCloudRollback').addEventListener('click',restoreCloudRollback);
+    document.getElementById('staffCloudRollback').addEventListener('click',()=>{
+      if(weekDepartment!=='sushi'){alert('旧本机备份只能在 Sushi 工作区恢复');return}
+      restoreCloudRollback();
+    });
     document.getElementById('staffExportBtn').addEventListener('click',()=>exportJson(false));
     document.getElementById('staffExportFullBtn').addEventListener('click',()=>exportJson(true));
     document.getElementById('staffImportInput').addEventListener('change',e=>{
