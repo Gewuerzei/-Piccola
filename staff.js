@@ -430,7 +430,7 @@
               <div class="staff-settings-actions"><button class="btn secondary" id="staffAddRole">＋ 岗位</button></div>
             </div>
             <div class="staff-settings-card staff-cloud-card">
-              <div class="staff-cloud-head"><div><h3>☁️ Staff Cloud</h3><p>⚠️ 目前共用单一 Staff 数据区，下载是整份替换，不会合并另一位 Supervisor 的人员或排休。头像继续只留本机。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
+              <div class="staff-cloud-head"><div><h3>🗄️ 旧版 Staff Cloud 档案</h3><p>旧共享 Staff 已冻结，禁止整份上传/下载。请使用周休页顶部对应部门的独立 Cloud 按钮，头像只留本机。</p></div><span id="staffCloudBadge">☁️ 未连接</span></div>
               <div id="staffCloudDetail" class="staff-cloud-detail">Staff Cloud 不会自动覆盖本机。</div>
               <div class="staff-settings-actions">
                 <button class="btn primary" id="staffCloudUpload" disabled title="旧 Staff Cloud 未分区，整份上传已冻结">🔒 旧整份上传已停用</button>
@@ -1233,7 +1233,7 @@
     const fileVersion=latest&&!pending?('v'+latest.version):('draft-r'+state.syncMeta.revision);
     const W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
     const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#151821';ctx.font='800 56px system-ui,sans-serif';ctx.fillText('Cassola · 周休息表',70,86);
+    ctx.fillStyle='#151821';ctx.font='800 56px system-ui,sans-serif';ctx.fillText('Cassola · '+WEEK_DEPARTMENTS[weekDepartment].label+' 周休息表',70,86);
     ctx.fillStyle='#566274';ctx.font='600 28px system-ui,sans-serif';ctx.fillText(weekLabel(currentDate)+' · '+releaseLabel,72,134);
     ctx.fillStyle='#e3e8ef';ctx.fillRect(70,160,W-140,2);
     const left=70,right=W-70,top=195,nameW=272,tableW=right-left,colW=(tableW-nameW)/7;
@@ -1295,7 +1295,7 @@
     const people=state.people.filter(p=>p.active!==false);if(!people.length){toast('还没有人员');return}
     const month=monthKey();toast('正在生成月报 PDF…');
     const W=1754,H=1240,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · 月度汇总',70,82);
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.fillStyle='#151821';ctx.font='700 54px system-ui,sans-serif';ctx.fillText('Cassola · '+WEEK_DEPARTMENTS[weekDepartment].label+' 月度汇总',70,82);
     ctx.fillStyle='#535b69';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(month+' · data #'+state.syncMeta.revision,72,128);
     const cols=[70,455,640,825,1010,1195,1425],heads=['人员','休息','请假','调休','缺勤','换休发起','个人调休'],top=180,rowH=Math.min(62,(H-top-70)/(people.length+1));
     ctx.fillStyle='#f0f2f5';ctx.fillRect(70,top,W-140,rowH);ctx.fillStyle='#242a35';ctx.font='700 23px system-ui,sans-serif';
@@ -1891,7 +1891,7 @@
 
   async function exportJson(includeAvatars=false){
     save();
-    const payload={...state,format:includeAvatars?'cassola-staff-backup-v1':'cassola-staff-handoff-v1',exportedAt:now()};
+    const payload={...state,department:weekDepartment,format:includeAvatars?'cassola-staff-backup-v1':'cassola-staff-handoff-v1',exportedAt:now()};
     if(includeAvatars){
       const avatars={};
       for(const p of state.people){
@@ -2243,7 +2243,13 @@
     document.getElementById('staffExportFullBtn').addEventListener('click',()=>exportJson(true));
     document.getElementById('staffImportInput').addEventListener('change',e=>{
       const file=e.target.files?.[0];if(!file)return;
-      const r=new FileReader();r.onload=()=>{try{const data=JSON.parse(r.result);if(!Array.isArray(data.people)||!Array.isArray(data.roles))throw new Error();previewImport(data)}catch(_){alert('这个文件不是有效的 Cassola Staff JSON。')}};r.readAsText(file);e.target.value='';
+      const r=new FileReader();r.onload=()=>{try{
+        const data=JSON.parse(r.result);
+        if(!Array.isArray(data.people)||!Array.isArray(data.roles))throw new Error('无效 Staff JSON');
+        if(data.department&&data.department!==weekDepartment)throw new Error('文件属于其他部门：'+data.department+'。请先切换对应部门。');
+        if(!data.department&&weekDepartment!=='sushi')throw new Error('没有部门标记的旧版 JSON 仅允许导入 Sushi，请先选择 Sushi。');
+        previewImport(data);
+      }catch(e){alert('🛑 已阻止导入：'+(e?.message||'无效文件'))}};r.readAsText(file);e.target.value='';
     });
     document.getElementById('staffAcceptImport').addEventListener('click',()=>applyImport(false));
     document.getElementById('staffForceImport').addEventListener('click',()=>applyImport(true));
