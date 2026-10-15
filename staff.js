@@ -705,11 +705,18 @@
     localStorage.setItem(DEPARTMENT_CLOUD_META,JSON.stringify(meta));
   }
   function departmentCloudSnapshot(dept=weekDepartment){
-    return {schemaVersion:2,scopeId:'staff:'+dept,...cloneJson(snapshot(state))};
+    const payload=cloneJson(snapshot(state));
+    // Avatar binaries stay in this device's IndexedDB; stamps are only local
+    // cache hints and must not create false cross-device Staff conflicts.
+    payload.people=payload.people.map(({avatarStamp,...person})=>person);
+    return {schemaVersion:2,scopeId:'staff:'+dept,...payload};
+  }
+  function departmentContentFingerprint(dept=weekDepartment){
+    return hashString(JSON.stringify(departmentCloudSnapshot(dept)));
   }
   function localDepartmentDirty(dept=weekDepartment){
     const base=departmentCloudMeta()[dept];
-    return !base?.fingerprint||base.fingerprint!==fingerprint(state);
+    return !base?.fingerprint||base.fingerprint!==departmentContentFingerprint(dept);
   }
   function renderDepartmentCloud(){
     const status=document.getElementById('staffDeptCloudStatus'),title=document.getElementById('staffDeptCloudTitle');
@@ -737,7 +744,7 @@
         :'本机同步基线与云端不一致，停止上传');
       if(!confirm('确认仅上传 '+WEEK_DEPARTMENTS[dept].label+' 的 '+state.people.length+' 人和本部门排休、版本？\n不会改动其他部门。'))return;
       save();
-      const fp=fingerprint(state);
+      const fp=departmentContentFingerprint(dept);
       const r=await cloud.staffDepartmentUpload(dept,departmentCloudSnapshot(dept),base);
       const result=r.result||{},next=result.headAfter||result.headVersionId;
       if(!next)throw new Error('Cloud 没有确认版本号，未标记成功');
@@ -771,7 +778,7 @@
       replacement.syncMeta.contentHash=fingerprint(replacement);
       localStorage.setItem(storageKey(),JSON.stringify(replacement));
       state=replacement;
-      setDepartmentCloudMeta(dept,{versionId:head.head_version_id,fingerprint:fingerprint(replacement),syncedAt:now()});
+      setDepartmentCloudMeta(dept,{versionId:head.head_version_id,fingerprint:departmentContentFingerprint(dept),syncedAt:now()});
       renderAll();toast('✅ 已下载 '+WEEK_DEPARTMENTS[dept].label+' 独立 Cloud');
     }catch(e){alert('🛑 已阻止部门下载：'+(e?.data?.error||e?.message||e))}
     finally{departmentCloudBusy=false;renderDepartmentCloud()}
