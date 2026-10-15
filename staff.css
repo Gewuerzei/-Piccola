@@ -551,3 +551,16 @@ body[data-cassola-mode="staff"] #staffApp{display:block}
 .staff-task-recipient label.hidden{display:none}
 .staff-task-recipient select{min-height:49px;width:100%;color:var(--text);border-radius:15px}
 @media(max-width:420px){.staff-task-recipient{grid-template-columns:1fr}.staff-task-recipient label:first-child,.staff-task-recipient small{grid-column:auto}}
+
+/* Staff v0.5.1 · per-department editable workspace and guarded Cloud controls */
+.staff-department-cloud-box{
+  border:1px solid var(--line);background:var(--panel2);
+  border-radius:23px;padding:13px 15px;margin:0 0 17px;
+}
+.staff-department-cloud-title{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.staff-department-cloud-title b{font-size:13px}
+.staff-department-cloud-title small{font-size:10px;color:var(--muted)}
+.staff-department-cloud-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:11px 0 8px}
+.staff-department-cloud-actions .btn{min-height:46px;font-size:13px;padding:8px 6px}
+.staff-department-cloud-note{font-size:10px;line-height:1.55;color:var(--muted)}
+@media(max-width:370px){.staff-department-cloud-actions .btn{font-size:11px}}
