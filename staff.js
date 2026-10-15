@@ -153,6 +153,7 @@
     };
   }
   function activateDepartment(dept){
+    if(departmentCloudBusy){toast('☁️ 正在处理本部门 Cloud，完成后才能切换部门');return false}
     if(!DEPARTMENT_KEY[dept]||dept===weekDepartment)return true;
     // Never change department while the user has an unsaved open editor.
     if(document.querySelector('#staffApp dialog[open]')){toast('先关闭正在编辑的窗口，再切换部门');return false}
@@ -762,6 +763,9 @@
       const button=document.getElementById(id);
       if(button)button.disabled=departmentCloudBusy;
     }
+    document.querySelectorAll('[data-staff-cloud-department],[data-staff-department]').forEach(btn=>{
+      btn.disabled=departmentCloudBusy;
+    });
   }
   async function inspectCurrentDepartmentCloud(){
     if(departmentCloudBusy)return;
