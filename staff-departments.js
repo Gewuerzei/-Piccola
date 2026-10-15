@@ -91,10 +91,12 @@
     }
     next.updatedAt=new Date().toISOString();
     try{saveWithBackup(next)}catch(e){alert(e.message);return}
+    const activated=window.CassolaStaff?.activateImportedDepartment?.(dept)===true;
     candidate=null;ensureDialog().close();renderExtraPeople();renderDepartment(dept);
-    alert('✅ 已导入 '+depts[dept]+' · '+source.people.length+' 人至本机独立分区。\n\nSushi 原数据完全未动；尚未上传 Cloud。');
+    alert('✅ 已导入 '+depts[dept]+' · '+source.people.length+' 人。'+(activated?'\n现在可切到对应部门直接编辑。':'\n若该部门已有不同的本机编辑数据，已保留原数据，请先检查并处理。')+'\n尚未上传 Cloud。');
   }
   function renderExtraPeople(){
+    if(window.CassolaStaff?.departmentWorkspacesEnabled?.())return;
     const base=document.getElementById('staffPeopleList');if(!base)return;
     let el=document.getElementById('staffMergedPeoplePanel');
     if(!el){el=document.createElement('section');el.id='staffMergedPeoplePanel';base.insertAdjacentElement('afterend',el)}
@@ -103,6 +105,7 @@
       (st.people||[]).map(p=>'<div class="staff-merge-people-row"><b>'+esc(p.name)+'</b><small>'+esc(d==='sala'?('负责出餐：'+(root.directory[p.id]?.serviceStation||'未设')):'本部门人员')+'</small></div>').join('')+'</div>').join('');
   }
   function renderDepartment(dept){
+    if(window.CassolaStaff?.departmentWorkspacesEnabled?.())return;
     const message=document.getElementById('staffDepartmentMessage');if(!message)return;
     let work=document.getElementById('staffLocalDepartmentWeek');
     if(!work){work=document.createElement('div');work.id='staffLocalDepartmentWeek';message.insertAdjacentElement('afterend',work)}
@@ -179,7 +182,7 @@
     const parent=document.querySelector('#staff-view-settings .staff-settings-stack');
     if(parent&&!document.getElementById('staffSafeMergeCard')){
       const card=document.createElement('div');card.className='staff-settings-card';card.id='staffSafeMergeCard';
-      card.innerHTML='<h3>🛡️ Staff 跨部门安全合并</h3><p>从 Cloud 历史版本只读提取人员，预览后导入独立本机部门副本。不会用「替换下载」，不会清空 Sushi 排休。部门 Cloud 正式分区尚未上线。</p>'+
+      card.innerHTML='<h3>🛡️ Staff 历史人员导入</h3><p>从冻结的旧 Staff 历史提取人员。导入会创建对应部门可编辑的本机工作副本，既不覆盖 Sushi，也不会自动上传。需要跨端同步时，使用周休页面的部门 Cloud 按钮。</p>'+
         '<div class="staff-settings-actions"><button class="btn primary" type="button" id="staffOpenSafeMerge">☁️ 历史版本安全导入</button><button class="btn secondary" type="button" id="staffExportDeptBackup">📦 备份合并数据 JSON</button></div>';
       parent.insertBefore(card,parent.firstChild);card.querySelector('#staffOpenSafeMerge').addEventListener('click',openMerge);card.querySelector('#staffExportDeptBackup').addEventListener('click',exportCombinedBackup);
     }
