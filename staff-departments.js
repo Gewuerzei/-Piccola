@@ -192,13 +192,12 @@
     alert('已生成合并 Staff 备份文件（包含旧 Sushi 工作本与本机部门副本，但不含头像）。请保存到安全位置。');
   }
   function init(){
-    const parent=document.querySelector('#staff-view-settings .staff-settings-stack');
-    if(parent&&!document.getElementById('staffSafeMergeCard')){
-      const card=document.createElement('div');card.className='staff-settings-card';card.id='staffSafeMergeCard';
-      card.innerHTML='<h3>🛡️ Staff 历史人员导入</h3><p>从冻结的旧 Staff 历史提取人员。导入会创建对应部门可编辑的本机工作副本，既不覆盖 Sushi，也不会自动上传。需要跨端同步时，使用周休页面的部门 Cloud 按钮。</p>'+
-        '<div class="staff-settings-actions"><button class="btn primary" type="button" id="staffOpenSafeMerge">☁️ 历史版本安全导入</button><button class="btn secondary" type="button" id="staffExportDeptBackup">📦 备份合并数据 JSON</button></div>';
-      parent.insertBefore(card,parent.firstChild);card.querySelector('#staffOpenSafeMerge').addEventListener('click',openMerge);card.querySelector('#staffExportDeptBackup').addEventListener('click',exportCombinedBackup);
-    }
+    // Both actions now live within the single Staff Cloud manager in Settings.
+    // No second legacy Cloud card or duplicate upload/download affordances.
+    const merge=document.getElementById('staffOpenSafeMerge');
+    const backup=document.getElementById('staffExportDeptBackup');
+    merge?.addEventListener('click',openMerge);
+    backup?.addEventListener('click',exportCombinedBackup);
     const sushi=document.getElementById('staffWeekLegacyContent');
     if(sushi&&!document.getElementById('staffPdfRestButton')){
       const strip=document.createElement('div');strip.className='staff-rest-recover-banner';
