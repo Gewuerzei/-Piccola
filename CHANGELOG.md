@@ -2,6 +2,20 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Staff v0.5.1 · Editable Sushi / Bar-Sala / Cucina + Scoped Cloud Transport
+**2026-10-15**
+
+- Pietro 反映本机已导入 Bar/Sala 八人，但部门大卡里的周休表仍是**只读**，希望可直接切换三部门管理。现在每次点 Sushi / Bar-Sala / Cucina 都重载**独立的可编辑 Staff 状态**，周休修改、月度、人员、岗位、换休、发布版本与 PDF 直接使用选中部门的工作本；不是把同一张只读表换名称。
+- 保留旧 Sushi `cassola_staff_v01` 原始本机键；新的 Sala / Cucina 分别用 `cassola_staff_department_sala_v01` / `cassola_staff_department_cucina_v01`。第一次切换 Bar/Sala 从历史导入的 sidecar 非破坏性种入八人，先时间戳备份；Sala 的旧 `Maki/Cucina/Cassa` 仅作为跑堂出餐 `serviceStation`，绝不推断为 Sushi 厨师岗位。空白 Cucina 工作区可添加人员并排班；切回 Sushi 不影响其他部门。
+- PDF 标题和导出文件、JSON 导出文件名加入部门标识。JSON 进件带部门标记；对其他部门的文件或在非 Sushi 工作区使用无部门的旧版 JSON，阻止直接导入。部门切换阻止未关闭对话框造成的草稿错位。
+- Settings 的「📦 备份合并数据 JSON」现在包含旧 Sushi、原导入 sidecar、**当前正在编辑的独立 Sala/Cucina 工作本**及同步元数据（此前只打包旧 sidecar，会遗漏最新修改）。头像仍须另行导出完整备份。
+- Supabase 生产迁移新增三个独立 scope `staff:sushi`、`staff:sala`、`staff:cucina`，Cloud Head **全部为空**，未自动迁移真实员工或排休到云端；新增 `staff_department_grants`（初始只授权已有的 Supervisor credential，各未来新主管需单独授权）。原 `staff` 历史 Head 不变。
+- `cassola-cloud` **ACTIVE v22** 提供 `staff_department_download/upload`，服务端校验当前 Supervisor credential 对目标部门的 read/write 授权、状态数据结构和 Head 基线。不允许通用 Inventory Cloud 或旧恢复接口绕过部门权限。人员/排休仅由 Supervisor 点击周休页「⬆ 上传本部门」「⬇ 下载本部门」同步；发生基线不一致、同部门多人改动、或本机有未上传修改时拒绝直接覆盖，下载前另留完整本机备份。
+- 已进行 JS 语法、三部门本机状态切换/Sala 编辑持续保存/Sushi 未变、Cloud 初次上传与冲突及未同步下载拦截等模拟测试。**尚未在 Pietro iPhone 上实测，也未实现统一人员目录、独立 Supervisor 多凭据以及自动三方合并**。不可宣传 Staff v2 已完全完成。
+- Service Worker 更新 `cassola-suite-v101`。Inventory 员工任务、PIN、原共享 Staff 版本均没有随代码发布自动改写。
+
+---
+
 ## Staff v0.5.0 / Inventory v0.7.7 · Direct Job-based Count & Receiving Tasks
 **2026-10-14**
 
