@@ -766,6 +766,9 @@
       localStorage.setItem(key,JSON.stringify({savedAt:now(),department:dept,local:state,cloudVersion:head.head_version_id}));
       const avatar=new Map(state.people.map(p=>[String(p.id),p.avatarStamp||'']));
       const replacement=normalize({...incoming,people:incoming.people.map(p=>({...p,avatarStamp:avatar.get(String(p.id))||p.avatarStamp||''})),syncMeta:state.syncMeta});
+      replacement.syncMeta.revision=Math.max(1,num(state.syncMeta?.revision)||1)+1;
+      replacement.syncMeta.updatedAt=now();
+      replacement.syncMeta.contentHash=fingerprint(replacement);
       localStorage.setItem(storageKey(),JSON.stringify(replacement));
       state=replacement;
       setDepartmentCloudMeta(dept,{versionId:head.head_version_id,fingerprint:fingerprint(replacement),syncedAt:now()});
