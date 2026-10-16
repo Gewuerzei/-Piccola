@@ -2,6 +2,18 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory / Employee Import v0.2.1 · Cloud Job-Task Approval Revalidation Fix
+**2026-10-16**
+
+- Pietro iPhone supervisor: Oct 16 job-based Maki composite inventory count showed **42 SKU / 23 discrepancies / 0 stock events** and valid “可采用” preview, yet pressing “采用最新版” reported “导入状态已经变化：这个员工槽位没有登记”.
+- Root cause in `employee-import.js`: `preview(data,{cloudSubmissionId})` passed trusted Cloud review context into `validate`; `apply()` incorrectly called `validate(pending.data)` with no Cloud context, so managed Employee PIN credentials absent from the **public legacy registry** were rejected on the second pass. The Cloud submission itself was not lost.
+- Patch preserves the original `pending.cloudSubmissionId` in second-pass `validate(pending.data,{cloudSubmissionId:pending.cloudSubmissionId})`; adds a consistency check that accepted Cloud SKU-list task scopes must have `scope.id === 'task:' + inventoryTaskId`. Plain JSON file import still has no Cloud review context and **does not bypass credential or scope validation**.
+- Production Supabase *read-only* check on 2026-10-16 verified exactly one matching Maki 42-SKU Cloud submission at status `pending`; no submission, inventory, Staff Head, rule, or credential was changed by investigation.
+- Regression simulated real click: Cloud-managed slot could preview, confirm, update only the scoped local SKUs, save once, record an active local submission, and send the matching `reviewEmployee(...,'accepted')` acknowledgement. Negative tests rejected unregistered manual JSON and mismatching task scope; all passed. Real iPhone acceptance still to be checked.
+- PWA Service Worker cache bumped to `cassola-suite-v105` to refresh `employee-import.js`. Users must reopen supervisor PWA and reopen the **existing pending Cloud count**; no employee recount or re-submission is needed.
+
+---
+
 ## Staff v0.5.2 · One Unified Cloud Manager for New Departments and Legacy Staff Archive
 **2026-10-15**
 
