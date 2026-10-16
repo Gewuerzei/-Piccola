@@ -44,7 +44,7 @@
     if(!validDate(data.date)||!validTime(data.submittedAt))throw new Error('日期 / 提交时间无效');
     if(!data.submissionId||!data.credentialId)throw new Error('缺少 submissionId / credentialId');
     let record=registryRecord(data.credentialId);
-    const cloudTask=!!options.cloudSubmissionId&&!!data.inventoryTaskId&&data.scope?.kind==='skuIds';
+    const cloudTask=!!options.cloudSubmissionId&&!!data.inventoryTaskId&&data.scope?.kind==='skuIds'&&data.scope?.id===`task:${data.inventoryTaskId}`;
     if(cloudTask&&!record)record={id:data.credentialId,role:'employee',scope:data.scope,dynamic:true};
     if(!record||record.role!=='employee'||!record.scope)throw new Error('这个员工槽位没有登记');
     if(!cloudTask&&!sameScope(record.scope,data.scope))throw new Error('盘货包 scope 与登记权限不一致');
@@ -147,7 +147,10 @@
   function apply(){
     if(!pending)return;
     let v;
-    try{v=validate(pending.data)}catch(err){alert('导入状态已经变化，请重新选择文件：'+err.message);return}
+    // Revalidate with the *same* trusted Cloud review context as preview().
+    // Role-task Employee PINs are dynamic and may not exist in the public
+    // legacy access registry. Manual JSON imports still pass no Cloud ID.
+    try{v=validate(pending.data,{cloudSubmissionId:pending.cloudSubmissionId})}catch(err){alert('导入状态已经变化，请重新选择文件：'+err.message);return}
     if(v.stale){showToast('这不是当天最新版');return}
     if(!confirm(`采用 ${v.scope.label||v.scope.id} · ${pending.data.date} 的员工盘货？`))return;
     const now=stamp(),submissionId=pending.data.submissionId;
