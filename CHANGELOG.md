@@ -2,6 +2,17 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory SKU Save UX v0.7.8 · Visible Validation and Same-Spec Pack Editing
+**2026-10-18**
+
+- Pietro iPhone screenshot: `＋ 同商品新增规格` for 仙女牌辣椒酱 with SKU physical spec **450ml**, stock unit **瓶**, order unit **箱**, multiplier **12**, category 酱料 and supplier 米兰; tapping 保存 appeared to do nothing. Existing built-in `chili450` already has **450ml** physical specification, so prior duplicate-spec guard correctly refused the second SKU but only called the global `showToast`, which is hidden behind the iOS modal top layer.
+- `v03-ui.js` now reports all known SKU Save validation failures in an inline `role=alert` panel immediately above the Save controls **inside** the `<dialog>` rather than in the background toast. `index.html` SKU form uses explicit `submit` validation with `novalidate` so native WebKit required-field blocking cannot hide feedback. `v03.css` styles visible dark/light feedback.
+- Identical **family / brand / real spec / supplier / area / inventory unit** no longer produces a duplicate SKU, whether created using `＋ 同商品新增规格` or fresh SKU form. The warning offers **✏️ 编辑已有规格（保留库存）**. When tapped, switches into the original SKU editor with only newly entered order unit and conversion (e.g. 1箱=12瓶) carried over; current stock is loaded from original and is not set to new-SKU 0. User must verify and save explicitly.
+- Automated isolated JS flow verified: 450ml duplicate warning visible and no save, edit-original button prepopulates 箱/12 and preserves 7-bottle illustrative stock, explicit existing save updates ordering pack without adding an SKU, and truly different 200ml variant saves as a new, zero-stock SKU. These quantities were only test fixtures and **did not touch production Inventory**.
+- Service Worker cache v106 includes updated HTML, JS and CSS. No localStorage clearing, Inventory rebuild, Cloud push, SKU creation or stock adjustment performed in production. iPhone PWA deployment and real save acceptance remain to be checked.
+
+---
+
 ## Inventory / Employee Import v0.2.1 · Cloud Job-Task Approval Revalidation Fix
 **2026-10-16**
 
