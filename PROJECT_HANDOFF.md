@@ -35,20 +35,21 @@
 
 > **2026-10-15 Staff v0.5.1 · 三部门真正可编辑 + 部门独立 Cloud v22（阶段性上线）：**Pietro 明确要求在 🍣 Sushi / 🍷 Bar/Sala / 🍳 Cucina 大卡间**直接切换管理**，不能只有只读预览。现 `staff.js` 的活动 `state` 会随部门切换，所有周/月/人员/换休/岗位/发布/PDF 界面使用当前部门状态；旧 Sushi 原键 `cassola_staff_v01` 继续保留，Sala 为 `cassola_staff_department_sala_v01`，Cucina 为 `cassola_staff_department_cucina_v01`。首次切换 Sala 时只从已批准 `cassola_staff_departments_v01` 旁路导入副本（原 sidecar 不删，建立时间戳备份）；原跑堂 `cassa/cucina/maki` 责任区转 `serviceStation`，不自动设厨房 primaryRole。新加入人员、排休/换休、发布版本、PDF 只写当前部门，PDF/JSON 文件名和 PDF 标题含部门；跨部门或无部门标识的旧 JSON 导入被拦截。
 > **新 Cloud**：生产 Supabase 新增 `staff:sushi` / `staff:sala` / `staff:cucina` scope，各自初始空 Head；`staff_department_grants` 行级授权表（仅已有的一个 active supervisor 凭据获得三部门初始 read/write grant，**新建 supervisor 默认不得自动继承**）。Edge `cassola-cloud` **ACTIVE v22** 增加 `staff_department_download` / `staff_department_upload`，验证当前登录身份 + 每部门授权，上传校验 schemaVersion=2、scopeId 与人名/ID，使用既有 lineage RPC，base/Head 不相同时 HTTP 409。通用 `upload_scopes` / `download_scopes` / `restore_version` 不可绕开部门 ACL，旧共享 `staff` 冻结保持原样。客户端只在 Supervisor 明确点击选中部门的「⬆ 上传本部门」「⬇ 下载本部门」时同步，并记录每部门 `versionId+fingerprint`；任何本机未上传更改、远端版本冲突或首次非空本机无基线的下载都拒绝覆盖；下载前时间戳备份。**没有自动向生产上传个人资料**。
-> **适用范围/下一阶段**：这是**真正可编辑、可手动同步的三部门独立工作区**，不是最终 Staff v2 的**全店统一 Directory、多 Supervisor 独立 PIN、多端三方冲突合并**。目前仅有一个 Supervisor 凭据；若多人共用其 PIN，服务端无法区分个人。必须先给各主管建立独立凭据并分别赋权，才能称为多人权限隔离；分歧版本仍需要人工解决，不进行覆盖。若 Pietro 的 iPhone 还没更新，先等待 GitHub Pages/PWA cache `cassola-suite-v105`，本机 Sala 副本须先在手机上确认，点击「上传本部门」才会上 Cloud。Sushi 旧排休/已发布 v1 不自动改写。验证：三部门独立本机读写及 Cloud 冲突拒绝模拟均通过；**iPhone 双 Supervisor 实机验收待完成**。
+> **适用范围/下一阶段**：这是**真正可编辑、可手动同步的三部门独立工作区**，不是最终 Staff v2 的**全店统一 Directory、多 Supervisor 独立 PIN、多端三方冲突合并**。目前仅有一个 Supervisor 凭据；若多人共用其 PIN，服务端无法区分个人。必须先给各主管建立独立凭据并分别赋权，才能称为多人权限隔离；分歧版本仍需要人工解决，不进行覆盖。若 Pietro 的 iPhone 还没更新，先等待 GitHub Pages/PWA cache `cassola-suite-v106`，本机 Sala 副本须先在手机上确认，点击「上传本部门」才会上 Cloud。Sushi 旧排休/已发布 v1 不自动改写。验证：三部门独立本机读写及 Cloud 冲突拒绝模拟均通过；**iPhone 双 Supervisor 实机验收待完成**。
 
 > **补充验收 v102：**部门 Cloud 上传不带设备本地头像的 `avatarStamp` 标记；同步差异判断同样排除该标记，避免两台设备本机照片状态不同就错误认定 Staff 冲突。人像照片仍需要本机保留/额外完整备份。三部门独立读写、版本冲突拦截、已修改本机阻止下载，以及头像变化不触发业务同步差异的模拟测试通过。\n\n> **2026-10-15 Staff v0.5.2 / PWA v103：旧/新 Cloud 统一入口已部署至 GitHub main。** Settings →「☁️ Staff Cloud 管理」现在是**唯一 Staff Cloud 操作面板**，内部选择 🍣 Sushi / 🍷 Bar/Sala / 🍳 Cucina，显示选中部门的本机同步基线和是否未同步，提供单份「⬆ 上传选中部门」「⬇ 下载选中部门」以及**只读**「🔍 检查云端状态」（查最近云端版本/人数，带本次读取时间，不声称永远最新）。选部门也切换实际可编辑 Staff 工作副本。周休页只保留简短「Cloud 管理 ›」跳转，不再独立重复上传/下载按钮。设置页旧 Cloud 禁用按钮移除，旧 `staff` Head 放到统一面板的「🗄️ 旧 Staff Cloud 历史与迁移」折叠区：只读查看旧历史、按部门安全导入和仅 Sushi 的本机备份回滚；原 `staff-departments.js` 冗余历史导入卡删除，安全导入与「📦 备份全部部门 JSON」改由统一面板触发。
 > **安全边界未变：**代码层 `staff_department_upload/download` 操作仍带 Supervisor 授权、部门隔离、基线+dirty 检查、下载前本机备份；旧 `staff` 全量上传/下载/云端恢复被 Cloud v22 后端拦截（本次未更新 Edge）。历史数据、生产三部门 Cloud Head / Inventory / 人员 PIN 均**未自动迁移或写入**。状态文字已区分「本机与上次同步一致」和「云端最新状态未检查」，切勿把前者当作实时无冲突保证。静态 JS/DOM 入口检查通过，GitHub Pages 发布 / iPhone 实机尚待验证。
 
 > **v104 安全补丁：**统一面板执行部门 Cloud 上传/下载/只读检查时锁定周休/设置的全部部门切换按钮，同时 `activateDepartment` 自身拒绝切换；防止等待网络时把新的部门 Staff 工作副本误上传到旧部门。模拟 pending Cloud→切换被阻止→请求完成→按钮恢复成功。没有修改任何生产数据。\n\n> **2026-10-16 员工岗位盘货“预览通过、采用报未登记槽位”Bug 修复：**主管端 Inventory → Cloud → 员工盘货审核，来自真实 Cloud 的 Maki 岗位 42 SKU / 23 差异提交，预览显示「✅ 可采用」，点击「采用最新版」却报「导入状态已经变化，请重新选择文件：这个员工槽位没有登记」。定位 `employee-import.js`：`preview(data,{cloudSubmissionId})` 校验允许真实云端岗位任务的动态 Employee Credential，但 `apply()` 二次校验漏传 `pending.cloudSubmissionId`，误按只在公开旧注册表存在的 legacy PIN 要求校验。现二次校验沿用同一可信 Cloud 传入的 ID，并约束 `skuIds` 岗位责任区 ID 必须为 `task:${inventoryTaskId}`；普通员工 JSON 不能伪装云端记录。只读 Supabase 核验 Oct16 对应 Maki 提交 **Cloud pending 1 条、42 SKU**，未丢失，也未自动采用。运行模拟点「采用」成功保存本机账目并回报相应 Cloud row accepted；未经登记普通 JSON 与冒用 task scope 仍被挡住。**上线后用户需在 iPhone 关闭旧预览/重开 PWA，重新打开 Cloud 待审核记录并点采用；不可让员工重新盘货，也不得自动应用 23 项差异**。缓存 v105；真机仍待验收。
 
-## 1. 项目身份
+> **2026-10-18 Inventory v0.7.8 / PWA cache v106 · 新增规格保存无反应修复。** 现场截图为 `＋ 同商品新增规格` → 仙女牌辣椒酱 / 450ml / 瓶 / 酱料 / 米兰 / 订货箱×12。旧种子 `chili450` 本身就是 450ml；原 `v3SaveSku` 检测与源 SKU 规格重复后调用全局 `showToast`，但 global toast 在 iOS `<dialog>` 的 top-layer 下不可见，造成「点保存没反应」。已经在 `index.html` SKU modal 的保存按钮上方新增 `role=alert` 的**弹窗内错误提示**与「✏️ 编辑已有规格（保留库存）」按钮，`v03-ui.js` 所有已知阻断条件显示弹窗内错误；`v03.css` 添加 UI。SKU 表单现在走 `submit` + `novalidate`，避免浏览器自身静默验证打断事件。
+> 重复判断范围：同一商品族、品牌、实际物理规格、供应商、区域和库存单位不得仅因订货包装改变而再造一条 SKU；按「编辑已有规格」会进入原 SKU，**只带入**正在填写的订货单位/倍率（如箱、12），原库存数由原 SKU 加载，必须用户明确再次保存。真正不同的物理规格仍可新建，库存允许是 0。模拟测试：重复不保存、提示可见、直接编辑原规格保留库存并更新箱数、另一规格 0 库存可保存，全部通过。此施工没有触及生产本机数据、Supabase、localStorage 清理、旧历史或订单；iPhone 实机验收待完成。\n\n## 1. 项目身份
 
 - Repository: `Gewuerzei/-Piccola`
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.7.7 · Cloud Managed Role Count Review Fix**
+- Inventory: **v0.7.8 · Visible SKU Save Feedback + Same-Spec Pack Edit**
 - Staff: **v0.5.2 · Unified Department Cloud Manager + Legacy Archive**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
@@ -1135,7 +1136,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v105
+cassola-suite-v106
 ```
 
 当前 CORE 必须包含：
