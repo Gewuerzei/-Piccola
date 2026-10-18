@@ -28,8 +28,31 @@ function v8SkuCategoryValue(){
   const raw=selected===V8_NEW_CATEGORY?document.getElementById('v3CustomCategory').value:selected;
   return v7CategoryLabel(raw.trim());
 }
+function v3SkuFeedback(message='',existingId=''){
+  const wrap=document.getElementById('v3SkuSaveFeedback');
+  const text=document.getElementById('v3SkuSaveFeedbackText');
+  const link=document.getElementById('v3SkuEditExisting');
+  if(!wrap||!text||!link)return;
+  text.textContent=message;
+  wrap.hidden=!message;
+  link.hidden=!existingId;
+  link.dataset.existingSkuId=existingId||'';
+}
+function v3OpenExistingForPack(){
+  const id=document.getElementById('v3SkuEditExisting')?.dataset.existingSkuId;
+  if(!id||!sku(id))return;
+  // Bring only the proposed ordering pack into an edit of the existing SKU.
+  // Never copy new-SKU initial stock (0) onto the existing inventory record.
+  const order=document.getElementById('v3OrderUnit').value.trim();
+  const multiplier=document.getElementById('v3UnitsPerOrder').value.trim();
+  v3OpenSku(id);
+  if(order)document.getElementById('v3OrderUnit').value=order;
+  if(multiplier)document.getElementById('v3UnitsPerOrder').value=multiplier;
+  v3SkuFeedback('✏️ 已切换为编辑现有 SKU。订货包装已带入，原库存保持不变；请核对后再保存。');
+}
 function v3OpenSku(id=''){
   v3VariantSourceId='';
+  v3SkuFeedback();
   const editing=!!id,s=editing?sku(id):{id:'',name:'',familyName:'',brand:'',spec:'',unit:'',category:'蔬果',supplier:'大兴',area:v4AreaFilter||'sushi',qty:0,icon:'',warningMode:'auto',targetWeeks:.6,autoOrder:true};
   if(!s)return;v3NormalizeSku(s);
   v8RenderSkuCategoryOptions(s.category||'');
@@ -93,6 +116,8 @@ function v3CopyAsVariant(){
 function v3WarningForm(){document.getElementById('v3ManualThresholds').classList.toggle('hidden',document.getElementById('v3WarningMode').value!=='manual')}
 function v3SaveSku(e){
   e.preventDefault();
+  v3SkuFeedback();
+  const reject=(message,existingId='')=>{v3SkuFeedback(message,existingId);return false};
   const id=document.getElementById('v3SkuId').value;
   const name=document.getElementById('v3Name').value.trim();
   const familyName=(document.getElementById('v3FamilyName').value.trim()||name);
@@ -102,31 +127,39 @@ function v3SaveSku(e){
   const category=v8SkuCategoryValue();
   const supplier=document.getElementById('v3Supplier').value.trim();
   const icon=document.getElementById('v3Icon').value.trim();
-  if(!name||!unit||!category||!supplier){showToast('名称、库存单位、分类、供应商要填');return}
+  if(!name||!unit||!category||!supplier)return reject('⚠️ 请补充：名称、库存单位、分类和供应商。');
   if(['全部','蔬果风房',V7_PRODUCE_ROOM_FILTER,V8_NEW_CATEGORY].includes(category)){
-    showToast('请选择具体分类；蔬果风房只是分组');return;
+    return reject('⚠️ 请选择具体分类；蔬果风房只是分组。');
   }
   if(document.getElementById('v3Category').value===V8_NEW_CATEGORY&&inventoryCategories().includes(category)){
-    showToast('这个分类已存在，请直接在菜单中选择');return;
+    return reject('⚠️ 这个分类已存在，请直接在下拉菜单中选择。');
   }
   const area=document.getElementById('v3Area').value||'sushi';
-  if(!id&&v3VariantSourceId){
-    const source=sku(v3VariantSourceId);
-    if(!spec){showToast('新增商品规格不能为空，例如 50g');return}
-    if(source&&spec.toLowerCase()===String(source.spec||'').trim().toLowerCase()){
-      showToast('新规格不能与原规格相同');return;
-    }
+  if(!id){
+    if(!spec&&v3VariantSourceId)return reject('⚠️ 请填写真正的新规格，如 200ml 或 900ml。');
+    // One physical stock specification must not be duplicated merely because
+    // its ordering pack changes. In particular chili 450ml remains one SKU,
+    // regardless of whether it is ordered per bottle or by 12-bottle case.
     const familyId=v6FamilyKey(familyName);
-    const alreadyExists=state.skus.some(s=>v6FamilyId(s)===familyId&&
+    const existing=state.skus.find(s=>v6FamilyId(s)===familyId&&
       String(s.brand||'').trim()===brand&&String(s.spec||'').trim().toLowerCase()===spec.toLowerCase()&&
       String(s.supplier||'')===supplier&&v4AreaOf(s)===area&&String(s.unit||'')===unit);
-    if(alreadyExists){showToast('相同商品卡中已存在这一规格，请直接编辑已有 SKU');return}
+    const original=v3VariantSourceId?sku(v3VariantSourceId):null;
+    const originalSame=original&&v6FamilyId(original)===familyId&&
+      String(original.brand||'').trim()===brand&&
+      String(original.spec||'').trim().toLowerCase()===spec.toLowerCase()&&
+      String(original.supplier||'')===supplier&&v4AreaOf(original)===area&&String(original.unit||'')===unit;
+    const duplicate=existing||(originalSame?original:null);
+    if(duplicate)return reject(
+      '⚠️ '+(duplicate.spec||'此规格')+' 已是现有 SKU。若只是改为整箱订货（例如 1箱=12瓶），应编辑原 SKU 的订货单位和换算，而不是新建相同规格。',
+      duplicate.id
+    );
   }
   const orderUnitRaw=document.getElementById('v3OrderUnit').value.trim();
   const unitsPerOrder=v3Num(document.getElementById('v3UnitsPerOrder').value)??1;
-  if(!(unitsPerOrder>0)){showToast('订货单位换算必须大于 0');return}
+  if(!(unitsPerOrder>0))return reject('⚠️ 订货单位换算必须是大于 0 的数字。');
   const orderUnit=orderUnitRaw||unit;
-  if(unitsPerOrder!==1&&!orderUnitRaw){showToast('设置换算时要填写订货单位');return}
+  if(unitsPerOrder!==1&&!orderUnitRaw)return reject('⚠️ 设置换算时请填写订货单位，例如「箱」。');
   state.customCategories=Array.isArray(state.customCategories)?state.customCategories:[];
   if(!categories.includes(category)&&!state.customCategories.includes(category))state.customCategories.push(category);
   const data={
@@ -179,7 +212,8 @@ document.addEventListener('click',e=>{
 document.getElementById('addSkuBtn').addEventListener('click',()=>v3OpenSku());
 document.getElementById('addSkuSettingsBtn').addEventListener('click',()=>v3OpenSku());
 document.getElementById('v3WarningMode').addEventListener('change',v3WarningForm);
-document.getElementById('v3SaveSku').addEventListener('click',v3SaveSku);
+document.getElementById('v3SkuForm').addEventListener('submit',v3SaveSku);
+document.getElementById('v3SkuEditExisting').addEventListener('click',v3OpenExistingForPack);
 document.getElementById('v3Category').addEventListener('change',()=>v8SyncSkuCategoryForm(true));
 document.getElementById('v3CopyVariant').addEventListener('click',v3CopyAsVariant);
 document.getElementById('v3DeleteSku').addEventListener('click',e=>{e.preventDefault();v3Delete()});
