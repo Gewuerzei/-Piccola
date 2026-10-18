@@ -555,3 +555,15 @@ body.v6-sorting .v6-drag-handle{cursor:grabbing}
 .v4-receipt-recipient-mode label.hidden{display:none}
 .v4-receipt-recipient-mode select{width:100%}
 .v4-receipt-recipient-mode + .v4-employee-receipt-note{line-height:1.6;font-size:11px}
+
+/* Inventory SKU editor: validation must be visible INSIDE the iOS modal top layer.
+   The global toast behind <dialog> was invisible to users. */
+.v3-sku-save-feedback{
+  display:flex;flex-direction:column;align-items:stretch;gap:10px;
+  margin:12px 0 8px;padding:13px 14px;border-radius:18px;
+  color:var(--text);font-size:12px;font-weight:700;line-height:1.6;
+  background:rgba(230,160,68,.11);border:1px solid rgba(230,160,68,.35);
+}
+.v3-sku-save-feedback[hidden],
+.v3-sku-save-feedback button[hidden]{display:none!important}
+.v3-sku-save-feedback .btn{min-height:46px;white-space:normal}
