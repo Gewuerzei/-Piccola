@@ -213,7 +213,7 @@
   </dialog>
 
   <dialog id="v3SkuDialog">
-    <form method="dialog" id="v3SkuForm">
+    <form method="dialog" id="v3SkuForm" novalidate>
       <div class="dialog-head">
         <div><div class="eyebrow">SKU MANAGER</div><h3 id="v3SkuTitle">新建 SKU</h3></div>
         <button value="cancel" formnovalidate class="icon-btn" aria-label="关闭">✕</button>
@@ -293,10 +293,14 @@
         <label>目标库存（可空）<input id="v3Target" type="text" inputmode="decimal" autocomplete="off" placeholder="填写后优先按目标库存计算" /></label>
         <label class="v3-check"><input id="v3AutoOrder" type="checkbox" /> 参与自动订货建议</label>
       </div>
+      <div id="v3SkuSaveFeedback" class="v3-sku-save-feedback" role="alert" aria-live="assertive" hidden>
+        <span id="v3SkuSaveFeedbackText"></span>
+        <button type="button" class="btn secondary" id="v3SkuEditExisting" hidden>✏️ 编辑已有规格（保留库存）</button>
+      </div>
       <div class="v3-dialog-actions">
-        <button id="v3DeleteSku" class="btn danger ghost hidden">删除</button>
+        <button id="v3DeleteSku" type="button" class="btn danger ghost hidden">删除</button>
         <button value="cancel" formnovalidate class="btn secondary">取消</button>
-        <button id="v3SaveSku" value="default" class="btn primary">保存</button>
+        <button id="v3SaveSku" type="submit" value="default" class="btn primary">保存</button>
       </div>
     </form>
   </dialog>
