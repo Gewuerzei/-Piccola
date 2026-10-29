@@ -3,6 +3,8 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
+> **2026-10-29 v0.8.0 · 库存页提速 + 吸顶栏遮挡修复 + 员工端三语（分支 `opus/v0.8-upgrade`）：**`v3WeeklyUse()` 改为按 SKU 建索引并缓存（输出与旧实现逐一比对一致），去掉搜索框重复监听，库存页在 2500 条历史下从约 4.3 秒降到约 23 毫秒。吸顶搜索栏 / Staff 工具条改用实测顶栏高度（`ui-extras.js` → CSS 变量 `--cassola-topbar-h` / `--cassola-staff-topbar-h`），修复 iPhone 上整条被顶栏挡住；胖胖风格不变，`v08-polish.css` 只做小补充。员工端新增 中文 / Italiano / বাংলা 切换（`i18n.js` / `i18n-ui.js` / `i18n-sku.js`），只翻译显示文字，不改任何上传数据。规则见下方 **2.4 员工端多语言**。SKU 新增自动插图（`sku-art.js`，员工也可见）和本机实拍（`sku-photos.js`，暂不同步），规则见 **2.5 SKU 小图**。PWA cache v109。iPhone 实机验收待完成；孟加拉语译文需孟加拉同事过目。
+
 > **2026-10-29 Inventory v0.7.9 / Employee Receipt Cloud Lifecycle：**生产只读核对发现 employee_receipt_tasks 仍有两条 authorized 历史授权：10/06 米兰个人收货 7 SKU、10/20 米兰岗位收货 11 SKU（10/27 被领取）。此前管理入口仅在当前未结案的订单「授权员工收货」弹窗，结案订单不显示按钮，收货审核 Inbox 也不显示未提交授权，因此旧授权不会随着本机订单结案自动撤销。新增 Inventory → 已下单 →「🚚 管理员工收货授权」独立弹窗，使用现有 Supervisor receipt_tasks Cloud API 列出全部订单的 authorized / submitted，并支持查看历史状态；只有 authorized 可以二次确认调用 receipt_revoke，submitted 进入人工审核，accepted / rejected / revoked 为只读。员工收货新增「🔄 刷新收货」及 Cloud 核对时间/本机旧快照提示；成功的 status 会用真实 Cloud 列表（可为空）覆盖本机任务缓存，失败不丢草稿或 Outbox。没有新建 Supabase 表、RPC 或 Edge Function；未修改生产收货任务状态、Inventory / Staff 数据。静态检查与隔离模拟通过，iPhone 实机验收待完成。PWA cache v108。
 
 > **2026-10-13 Staff 新架构已定稿，但尚未执行迁移：**正式按照 **Sushi / Cucina / Sala** 三部门隔离排休数据，多 Supervisor 可管理同一部门；共享人员目录与独立部门周排休/发布版本。完整的安全迁移步骤、数据模型、身份映射与三方合并冲突规则见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
@@ -508,6 +510,35 @@ Supervisor Hub / Inventory 顶部提供全局搜索。当前索引：
 - 供应商战绩：从 `placedOrders / lineStatus / receiptBatches` 推导订单数、结案准确率、少到/缺货率、挂起行；不另造人工评分。
 - Price Radar：只比较同供应商、同规格、同报价单位且 IVA 基准可比的 priceRecords。
 - Staff 检察院：只读扫描本地 `cassola_staff_v01` 的 missing person、孤立 swap/move、active swap 与当前 attendance 脱链等结构异常；**绝不自动修改 Staff 数据**。
+
+## 2.4 员工端多语言（v0.8.0）
+
+- 文件：`i18n.js`（逻辑）、`i18n-ui.js`（界面文案，key = 代码里的原中文）、`i18n-sku.js`（SKU 名 / 单位 / 分类显示翻译）。三者都在 `app.js` 之前加载。
+- 语言是**设备偏好**：localStorage `cassola_ui_lang_v01`（`zh` / `it` / `bn`）。和主题一样，不进入 Inventory / Staff Cloud，也不进入员工提交。
+- **只翻译显示**。凡是会上传或写入数据的值（单位、分类、SKU 名称、任务标签、提议字段、datalist 候选值）必须保持原值；不得把 `T()` 的结果写进 payload / state。
+- 代码里用 `T('原中文')` 包裹显示文字；含数字的句子用占位符：`T('{n} 个收货任务',{n})`。翻译里禁止出现 `" < > &`（会进 HTML 属性）。没有翻译时自动显示原中文，所以漏翻不会坏页面。
+- 新增员工端文案：在 `hub.js` / `employee-tools.js` 用 `T()` 包裹，再到 `i18n-ui.js` 加一行。新增 SKU 想让员工看到外语名：在 `i18n-sku.js` 的 `names` 加一行，key 必须和 SKU 名称完全一致；名称本身已是意大利语 / 日语（Ikura、Panna）的不用加。
+- SKU 显示规则：外语模式下显示翻译名，小字保留原中文名；单位 `瓶/罐` 这种组合按 `/` 分段翻译。
+- Supervisor 界面（Inventory / Staff / Hub）保持中文，不调用 `T()`。
+- 员工对话框在语言切换后、下次打开前按新语言重建（只在对话框关闭时重建）。
+- 已知未覆盖：`cloud-sync.js` 的部分连接状态 toast；主管输入的任务标签、供应商名、备注按原文显示。
+
+### 吸顶栏高度（v0.8.0）
+- 任何 `position:sticky` 的工具条都不要再写死 `top: 7xpx`。用 `var(--cassola-topbar-h)`（Inventory）或 `var(--cassola-staff-topbar-h)`（Staff），它们由 `ui-extras.js` 实测顶栏高度得到，已包含 iPhone 状态栏 inset 和多行标题。
+- 胖胖风格是 Pietro 的明确要求：触控目标 46–56px、大圆角、厚卡片。不要为了“省空间”压缩它们。
+
+## 2.5 SKU 小图（v0.8.0）
+
+- `sku-art.js`：代码绘制的原创 SVG 插图，`CassolaSkuArt.svg(sku)`。匹配顺序：SKU id（`BY_ID`）→ 同名别名（`NAME_ALIAS`）→ 名称关键词（`KEYWORDS`）→ 分类（`BY_CATEGORY`）。底色由 CSS `.art-tile.k-*` 决定，跟随主题。
+- **不得画品牌 logo / 包装设计**，只画通用物品，颜色可以暗示真实产品。
+- `sku-photos.js`：SKU 编辑页「📷 拍照 / 相册」。照片存独立 IndexedDB `cassola_sku_photos_v01`（key = SKU id，值 `{blob,savedAt,bytes}`），256px JPEG。**不写入 SKU 数据、不进 Cloud、不进 JSON 备份**，只在拍照设备显示。
+- 统一出口 `window.CassolaSkuVisual(sku, 兜底emoji)`；Inventory 用 `skuVisual(s)`（v03-core.js），员工端用 hub.js 的 `L.pic()`。优先级：本机照片 > 专属插图 > SKU 自定义 emoji > 分类插图 > 默认 emoji。`v3Icon()` 仍返回纯 emoji，供全局搜索等文本场景使用。
+- 新增 SKU 想要专属插图：在 `BY_ID` 加一行（复用现成的画法函数，如 `bottle` / `can` / `pouch` / `frozen`）。
+- 下一步（未做）：照片同步给员工需要 Supabase Storage 桶 + `cassola-cloud` 上传 / 读取接口；SKU 只记照片编号，不要把图片 base64 塞进库存数据。
+
+### 周耗缓存不变量（v0.8.0）
+- `v3WeeklyUse()` 的缓存只是派生视图，绝不写回 state。缓存在以下任一情况失效：`state.history` 换了数组 / 长度或最后一条变化、`saveState()`、当前事件循环结束（`setTimeout 0`）。
+- 以后若有代码**原地修改**历史条目（例如改 `employeeSuperseded`）并在同一个同步流程里立刻需要新周耗，先调用 `v8InvalidateUseCache()`。
 
 # Inventory
 

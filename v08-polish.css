@@ -1,0 +1,100 @@
+/* Cassola v0.8 · small layer on top of the Fat UI (loaded last)
+   Pietro wants the fat look, so this file does NOT shrink anything: header,
+   tabs, cards, buttons and radii stay exactly as Piccola designed them.
+   It only fixes the sticky rows, adds a search icon, makes primary buttons
+   visible in the light graphite theme and styles the language switch.
+   No data, storage key or behaviour depends on this file. */
+
+/* ---------- Sticky rows under the real header ----------
+   --cassola-topbar-h / --cassola-staff-topbar-h are measured in ui-extras.js
+   (status-bar inset + two-line title included). Fallbacks = the old values. */
+.sticky-panel{top:var(--cassola-topbar-h,76px)}
+.staff-board-tools,
+.staff-week-tools,
+.staff-month-tools{top:var(--cassola-staff-topbar-h,77px)}
+
+/* Now that the search row really stays visible while scrolling, let its
+   background run edge to edge so it reads as one bar under the header. */
+#view-stock .toolbar.sticky-panel{
+  margin-left:-15px;margin-right:-15px;
+  padding-left:15px;padding-right:15px;
+}
+
+/* ---------- Search field with a magnifier ---------- */
+#view-stock .toolbar .search{
+  padding-left:44px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238a93a5' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:16px 50%;background-size:18px 18px;
+}
+:root[data-theme="light"] #view-stock .toolbar .search{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b7385' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E");
+}
+
+/* ---------- Light theme · graphite accent ----------
+   Graphite's accent is cream, so on the light background the primary buttons
+   ("＋ SKU", "保存本轮盘货"…) almost disappeared. Give them ink instead.
+   Matcha / ocean / sakura already have coloured fills and keep them. */
+:root[data-theme="light"][data-accent="graphite"] .btn.primary{background:#262b36;color:#f8f7f3;box-shadow:0 10px 24px rgba(38,43,54,.18)}
+
+/* ---------- Language switch (Access gate + employee screens) ----------
+   Same fat proportions as the area tabs: 50px pills inside a soft tray. */
+.cassola-lang-switch{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+  margin:0 0 16px;padding:6px;border-radius:24px;
+  background:rgba(255,255,255,.035);border:1px solid var(--line);
+}
+.cassola-lang-switch button{
+  min-height:50px;border:0;border-radius:18px;background:transparent;color:var(--muted);
+  font:inherit;font-size:15px;font-weight:850;padding:10px 6px;cursor:pointer;
+}
+.cassola-lang-switch button.active{
+  background:var(--panel3);color:var(--text);
+  box-shadow:0 6px 16px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.cassola-lang-switch button[lang="bn"]{font-size:16px}
+#cassolaGate .cassola-lang-switch{max-width:520px}
+:root[data-theme="light"] .cassola-lang-switch{background:rgba(31,37,48,.035)}
+:root[data-theme="light"] .cassola-lang-switch button.active{background:#fff;box-shadow:0 6px 16px rgba(54,48,38,.10)}
+
+/* Bengali script needs a little more line height to stay readable. */
+#cassolaEmployee:lang(bn),#cassolaGate:lang(bn),.employee-tool-dialog:lang(bn){line-height:1.5}
+#cassolaEmployee:lang(bn) small,.employee-tool-dialog:lang(bn) small{line-height:1.45}
+
+/* ---------- SKU pictures (sku-art.js illustrations / device photos) ----------
+   The tile colour follows the theme; the drawing itself has fixed colours. */
+.sku-art{display:block;width:100%;height:100%;border-radius:inherit;overflow:hidden}
+.sku-art svg,.sku-art img{display:block;width:100%;height:100%}
+.sku-art img{object-fit:cover}
+.sku-icon:has(> .sku-art),.count-mini-icon:has(> .sku-art){padding:0;overflow:hidden;background:none}
+.art-tile{fill:#2a3040}
+.art-tile.k-base{fill:#3a2f2a}.art-tile.k-dry{fill:#3b3324}.art-tile.k-sauce{fill:#3d2c26}
+.art-tile.k-dairy{fill:#2c3442}.art-tile.k-produce{fill:#26392b}.art-tile.k-frozen{fill:#22364a}
+.art-tile.k-prep{fill:#3c2b2d}.art-tile.k-supply{fill:#2e323a}.art-tile.k-dessert{fill:#3d2836}
+.art-tile.k-alcohol{fill:#33283d}.art-tile.k-syrup{fill:#3a2733}.art-tile.k-drink{fill:#213a3c}
+.art-tile.k-sala{fill:#323524}.art-tile.k-fish{fill:#1f3346}
+:root[data-theme="light"] .art-tile{fill:#eceef2}
+:root[data-theme="light"] .art-tile.k-base{fill:#f3e9e1}:root[data-theme="light"] .art-tile.k-dry{fill:#f4ecda}:root[data-theme="light"] .art-tile.k-sauce{fill:#f5e4dc}
+:root[data-theme="light"] .art-tile.k-dairy{fill:#e4ecf6}:root[data-theme="light"] .art-tile.k-produce{fill:#e2f0e1}:root[data-theme="light"] .art-tile.k-frozen{fill:#dde9f5}
+:root[data-theme="light"] .art-tile.k-prep{fill:#f5e3e3}:root[data-theme="light"] .art-tile.k-supply{fill:#e8eaee}:root[data-theme="light"] .art-tile.k-dessert{fill:#f6e3ec}
+:root[data-theme="light"] .art-tile.k-alcohol{fill:#ebe3f3}:root[data-theme="light"] .art-tile.k-syrup{fill:#f5e1ea}:root[data-theme="light"] .art-tile.k-drink{fill:#dcefee}
+:root[data-theme="light"] .art-tile.k-sala{fill:#eef0dc}:root[data-theme="light"] .art-tile.k-fish{fill:#dce8f4}
+
+/* Employee rows: picture next to the SKU name (helps colleagues who do not read Chinese). */
+.v8-has-art{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.v8-copy-text{min-width:0;flex:1}
+.cassola-employee-art{flex:0 0 auto;width:50px;height:50px;border-radius:18px;overflow:hidden;display:grid;place-items:center;font-size:26px;background:rgba(255,255,255,.05)}
+.cassola-employee-receipt-line-head .cassola-employee-art{width:44px;height:44px;border-radius:16px;font-size:22px}
+:root[data-theme="light"] .cassola-employee-art{background:rgba(31,37,48,.05)}
+
+/* SKU editor: photo row */
+.v8-photo-row{display:flex;align-items:center;gap:14px;margin:4px 0 14px;padding:12px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.v8-photo-preview{flex:0 0 auto;width:76px;height:76px;border-radius:24px;overflow:hidden;display:grid;place-items:center;font-size:34px;background:rgba(255,255,255,.05)}
+.v8-photo-empty{opacity:.5}
+.v8-photo-side{min-width:0;flex:1;display:flex;flex-direction:column;gap:8px}
+.v8-photo-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.v8-photo-pick{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;min-height:46px}
+.v8-photo-pick input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.v8-photo-pick.disabled{opacity:.45;pointer-events:none}
+.v8-photo-side small{color:var(--muted);font-size:11.5px;line-height:1.4}
+:root[data-theme="light"] .v8-photo-row{background:rgba(31,37,48,.025)}
+:root[data-theme="light"] .v8-photo-preview{background:rgba(31,37,48,.05)}

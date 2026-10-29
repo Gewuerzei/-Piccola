@@ -1,5 +1,15 @@
 /* Cassola Employee Tools v0.4 · packaging reports + SKU proposals + loss / conversion facts */
 (function(){
+  /* v0.8 i18n: display-only helpers. Proposal values (units, categories, names) stay as typed. */
+  const T=(s,v)=>window.CassolaI18n?window.CassolaI18n.t(s,v):(v?String(s).replace(/\{(\w+)\}/g,(m,k)=>k in v?v[k]:m):s);
+  const L={
+    sku:n=>window.CassolaI18n?window.CassolaI18n.sku(n):n,
+    unit:u=>window.CassolaI18n?window.CassolaI18n.unit(u):u,
+    cat:c=>window.CassolaI18n?window.CassolaI18n.category(c):c,
+    lang:()=>window.CassolaI18n?window.CassolaI18n.lang():'zh',
+    html:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN'
+  };
+  const EMPLOYEE_DIALOG_IDS=['employeeSkuDetailDialog','employeeNewSkuDialog','employeeNewCategoryDialog','employeeReclassifyDialog'];
   const UNITS=['个','颗','包','盒','袋','箱','瓶','罐','kg','g','L','ml','份','把','托','件'];
   const EMPLOYEE_CONVERSION_TARGETS={
     avocado_hard:['avocado_half','avocado_soft'],
@@ -41,127 +51,128 @@
   function proposalSuppliers(){return [...new Set(proposalCatalog().map(x=>String(x.supplier||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'))}
   function unitOptions(){return UNITS.map(x=>'<option value="'+esc(x)+'"></option>').join('')}
   function ensureDialogs(){
+    EMPLOYEE_DIALOG_IDS.forEach(id=>{const old=document.getElementById(id);if(old&&old.dataset.lang!==L.lang()&&!old.open)old.remove()});
     if(!document.getElementById('employeeSkuDetailDialog')){
-      const d=document.createElement('dialog');d.id='employeeSkuDetailDialog';d.className='employee-tool-dialog';
+      const d=document.createElement('dialog');d.id='employeeSkuDetailDialog';d.className='employee-tool-dialog';d.dataset.lang=L.lang();d.lang=L.html();
       d.innerHTML=`
         <form method="dialog" id="employeeSkuDetailForm">
           <div class="dialog-head">
-            <div><div class="eyebrow">SKU DETAIL</div><h3 id="employeeSkuDetailTitle">SKU 详情</h3></div>
+            <div><div class="eyebrow">SKU DETAIL</div><h3 id="employeeSkuDetailTitle">${T('SKU 详情')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
           <input type="hidden" id="employeeSkuDetailId" />
           <div id="employeeSkuCurrent" class="employee-standard-card"></div>
           <datalist id="employeeUnitOptions">${unitOptions()}</datalist>
           <div class="employee-movement-card" id="employeeMovementCard">
-            <strong>📉 今日库存变动</strong>
-            <small>和今日盘货一起上传。Supervisor 采用后写入报损 / 内部转换历史；这里不会单独修改正式库存数量。</small>
+            <strong>${T('📉 今日库存变动')}</strong>
+            <small>${T('和今日盘货一起上传。Supervisor 采用后写入报损 / 内部转换历史；这里不会单独修改正式库存数量。')}</small>
             <div class="employee-movement-grid">
               <div class="employee-movement-box loss">
-                <b>🗑️ 报损</b>
-                <label>数量<input id="employeeLossQty" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 2" /></label>
-                <label>原因<input id="employeeLossNote" maxlength="300" placeholder="例如 内部氧化 / 腐坏 / 发霉" /></label>
-                <button type="button" class="btn danger ghost" id="employeeLossAdd">记入今日报损</button>
+                <b>${T('🗑️ 报损')}</b>
+                <label>${T('数量')}<input id="employeeLossQty" type="text" inputmode="decimal" autocomplete="off" placeholder="${T('例如 2')}" /></label>
+                <label>${T('原因')}<input id="employeeLossNote" maxlength="300" placeholder="${T('例如 内部氧化 / 腐坏 / 发霉')}" /></label>
+                <button type="button" class="btn danger ghost" id="employeeLossAdd">${T('记入今日报损')}</button>
               </div>
               <div class="employee-movement-box transfer">
-                <b>🔄 转化</b>
-                <label>转成<select id="employeeTransferTarget"></select></label>
-                <label>数量<input id="employeeTransferQty" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 2" /></label>
-                <label>备注<input id="employeeTransferNote" maxlength="300" placeholder="例如 熟化：硬 → 软" /></label>
-                <button type="button" class="btn secondary" id="employeeTransferAdd">记入今日转化</button>
+                <b>${T('🔄 转化')}</b>
+                <label>${T('转成')}<select id="employeeTransferTarget"></select></label>
+                <label>${T('数量')}<input id="employeeTransferQty" type="text" inputmode="decimal" autocomplete="off" placeholder="${T('例如 2')}" /></label>
+                <label>${T('备注')}<input id="employeeTransferNote" maxlength="300" placeholder="${T('例如 熟化：硬 → 软')}" /></label>
+                <button type="button" class="btn secondary" id="employeeTransferAdd">${T('记入今日转化')}</button>
               </div>
             </div>
             <div id="employeeMovementDraft" class="employee-movement-draft"></div>
           </div>
           <div class="employee-proposal-card">
-            <strong>🧪 现场规格 / 包装不一致</strong>
-            <small>记录现场真正看到的包装。这里只提交提议，不会直接修改正式 SKU；Supervisor 可以更新原 SKU，也可以把它新建成同商品的另一个规格 SKU。</small>
+            <strong>${T('🧪 现场规格 / 包装不一致')}</strong>
+            <small>${T('记录现场真正看到的包装。这里只提交提议，不会直接修改正式 SKU；Supervisor 可以更新原 SKU，也可以把它新建成同商品的另一个规格 SKU。')}</small>
             <div class="employee-proposal-grid">
-              <label>现场库存规格<input id="employeeSkuSpec" maxlength="100" placeholder="例如 500g / 1kg / 20张" /></label>
-              <label>现场品牌（可选）<input id="employeeSkuBrand" maxlength="80" placeholder="例如 Kikkoman / 恒丰" /></label>
-              <label>现场库存单位<input id="employeeSkuUnit" list="employeeUnitOptions" maxlength="24" placeholder="包 / 盒 / 瓶" /></label>
-              <label>现场订货单位<input id="employeeSkuOrderUnit" list="employeeUnitOptions" maxlength="24" placeholder="箱 / 件；不换算时同库存单位" /></label>
-              <label>换算：1 订货单位 = 几个库存单位<input id="employeeSkuFactor" type="text" inputmode="decimal" autocomplete="off" placeholder="例如 10" /></label>
+              <label>${T('现场库存规格')}<input id="employeeSkuSpec" maxlength="100" placeholder="${T('例如 500g / 1kg / 20张')}" /></label>
+              <label>${T('现场品牌（可选）')}<input id="employeeSkuBrand" maxlength="80" placeholder="${T('例如 Kikkoman / 恒丰')}" /></label>
+              <label>${T('现场库存单位')}<input id="employeeSkuUnit" list="employeeUnitOptions" maxlength="24" placeholder="${T('包 / 盒 / 瓶')}" /></label>
+              <label>${T('现场订货单位')}<input id="employeeSkuOrderUnit" list="employeeUnitOptions" maxlength="24" placeholder="${T('箱 / 件；不换算时同库存单位')}" /></label>
+              <label>${T('换算：1 订货单位 = 几个库存单位')}<input id="employeeSkuFactor" type="text" inputmode="decimal" autocomplete="off" placeholder="${T('例如 10')}" /></label>
             </div>
-            <label>备注<input id="employeeSkuNote" maxlength="300" placeholder="例如：今天到的是整箱，标签写 6kg" /></label>
-            <button type="button" class="btn primary large" id="employeeSkuChangeSubmit">提交给 Supervisor</button>
+            <label>${T('备注')}<input id="employeeSkuNote" maxlength="300" placeholder="${T('例如：今天到的是整箱，标签写 6kg')}" /></label>
+            <button type="button" class="btn primary large" id="employeeSkuChangeSubmit">${T('提交给 Supervisor')}</button>
           </div>
           <div class="employee-proposal-card issue">
-            <strong>🚩 这个 SKU 有问题</strong>
-            <label>问题描述<input id="employeeSkuIssueNote" maxlength="300" placeholder="例如：标签不清楚 / 商品不是同一个规格" /></label>
-            <button type="button" class="btn secondary" id="employeeSkuIssueSubmit">只报告问题</button>
+            <strong>${T('🚩 这个 SKU 有问题')}</strong>
+            <label>${T('问题描述')}<input id="employeeSkuIssueNote" maxlength="300" placeholder="${T('例如：标签不清楚 / 商品不是同一个规格')}" /></label>
+            <button type="button" class="btn secondary" id="employeeSkuIssueSubmit">${T('只报告问题')}</button>
           </div>
-          <button value="cancel" formnovalidate class="btn secondary large">关闭</button>
+          <button value="cancel" formnovalidate class="btn secondary large">${T('关闭')}</button>
         </form>`;
       document.body.appendChild(d);
     }
 
     if(!document.getElementById('employeeNewSkuDialog')){
-      const d=document.createElement('dialog');d.id='employeeNewSkuDialog';d.className='employee-tool-dialog';
+      const d=document.createElement('dialog');d.id='employeeNewSkuDialog';d.className='employee-tool-dialog';d.dataset.lang=L.lang();d.lang=L.html();
       d.innerHTML=`
         <form method="dialog" id="employeeNewSkuForm">
           <div class="dialog-head">
-            <div><div class="eyebrow">FIELD SKU PROPOSAL</div><h3>＋ 现场新 SKU</h3></div>
+            <div><div class="eyebrow">FIELD SKU PROPOSAL</div><h3>${T('＋ 现场新 SKU')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
-          <div class="employee-proposal-banner">🟠 新 SKU 只会进入待审核区。Supervisor 接受以后才会进入正式库存。</div>
+          <div class="employee-proposal-banner">${T('🟠 新 SKU 只会进入待审核区。Supervisor 接受以后才会进入正式库存。')}</div>
           <datalist id="employeeNewUnitOptions">${unitOptions()}</datalist>
           <datalist id="employeeCategoryOptions"></datalist>
           <datalist id="employeeSupplierOptions"></datalist>
-          <label>名称<input id="employeeNewName" maxlength="80" required placeholder="例如 Ikura / Surimi" /></label>
+          <label>${T('名称')}<input id="employeeNewName" maxlength="80" required placeholder="${T('例如 Ikura / Surimi')}" /></label>
           <div class="employee-proposal-grid">
-            <label>商品卡 / 商品族<input id="employeeNewFamilyName" maxlength="80" placeholder="同商品不同规格填同一个，例如 Ikura" /></label>
-            <label>品牌（可选）<input id="employeeNewBrand" maxlength="80" placeholder="例如 Kikkoman / 恒丰" /></label>
-            <label>库存规格<input id="employeeNewSpec" maxlength="100" placeholder="例如 500g / 1kg / 20张" /></label>
-            <label>库存单位<input id="employeeNewUnit" list="employeeNewUnitOptions" maxlength="24" required placeholder="个 / 包 / 箱 / 其他" /></label>
-            <label>订货单位<input id="employeeNewOrderUnit" list="employeeNewUnitOptions" maxlength="24" placeholder="与库存单位相同" /></label>
-            <label>换算：1 订货单位 = 几个库存单位<input id="employeeNewFactor" type="text" inputmode="decimal" autocomplete="off" value="1" /></label>
+            <label>${T('商品卡 / 商品族')}<input id="employeeNewFamilyName" maxlength="80" placeholder="${T('同商品不同规格填同一个，例如 Ikura')}" /></label>
+            <label>${T('品牌（可选）')}<input id="employeeNewBrand" maxlength="80" placeholder="${T('例如 Kikkoman / 恒丰')}" /></label>
+            <label>${T('库存规格')}<input id="employeeNewSpec" maxlength="100" placeholder="${T('例如 500g / 1kg / 20张')}" /></label>
+            <label>${T('库存单位')}<input id="employeeNewUnit" list="employeeNewUnitOptions" maxlength="24" required placeholder="${T('个 / 包 / 箱 / 其他')}" /></label>
+            <label>${T('订货单位')}<input id="employeeNewOrderUnit" list="employeeNewUnitOptions" maxlength="24" placeholder="${T('与库存单位相同')}" /></label>
+            <label>${T('换算：1 订货单位 = 几个库存单位')}<input id="employeeNewFactor" type="text" inputmode="decimal" autocomplete="off" value="1" /></label>
           </div>
           <div class="employee-proposal-grid">
-            <label>分类<input id="employeeNewCategory" list="employeeCategoryOptions" maxlength="60" placeholder="例如 蔬果 / 冷冻" /></label>
-            <label>供应商<input id="employeeNewSupplier" list="employeeSupplierOptions" maxlength="120" placeholder="例如 大兴 / 米兰" /></label>
-            <label>区域<select id="employeeNewArea"><option value="sushi">🍣 Sushi</option><option value="cucina">🔪 Cucina</option><option value="bar">🍸 Bar / Sala</option><option value="common">📦 Comune</option></select></label>
-            <label>现场数量<input id="employeeNewQty" type="text" inputmode="decimal" autocomplete="off" placeholder="可空" /></label>
+            <label>${T('分类')}<input id="employeeNewCategory" list="employeeCategoryOptions" maxlength="60" placeholder="${T('例如 蔬果 / 冷冻')}" /></label>
+            <label>${T('供应商')}<input id="employeeNewSupplier" list="employeeSupplierOptions" maxlength="120" placeholder="${T('例如 大兴 / 米兰')}" /></label>
+            <label>${T('区域')}<select id="employeeNewArea"><option value="sushi">🍣 Sushi</option><option value="cucina">🔪 Cucina</option><option value="bar">🍸 Bar / Sala</option><option value="common">📦 Comune</option></select></label>
+            <label>${T('现场数量')}<input id="employeeNewQty" type="text" inputmode="decimal" autocomplete="off" placeholder="${T('可空')}" /></label>
           </div>
-          <label>备注<input id="employeeNewNote" maxlength="300" placeholder="为什么现有列表里没有它？" /></label>
-          <button type="button" class="btn primary large" id="employeeNewSkuSubmit">提交新 SKU 提议</button>
-          <button value="cancel" formnovalidate class="btn secondary large">取消</button>
+          <label>${T('备注')}<input id="employeeNewNote" maxlength="300" placeholder="${T('为什么现有列表里没有它？')}" /></label>
+          <button type="button" class="btn primary large" id="employeeNewSkuSubmit">${T('提交新 SKU 提议')}</button>
+          <button value="cancel" formnovalidate class="btn secondary large">${T('取消')}</button>
         </form>`;
       document.body.appendChild(d);
     }
 
     if(!document.getElementById('employeeNewCategoryDialog')){
-      const d=document.createElement('dialog');d.id='employeeNewCategoryDialog';d.className='employee-tool-dialog';
+      const d=document.createElement('dialog');d.id='employeeNewCategoryDialog';d.className='employee-tool-dialog';d.dataset.lang=L.lang();d.lang=L.html();
       d.innerHTML=`
         <form method="dialog">
           <div class="dialog-head">
-            <div><div class="eyebrow">CATEGORY PROPOSAL</div><h3>＋ 提议新分类</h3></div>
+            <div><div class="eyebrow">CATEGORY PROPOSAL</div><h3>${T('＋ 提议新分类')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
-          <div class="employee-proposal-banner">🏷️ 只是提议。Supervisor 批准后才会进入正式 Inventory 分类。</div>
-          <label>新分类名称<input id="employeeNewCategoryName" maxlength="60" placeholder="例如 果泥 / 冷藏甜品" /></label>
-          <label>说明<input id="employeeNewCategoryNote" maxlength="300" placeholder="为什么现有分类不合适？" /></label>
-          <button type="button" class="btn primary large" id="employeeNewCategorySubmit">提交分类提议</button>
-          <button value="cancel" formnovalidate class="btn secondary large">取消</button>
+          <div class="employee-proposal-banner">${T('🏷️ 只是提议。Supervisor 批准后才会进入正式 Inventory 分类。')}</div>
+          <label>${T('新分类名称')}<input id="employeeNewCategoryName" maxlength="60" placeholder="${T('例如 果泥 / 冷藏甜品')}" /></label>
+          <label>${T('说明')}<input id="employeeNewCategoryNote" maxlength="300" placeholder="${T('为什么现有分类不合适？')}" /></label>
+          <button type="button" class="btn primary large" id="employeeNewCategorySubmit">${T('提交分类提议')}</button>
+          <button value="cancel" formnovalidate class="btn secondary large">${T('取消')}</button>
         </form>`;
       document.body.appendChild(d);
     }
 
     if(!document.getElementById('employeeReclassifyDialog')){
-      const d=document.createElement('dialog');d.id='employeeReclassifyDialog';d.className='employee-tool-dialog';
+      const d=document.createElement('dialog');d.id='employeeReclassifyDialog';d.className='employee-tool-dialog';d.dataset.lang=L.lang();d.lang=L.html();
       d.innerHTML=`
         <form method="dialog">
           <div class="dialog-head">
-            <div><div class="eyebrow">RECLASSIFY PROPOSAL</div><h3 id="employeeReclassifyTitle">🏷️ 重新归类 SKU</h3></div>
+            <div><div class="eyebrow">RECLASSIFY PROPOSAL</div><h3 id="employeeReclassifyTitle">${T('🏷️ 重新归类 SKU')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
           <input type="hidden" id="employeeReclassifySkuId" />
           <div id="employeeReclassifyCurrent" class="employee-standard-card"></div>
           <datalist id="employeeReclassifyCategoryOptions"></datalist>
-          <label>建议分类<input id="employeeReclassifyCategory" list="employeeReclassifyCategoryOptions" maxlength="60" placeholder="选择已有分类，也可以填写新分类" /></label>
-          <label>说明<input id="employeeReclassifyNote" maxlength="300" placeholder="为什么要重新归类？" /></label>
-          <div class="employee-proposal-banner">Supervisor 批准后才会改正式 SKU。若这是新分类，批准时会同时登记分类。</div>
-          <button type="button" class="btn primary large" id="employeeReclassifySubmit">提交归类提议</button>
-          <button value="cancel" formnovalidate class="btn secondary large">取消</button>
+          <label>${T('建议分类')}<input id="employeeReclassifyCategory" list="employeeReclassifyCategoryOptions" maxlength="60" placeholder="${T('选择已有分类，也可以填写新分类')}" /></label>
+          <label>${T('说明')}<input id="employeeReclassifyNote" maxlength="300" placeholder="${T('为什么要重新归类？')}" /></label>
+          <div class="employee-proposal-banner">${T('Supervisor 批准后才会改正式 SKU。若这是新分类，批准时会同时登记分类。')}</div>
+          <button type="button" class="btn primary large" id="employeeReclassifySubmit">${T('提交归类提议')}</button>
+          <button value="cancel" formnovalidate class="btn secondary large">${T('取消')}</button>
         </form>`;
       document.body.appendChild(d);
     }
@@ -191,12 +202,12 @@
   function panelHtml(){
     const rows=proposalCatalog();
     return '<section class="employee-sku-center">'+
-      '<div class="employee-sku-center-intro"><div><span class="eyebrow">SKU FIELD TOOLS</span><h2>📦 SKU 现场功能</h2><p>发现现实可以，改正式数据库不行。新 SKU / 新分类 / 重新归类都先交给 Supervisor。🗿💢</p></div></div>'+
-      '<div class="employee-sku-center-actions"><button type="button" class="btn primary" data-employee-new-sku>＋ 新 SKU</button><button type="button" class="btn secondary" data-employee-new-category>🏷️ 新分类</button></div>'+
+      ('<div class="employee-sku-center-intro"><div><span class="eyebrow">SKU FIELD TOOLS</span><h2>'+T('📦 SKU 现场功能')+'</h2><p>'+T('发现现实可以，改正式数据库不行。新 SKU / 新分类 / 重新归类都先交给 Supervisor。🗿💢')+'</p></div></div>')+
+      ('<div class="employee-sku-center-actions"><button type="button" class="btn primary" data-employee-new-sku>'+T('＋ 新 SKU')+'</button><button type="button" class="btn secondary" data-employee-new-category>'+T('🏷️ 新分类')+'</button></div>')+
       '<div class="employee-sku-center-list">'+
-        (rows.length?rows.map(x=>'<article class="employee-sku-center-row"><div><strong>'+esc(x.name||'SKU')+'</strong><small>'+esc(x.spec||'无规格')+' · '+esc(x.category||'未分类')+' · '+esc(x.supplier||'未设供应商')+'</small></div><button type="button" class="btn secondary" data-employee-reclassify="'+esc(x.id)+'">重新归类</button></article>').join(''):'<div class="empty">当前还没有可查看的正式 SKU。新 SKU 仍可以单独提议。</div>')+
+        (rows.length?rows.map(x=>'<article class="employee-sku-center-row"><div><strong>'+esc(L.sku(x.name||'SKU'))+'</strong><small>'+esc(x.spec||T('无规格'))+' · '+esc(x.category?L.cat(x.category):T('未分类'))+' · '+esc(x.supplier||T('未设供应商'))+'</small></div><button type="button" class="btn secondary" data-employee-reclassify="'+esc(x.id)+('">'+T('重新归类')+'</button></article>')).join(''):('<div class="empty">'+T('当前还没有可查看的正式 SKU。新 SKU 仍可以单独提议。')+'</div>'))+
       '</div>'+
-      '<div class="employee-sku-center-foot">员工提交的是 proposal，不会直接创建 / 改名 / 改分类 / 改库存。Supervisor 可以看完再决定要不要收编这只 SKU。</div>'+
+      ('<div class="employee-sku-center-foot">'+T('员工提交的是 proposal，不会直接创建 / 改名 / 改分类 / 改库存。Supervisor 可以看完再决定要不要收编这只 SKU。')+'</div>')+
     '</section>';
   }
 
@@ -210,21 +221,21 @@
       }
     }
     window.CassolaCloud?.queueSkuProposal?.(proposal);
-    if(typeof showToast==='function')showToast('📵 SKU 提议已保存待发送');
+    if(typeof showToast==='function')showToast(T('📵 SKU 提议已保存待发送'));
     return{queued:true};
   }
 
   function openDetail(id,opts={}){
     ensureDialogs();
-    const sku=findSku(id);if(!sku){alert('找不到这个 SKU。');return}
+    const sku=findSku(id);if(!sku){alert(T('找不到这个 SKU。'));return}
     document.getElementById('employeeSkuDetailId').value=sku.id;
-    document.getElementById('employeeSkuDetailTitle').textContent=(opts.specOnly?'现场规格上报 · ':'')+(sku.name||'SKU 详情');
-    const orderUnit=String(sku.orderUnit||sku.unit||'未填写'),stockUnit=String(sku.unit||'未填写'),factor=Number(sku.unitsPerOrder)>0?Number(sku.unitsPerOrder):1;
+    document.getElementById('employeeSkuDetailTitle').textContent=(opts.specOnly?T('现场规格上报')+' · ':'')+(sku.name?L.sku(sku.name):T('SKU 详情'));
+    const orderUnit=String(sku.orderUnit||sku.unit||T('未填写')),stockUnit=String(sku.unit||T('未填写')),factor=Number(sku.unitsPerOrder)>0?Number(sku.unitsPerOrder):1;
     document.getElementById('employeeSkuCurrent').innerHTML=
-      '<div><span>库存规格</span><b>'+esc(sku.spec||'未填写')+'</b></div>'+
-      '<div><span>品牌</span><b>'+esc(sku.brand||'未填写')+'</b></div>'+
-      '<div><span>库存单位</span><b>'+esc(stockUnit)+'</b></div>'+
-      '<div><span>订货单位 / 换算</span><b>'+esc(orderUnit)+' · 1 '+esc(orderUnit)+' = '+esc(factor)+' '+esc(stockUnit)+'</b></div>';
+      ('<div><span>'+T('库存规格')+'</span><b>')+esc(sku.spec||T('未填写'))+'</b></div>'+
+      ('<div><span>'+T('品牌')+'</span><b>')+esc(sku.brand||T('未填写'))+'</b></div>'+
+      ('<div><span>'+T('库存单位')+'</span><b>')+esc(L.unit(stockUnit))+'</b></div>'+
+      ('<div><span>'+T('订货单位 / 换算')+'</span><b>')+esc(L.unit(orderUnit))+' · 1 '+esc(L.unit(orderUnit))+' = '+esc(factor)+' '+esc(L.unit(stockUnit))+'</b></div>';
     document.getElementById('employeeMovementCard')?.classList.toggle('hidden',!!opts.specOnly);
     document.getElementById('employeeSkuSpec').value='';
     document.getElementById('employeeSkuBrand').value='';
@@ -241,7 +252,7 @@
     const allowedIds=new Set(configured.map(String));
     const targets=catalog().filter(x=>allowedIds.has(String(x.id))&&String(x.unit||'')===String(sku.unit||''));
     const targetSelect=document.getElementById('employeeTransferTarget');
-    targetSelect.innerHTML=targets.length?targets.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' · '+esc(x.unit||'')+'</option>').join(''):'<option value="">没有同单位可转化 SKU</option>';
+    targetSelect.innerHTML=targets.length?targets.map(x=>'<option value="'+esc(x.id)+'">'+esc(L.sku(x.name))+' · '+esc(L.unit(x.unit||''))+'</option>').join(''):('<option value="">'+T('没有同单位可转化 SKU')+'</option>');
     const preferred={avocado_hard:'avocado_soft',avocado_half:'avocado_soft',mango_hard:'mango_soft'}[String(sku.id)];
     if(preferred&&targets.some(x=>String(x.id)===preferred))targetSelect.value=preferred;
     targetSelect.disabled=!targets.length;
@@ -260,42 +271,42 @@
     const root=document.getElementById('employeeMovementDraft');if(!root)return;
     const source=movementSku();if(!source){root.innerHTML='';return}
     const events=window.CassolaHub?.employeeEventsForSku?.(source.id)||[];
-    root.innerHTML=events.length?'<div class="employee-movement-title">今日已记录 '+events.length+' 条</div>'+events.map(e=>{
+    root.innerHTML=events.length?'<div class="employee-movement-title">'+T('今日已记录 {n} 条',{n:events.length})+'</div>'+events.map(e=>{
       const target=e.targetId?findSku(e.targetId):null;
       const label=e.type==='loss'
-        ?('🗑️ 报损 '+esc(e.qty)+' '+esc(source.unit||''))
-        :('🔄 '+esc(source.name)+' → '+esc(target?.name||e.targetId||'目标')+' · '+esc(e.qty)+' '+esc(source.unit||''));
+        ?(T('🗑️ 报损')+' '+esc(e.qty)+' '+esc(L.unit(source.unit||'')))
+        :('🔄 '+esc(L.sku(source.name))+' → '+esc(target?.name?L.sku(target.name):(e.targetId||T('目标')))+' · '+esc(e.qty)+' '+esc(L.unit(source.unit||'')));
       return '<div class="employee-movement-item"><div><b>'+label+'</b>'+(e.note?'<small>'+esc(e.note)+'</small>':'')+'</div><button type="button" data-employee-event-remove="'+esc(e.id)+'">✕</button></div>';
-    }).join(''):'<div class="employee-movement-empty">今天还没有报损 / 转化记录。</div>';
+    }).join(''):('<div class="employee-movement-empty">'+T('今天还没有报损 / 转化记录。')+'</div>');
   }
   function addLossEvent(){
     const source=movementSku();if(!source)return;
     const qty=parseMovementQty('employeeLossQty'),note=document.getElementById('employeeLossNote').value.trim();
-    if(!(qty>0)){if(typeof showToast==='function')showToast('报损数量要大于 0');return}
-    if(!note){if(typeof showToast==='function')showToast('写一下报损原因');return}
+    if(!(qty>0)){if(typeof showToast==='function')showToast(T('报损数量要大于 0'));return}
+    if(!note){if(typeof showToast==='function')showToast(T('写一下报损原因'));return}
     window.CassolaHub?.addEmployeeEvent?.({type:'loss',skuId:source.id,qty,note});
     document.getElementById('employeeLossQty').value='';
     document.getElementById('employeeLossNote').value='';
     renderMovementDraft();window.CassolaHub?.refreshEmployee?.();
-    if(typeof showToast==='function')showToast('🗑️ 已记入今日报损');
+    if(typeof showToast==='function')showToast(T('🗑️ 已记入今日报损'));
   }
   function addTransferEvent(){
     const source=movementSku();if(!source)return;
     const targetId=document.getElementById('employeeTransferTarget').value,target=findSku(targetId);
     const qty=parseMovementQty('employeeTransferQty'),note=document.getElementById('employeeTransferNote').value.trim();
-    if(!target){if(typeof showToast==='function')showToast('先选择转化目标');return}
-    if(String(target.unit||'')!==String(source.unit||'')){if(typeof showToast==='function')showToast('转化目标必须和来源使用同一库存单位');return}
-    if(!(qty>0)){if(typeof showToast==='function')showToast('转化数量要大于 0');return}
+    if(!target){if(typeof showToast==='function')showToast(T('先选择转化目标'));return}
+    if(String(target.unit||'')!==String(source.unit||'')){if(typeof showToast==='function')showToast(T('转化目标必须和来源使用同一库存单位'));return}
+    if(!(qty>0)){if(typeof showToast==='function')showToast(T('转化数量要大于 0'));return}
     window.CassolaHub?.addEmployeeEvent?.({type:'transfer',skuId:source.id,targetId:target.id,qty,note});
     document.getElementById('employeeTransferQty').value='';
     document.getElementById('employeeTransferNote').value='';
     renderMovementDraft();window.CassolaHub?.refreshEmployee?.();
-    if(typeof showToast==='function')showToast('🔄 已记入今日转化');
+    if(typeof showToast==='function')showToast(T('🔄 已记入今日转化'));
   }
   function removeMovementEvent(id){
     if(window.CassolaHub?.removeEmployeeEvent?.(id)){
       renderMovementDraft();window.CassolaHub?.refreshEmployee?.();
-      if(typeof showToast==='function')showToast('已移除这条今日变动');
+      if(typeof showToast==='function')showToast(T('已移除这条今日变动'));
     }
   }
 
@@ -310,7 +321,7 @@
       unitsPerOrder:parseFloat(String(document.getElementById('employeeSkuFactor').value||'').replace(',','.'))||0
     };
     if(!proposed.spec&&!proposed.brand&&!proposed.unit&&!proposed.orderUnit&&!proposed.unitsPerOrder){
-      if(typeof showToast==='function')showToast('先填写一个现场变化');return;
+      if(typeof showToast==='function')showToast(T('先填写一个现场变化'));return;
     }
     const p={
       proposalId:crypto.randomUUID?.()||String(Date.now()+Math.random()),
@@ -323,14 +334,14 @@
     try{
       const r=await submitOrQueue(p);
       document.getElementById('employeeSkuDetailDialog').close();
-      if(!r.queued&&typeof showToast==='function')showToast('🧪 已交给 Supervisor 审核');
-    }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+      if(!r.queued&&typeof showToast==='function')showToast(T('🧪 已交给 Supervisor 审核'));
+    }catch(err){alert(T('提交失败：')+(err?.data?.detail||err?.message||T('未知错误')))}
   }
 
   async function submitIssue(){
     const sku=findSku(document.getElementById('employeeSkuDetailId').value);if(!sku)return;
     const note=document.getElementById('employeeSkuIssueNote').value.trim();
-    if(!note){if(typeof showToast==='function')showToast('写一下哪里不对');return}
+    if(!note){if(typeof showToast==='function')showToast(T('写一下哪里不对'));return}
     const p={
       proposalId:crypto.randomUUID?.()||String(Date.now()+Math.random()),
       proposalType:'sku_issue',
@@ -342,8 +353,8 @@
     try{
       const r=await submitOrQueue(p);
       document.getElementById('employeeSkuDetailDialog').close();
-      if(!r.queued&&typeof showToast==='function')showToast('🚩 问题已报告');
-    }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+      if(!r.queued&&typeof showToast==='function')showToast(T('🚩 问题已报告'));
+    }catch(err){alert(T('提交失败：')+(err?.data?.detail||err?.message||T('未知错误')))}
   }
 
   function openNewSku(){
@@ -361,11 +372,11 @@
   async function submitNewSku(){
     const name=document.getElementById('employeeNewName').value.trim();
     const unit=document.getElementById('employeeNewUnit').value;
-    if(!name||!unit){if(typeof showToast==='function')showToast('名称和库存单位必须填');return}
+    if(!name||!unit){if(typeof showToast==='function')showToast(T('名称和库存单位必须填'));return}
     const sessionNow=session(),scope=sessionNow?.scope||{};
     const qtyRaw=document.getElementById('employeeNewQty').value.trim();
     const qty=qtyRaw===''?null:Number(qtyRaw.replace(',','.'));
-    if(qty!==null&&(!Number.isFinite(qty)||qty<0)){if(typeof showToast==='function')showToast('现场数量不对');return}
+    if(qty!==null&&(!Number.isFinite(qty)||qty<0)){if(typeof showToast==='function')showToast(T('现场数量不对'));return}
     const p={
       proposalId:crypto.randomUUID?.()||String(Date.now()+Math.random()),
       proposalType:'new_sku',
@@ -388,8 +399,8 @@
     try{
       const r=await submitOrQueue(p);
       document.getElementById('employeeNewSkuDialog').close();
-      if(!r.queued&&typeof showToast==='function')showToast('🧪 新 SKU 已进入待审核');
-    }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+      if(!r.queued&&typeof showToast==='function')showToast(T('🧪 新 SKU 已进入待审核'));
+    }catch(err){alert(T('提交失败：')+(err?.data?.detail||err?.message||T('未知错误')))}
   }
 
   function openNewCategory(){
@@ -400,20 +411,20 @@
   }
   async function submitNewCategory(){
     const category=document.getElementById('employeeNewCategoryName').value.trim(),note=document.getElementById('employeeNewCategoryNote').value.trim();
-    if(!category){if(typeof showToast==='function')showToast('分类名称不能为空');return}
-    if(proposalCategories().includes(category)){if(typeof showToast==='function')showToast('这个分类已经存在');return}
+    if(!category){if(typeof showToast==='function')showToast(T('分类名称不能为空'));return}
+    if(proposalCategories().includes(category)){if(typeof showToast==='function')showToast(T('这个分类已经存在'));return}
     const p={proposalId:crypto.randomUUID?.()||String(Date.now()+Math.random()),proposalType:'new_category',businessDate:today(),proposed:{category},note};
     try{
       const r=await submitOrQueue(p);document.getElementById('employeeNewCategoryDialog').close();
-      if(!r.queued&&typeof showToast==='function')showToast('🏷️ 新分类已交给 Supervisor');
-    }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+      if(!r.queued&&typeof showToast==='function')showToast(T('🏷️ 新分类已交给 Supervisor'));
+    }catch(err){alert(T('提交失败：')+(err?.data?.detail||err?.message||T('未知错误')))}
   }
   function openReclassify(id){
     ensureDialogs();refreshProposalOptions();
-    const sku=proposalCatalog().find(x=>String(x.id)===String(id));if(!sku){alert('找不到这个正式 SKU。');return}
+    const sku=proposalCatalog().find(x=>String(x.id)===String(id));if(!sku){alert(T('找不到这个正式 SKU。'));return}
     document.getElementById('employeeReclassifySkuId').value=sku.id;
-    document.getElementById('employeeReclassifyTitle').textContent='🏷️ '+(sku.name||'SKU')+' · 重新归类';
-    document.getElementById('employeeReclassifyCurrent').innerHTML='<div><span>当前分类</span><b>'+esc(sku.category||'未分类')+'</b></div><div><span>供应商</span><b>'+esc(sku.supplier||'未设置')+'</b></div>';
+    document.getElementById('employeeReclassifyTitle').textContent='🏷️ '+L.sku(sku.name||'SKU')+' · '+T('重新归类');
+    document.getElementById('employeeReclassifyCurrent').innerHTML=('<div><span>'+T('当前分类')+'</span><b>')+esc(sku.category?L.cat(sku.category):T('未分类'))+('</b></div><div><span>'+T('供应商')+'</span><b>')+esc(sku.supplier||T('未设置'))+'</b></div>';
     document.getElementById('employeeReclassifyCategory').value='';
     document.getElementById('employeeReclassifyNote').value='';
     document.getElementById('employeeReclassifyDialog').showModal();
@@ -422,13 +433,13 @@
     const skuId=document.getElementById('employeeReclassifySkuId').value,sku=proposalCatalog().find(x=>String(x.id)===String(skuId));
     if(!sku)return;
     const category=document.getElementById('employeeReclassifyCategory').value.trim(),note=document.getElementById('employeeReclassifyNote').value.trim();
-    if(!category){if(typeof showToast==='function')showToast('先填写建议分类');return}
-    if(category===String(sku.category||'')){if(typeof showToast==='function')showToast('它现在已经是这个分类');return}
+    if(!category){if(typeof showToast==='function')showToast(T('先填写建议分类'));return}
+    if(category===String(sku.category||'')){if(typeof showToast==='function')showToast(T('它现在已经是这个分类'));return}
     const p={proposalId:crypto.randomUUID?.()||String(Date.now()+Math.random()),proposalType:'sku_reclassify',skuId:sku.id,businessDate:today(),proposed:{category},note};
     try{
       const r=await submitOrQueue(p);document.getElementById('employeeReclassifyDialog').close();
-      if(!r.queued&&typeof showToast==='function')showToast('🏷️ 归类提议已交给 Supervisor');
-    }catch(err){alert('提交失败：'+(err?.data?.detail||err?.message||'未知错误'))}
+      if(!r.queued&&typeof showToast==='function')showToast(T('🏷️ 归类提议已交给 Supervisor'));
+    }catch(err){alert(T('提交失败：')+(err?.data?.detail||err?.message||T('未知错误')))}
   }
 
   function proposalTypeLabel(type){

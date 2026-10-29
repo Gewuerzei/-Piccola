@@ -220,6 +220,13 @@ document.getElementById('v3DeleteSku').addEventListener('click',e=>{e.preventDef
 document.getElementById('v3SuggestBtn').addEventListener('click',v3Generate);
 document.getElementById('v3PlaceBtn').addEventListener('click',v3Place);
 document.getElementById('v3PlacedList').addEventListener('change',e=>{if(e.target.classList.contains('v3-receive-qty')){const r=e.target.closest('[data-v3-order]');v3Qty(r.dataset.v3Order,r.dataset.v3Item,e.target.value)}});
-document.getElementById('searchInput').addEventListener('input',renderStock);
+/* v0.8: typing waits briefly before re-rendering; programmatic searches (global search,
+   analytics jump) are not trusted events and still render immediately. */
+var v8SearchTimer=0;
+document.getElementById('searchInput').addEventListener('input',e=>{
+  clearTimeout(v8SearchTimer);
+  if(!e.isTrusted){renderStock();return}
+  v8SearchTimer=setTimeout(()=>renderStock(),120);
+});
 document.getElementById('categoryFilter').addEventListener('change',renderStock);
 renderAll();

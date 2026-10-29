@@ -315,3 +315,29 @@
 
   window.CassolaUIExtras={applyTheme,openSearch,injectThemeCard,injectStaffThemeCard,injectSearchButtons};
 })();
+/* v0.8 · Sticky rows sit exactly under the real top bar.
+   The search row (top:76px) and the Staff tool rows (top:77px) assumed a fixed
+   header height. On iPhones with a notch / Dynamic Island the header also holds
+   the status-bar inset (and a two-line title), so it is ~140px tall and the
+   sticky rows slid completely behind it. We measure the header instead and
+   expose it as a CSS variable; v08-polish.css uses it with the old value as
+   fallback. Layout only: no state, storage or data involved. */
+(function(){
+  const root=document.documentElement;
+  const targets=[['body > .topbar','--cassola-topbar-h'],['.staff-topbar','--cassola-staff-topbar-h']];
+  const watched=new WeakSet();
+  const ro=typeof ResizeObserver==='function'?new ResizeObserver(()=>measure()):null;
+  function measure(){
+    for(const [selector,name] of targets){
+      const el=document.querySelector(selector);if(!el)continue;
+      if(ro&&!watched.has(el)){try{ro.observe(el,{box:'border-box'})}catch(_){ro.observe(el)}watched.add(el)}
+      const h=Math.round(el.getBoundingClientRect().height);
+      if(h>0)root.style.setProperty(name,h+'px');
+    }
+  }
+  measure();
+  window.addEventListener('resize',measure);
+  window.addEventListener('orientationchange',()=>setTimeout(measure,250));
+  window.addEventListener('load',measure);
+  if(typeof MutationObserver==='function')new MutationObserver(measure).observe(document.body,{attributes:true,attributeFilter:['data-cassola-mode']});
+})();
