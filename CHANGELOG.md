@@ -12,8 +12,9 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 实测（Chromium，Sushi 区 + 2500 条历史）：库存页一次渲染 4296 ms → 23 ms；搜索框每打一字的同步耗时 879 ms → 14 ms。
 
 **2. 库存页界面（CSS-only，新文件 `v08-polish.css`，最后加载）**
-- 顶栏压成一行（标题不再折成两行）；区域标签、搜索行、排序行、统计卡变薄；三张统计卡固定一行；分类下拉不再截断成「全部分⋮」。首屏可见 SKU 从 1 张变为 2 张。
-- 修正吸顶搜索行的 `top`：此前固定 76px，未计入 iPhone 状态栏 `safe-area-inset-top`，滚动时会被顶栏遮住一截。
+- 顶栏压成一行（iPhone 实机上原标题会折成两行）；区域标签、搜索行、排序行、统计卡变薄，让第一张 SKU 卡更靠上。
+- **注意：界面部分只在 Chromium（Linux）预览中调试，未在 Safari / iPhone 渲染。** Chromium 里看到的「分类下拉截断」「统计卡 2+1 排列」在 Pietro 的 iPhone 实机截图里并不存在（Safari 原生 select 与系统字体不同），相关样式对 iPhone 无害但不是必需。合并前后请以 iPhone 实机为准。
+- 吸顶搜索行的 `top` 改为计入 `safe-area-inset-top`：原值固定 76px，按代码推算在带灵动岛的 iPhone PWA 中滚动时会被顶栏遮住一截，**待实机确认**。
 - 日间主题 + 石墨 accent 下，主按钮（「＋ SKU」「保存本轮盘货」等）原本是米色叠米色几乎看不见，改为深墨色。其余 accent 不变。
 - 保留 Fat UI 契约：圆角不变，触控目标仍 ≥ 44px。删除 `<link>` 即可完整回退。
 
