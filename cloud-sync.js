@@ -17,6 +17,7 @@
     {id:'common',label:'📦 Comune'}
   ];
   let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null,employeeReceiptTasks=null,employeeInventoryTasks=null,reconnectCode=null;
+  let receiptTaskLastCheckedAt=null,receiptTaskCheckFailed=false;
 
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -329,7 +330,7 @@
     try{return await login(reconnectCode)}catch(err){console.warn('Cassola Cloud reconnect failed',err);return null}
   }
   async function logout(){
-    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;employeeReceiptTasks=null;employeeInventoryTasks=null;reconnectCode=null;renderCloudUi();
+    const old=token;token=null;credential=null;lastStatus=null;employeeCatalog=null;employeeReceiptTasks=null;employeeInventoryTasks=null;reconnectCode=null;receiptTaskLastCheckedAt=null;receiptTaskCheckFailed=false;renderCloudUi();
     if(old){
       token=old;try{await api('logout',{},2500)}catch(_){}finally{token=null}
     }
@@ -352,12 +353,21 @@
   }
   async function refreshStatus({silent=false}={}){
     if(!token)return null;
-    const data=await api('status',{localBases:bases()},6500);
+    let data;
+    try{data=await api('status',{localBases:bases()},6500)}
+    catch(err){
+      if(role()==='employee'){
+        receiptTaskCheckFailed=true;
+        window.dispatchEvent(new CustomEvent('cassola-cloud-employee-tasks-change',{detail:{receiptRefreshFailed:true}}));
+      }
+      throw err;
+    }
     lastStatus=data;
     if(role()==='employee'){
       employeeCatalog=data.catalogReady?(Array.isArray(data.scopeCatalog)?clone(data.scopeCatalog):[]):null;
       if(employeeCatalog!==null&&credential?.id)cacheEmployeeCatalog(credential.id,employeeCatalog);
       employeeReceiptTasks=Array.isArray(data.receiptTasks)?clone(data.receiptTasks):[];
+      receiptTaskLastCheckedAt=new Date().toISOString();receiptTaskCheckFailed=false;
       employeeInventoryTasks=Array.isArray(data.inventoryTasks)?clone(data.inventoryTasks):[];
       if(credential?.id){
         cacheEmployeeReceiptTasks(credential.id,employeeReceiptTasks);
@@ -899,6 +909,12 @@
       return cachedEmployeeReceiptTasks(credentialId||credential?.id);
     },
     cachedEmployeeReceiptTasks,
+    receiptTaskSyncInfo:(credentialId)=>{
+      const cached=readReceiptTaskCache()[String(credentialId||credential?.id||'')];
+      return {verified:!!token&&employeeReceiptTasks!==null&&!receiptTaskCheckFailed,
+        checkedAt:receiptTaskLastCheckedAt||cached?.updatedAt||null,
+        connected:!!token};
+    },
     employeeInventoryTasks:(credentialId)=>{
       if(employeeInventoryTasks!==null)return clone(employeeInventoryTasks);
       return cachedEmployeeInventoryTasks(credentialId||credential?.id);
