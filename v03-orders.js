@@ -520,6 +520,22 @@ function v4EnsureEmployeeReceiptDialogs(){
       </form>`;
     document.body.appendChild(d);
   }
+  if(!document.getElementById('v4ReceiptTaskManagerDialog')){
+    const d=document.createElement('dialog');d.id='v4ReceiptTaskManagerDialog';d.className='v45-dialog v4-employee-receipt-dialog';
+    d.innerHTML=`
+      <form method="dialog">
+        <div class="dialog-head"><div><div class="eyebrow">CLOUD RECEIPT TASKS</div><h3>🚚 收货任务管理</h3></div><button value="cancel" formnovalidate class="icon-btn">✕</button></div>
+        <p class="v4-employee-receipt-note">这里读取 Cloud 全店收货授权，不依赖本机订单是否结案。撤销只终止尚未提交的授权，不删除历史和库存。</p>
+        <div class="v4-receipt-manager-tools">
+          <label>显示<select id="v4ReceiptManagerFilter"><option value="active">有效授权 + 待审核</option><option value="all">全部状态（历史只读）</option></select></label>
+          <button type="button" class="btn secondary" id="v4ReceiptManagerReload">🔄 刷新 Cloud</button>
+        </div>
+        <div id="v4ReceiptManagerInfo" class="v4-employee-receipt-note" role="status"></div>
+        <div id="v4ReceiptManagerList" class="v4-receipt-manager-list"></div>
+        <button value="cancel" formnovalidate class="btn secondary large">关闭</button>
+      </form>`;
+    document.body.appendChild(d);
+  }
 }
 function v4EmployeeReceiptName(e){return e?.displayName||e?.label||e?.id||'员工'}
 function v4RenderReceiptExisting(){
@@ -707,12 +723,68 @@ async function v4ApplyEmployeeReceiptTask(taskId){
   }
   await v4OpenEmployeeReceiptInbox();
 }
+
+function v4ReceiptManagerStatus(status){
+  return {authorized:'🟢 已授权 · 未提交',submitted:'🟠 已提交 · 待审核',accepted:'✅ 已采用',rejected:'⛔ 已拒绝',revoked:'↩️ 已撤销'}[String(status)]||'未知状态';
+}
+async function v4OpenReceiptTaskManager(){
+  v4EnsureEmployeeReceiptDialogs();
+  if(!window.CassolaCloud?.connected?.()||window.CassolaCloud?.role?.()!=='supervisor'){
+    alert('管理 Cloud 收货授权需要 Supervisor 联网登录。');return;
+  }
+  const dlg=document.getElementById('v4ReceiptTaskManagerDialog');
+  if(!dlg.open)dlg.showModal();
+  await v4ReloadReceiptTaskManager();
+}
+async function v4ReloadReceiptTaskManager(){
+  const dlg=document.getElementById('v4ReceiptTaskManagerDialog');
+  if(!dlg||!dlg.open)return;
+  const info=document.getElementById('v4ReceiptManagerInfo'),box=document.getElementById('v4ReceiptManagerList');
+  const seq=dlg._refreshSerial=(dlg._refreshSerial||0)+1;
+  info.textContent='⏳ 正在读取 Cloud 授权…';
+  box.innerHTML='';
+  const showAll=document.getElementById('v4ReceiptManagerFilter')?.value==='all';
+  const statuses=showAll?['authorized','submitted','accepted','rejected','revoked']:['authorized','submitted'];
+  try{
+    const data=await window.CassolaCloud.listReceiptTasks(statuses);
+    if(!dlg.open||seq!==dlg._refreshSerial)return;
+    const tasks=Array.isArray(data.tasks)?data.tasks:[];
+    info.textContent='☁️ Cloud 已核对 · '+new Date().toLocaleString('zh-CN')+' · '+tasks.length+' 份'+(tasks.length>=100?'（最多显示最近 100 份）':'');
+    box.innerHTML=tasks.length?tasks.map(t=>{
+      const order=(state.placedOrders||[]).find(o=>String(o.id)===String(t.order_id));
+      const localState=!order?'本机无此订单':(v4OrderDone(order)?'本机订单已结案':'本机订单未结案');
+      const kind=t.source_role_id?'👥 岗位任务':'👤 个人任务';
+      const who=t.displayName||t.source_role_name||'员工';
+      const date=t.authorized_at?new Date(t.authorized_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'日期未知';
+      const count=Array.isArray(t.order_snapshot?.items)?t.order_snapshot.items.length:0;
+      const action=t.status==='authorized'
+        ?'<button type="button" class="btn danger ghost" data-v4-receipt-revoke-task="'+escapeHtml(t.task_id)+'">↩️ 撤销授权</button>'
+        :t.status==='submitted'?'<button type="button" class="btn secondary" data-v4-receipt-manager-review>去审核</button>':'<span>历史保留</span>';
+      return '<article class="v4-receipt-manager-row"><div class="v4-receipt-manager-row-head"><strong>'+escapeHtml(t.supplier||'供应商')+'</strong><span>'+escapeHtml(v4ReceiptManagerStatus(t.status))+'</span></div>'+
+        '<div class="v4-receipt-manager-meta">'+escapeHtml(kind+' · '+who)+' · '+count+' SKU · '+date+'</div>'+
+        '<div class="v4-receipt-manager-meta">'+escapeHtml(localState)+' · ID '+escapeHtml(String(t.task_id||'').slice(0,8))+'</div>'+
+        '<div class="v4-receipt-manager-actions">'+action+'</div></article>';
+    }).join(''):'<div class="empty">Cloud 没有'+(showAll?'收货任务历史':'有效或待审核的收货任务')+'。</div>';
+  }catch(err){
+    if(!dlg.open||seq!==dlg._refreshSerial)return;
+    info.textContent='⚠️ Cloud 读取失败，请检查连接后重试';
+    box.textContent=err?.message||'未知错误';
+  }
+}
 async function v4RevokeEmployeeReceiptTask(taskId){
-  if(!confirm('撤销这份员工收货授权？\n\n员工端任务会在下次联网刷新后消失。'))return;
-  await window.CassolaCloud.revokeReceiptTask(taskId,'Supervisor revoked receipt authorization');
-  showToast('已撤销员工收货授权');
-  const dlg=document.getElementById('v4EmployeeReceiptAuthDialog');
-  if(dlg?._orderId)await v4OpenEmployeeReceiptAuthorize(dlg._orderId);
+  if(!confirm('撤销这份员工收货授权？\\n\\nCloud 授权将立即终止，员工下次联网刷新后任务消失。历史及库存保留。'))return;
+  try{
+    await window.CassolaCloud.revokeReceiptTask(taskId,'Supervisor revoked receipt authorization');
+    showToast('✅ Cloud 已撤销收货授权');
+    const manager=document.getElementById('v4ReceiptTaskManagerDialog');
+    if(manager?.open)await v4ReloadReceiptTaskManager();
+    const dlg=document.getElementById('v4EmployeeReceiptAuthDialog');
+    if(dlg?.open&&dlg._orderId)await v4OpenEmployeeReceiptAuthorize(dlg._orderId);
+  }catch(err){
+    alert('撤销失败，Cloud 状态未确认：'+(err?.data?.detail||err?.message||'未知错误'));
+    const manager=document.getElementById('v4ReceiptTaskManagerDialog');
+    if(manager?.open)await v4ReloadReceiptTaskManager();
+  }
 }
 async function v4RejectEmployeeReceiptTask(taskId){
   if(!confirm('拒绝这份员工收货？\n\n不会修改本机库存。'))return;
@@ -723,8 +795,14 @@ async function v4RejectEmployeeReceiptTask(taskId){
 
 document.addEventListener('change',e=>{
   if(['v4ReceiptEmployeeSelect','v4ReceiptRoleSelect','v4ReceiptTargetMode'].includes(e.target?.id))v4RenderReceiptAuthPreview();
+  if(e.target?.id==='v4ReceiptManagerFilter')v4ReloadReceiptTaskManager();
 });
 document.addEventListener('click',async e=>{
+  if(e.target.closest('#v4OpenReceiptTaskManager')){await v4OpenReceiptTaskManager();return}
+  if(e.target.closest('#v4ReceiptManagerReload')){await v4ReloadReceiptTaskManager();return}
+  if(e.target.closest('[data-v4-receipt-manager-review]')){
+    document.getElementById('v4ReceiptTaskManagerDialog')?.close();await v4OpenEmployeeReceiptInbox();return;
+  }
   const auth=e.target.closest('[data-v4-authorize-receipt]');if(auth){await v4OpenEmployeeReceiptAuthorize(auth.dataset.v4AuthorizeReceipt);return}
   if(e.target.closest('#v4ReceiptAuthorizeBtn')){await v4AuthorizeEmployeeReceipt();return}
   const revoke=e.target.closest('[data-v4-receipt-revoke-task]');if(revoke){await v4RevokeEmployeeReceiptTask(revoke.dataset.v4ReceiptRevokeTask);return}
