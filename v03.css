@@ -567,3 +567,20 @@ body.v6-sorting .v6-drag-handle{cursor:grabbing}
 .v3-sku-save-feedback[hidden],
 .v3-sku-save-feedback button[hidden]{display:none!important}
 .v3-sku-save-feedback .btn{min-height:46px;white-space:normal}
+
+/* v0.7.9 · Cloud receipt authorization manager */
+.v4-receipt-manager-entry{display:flex;flex-direction:column;gap:7px;margin:2px 0 12px}
+.v4-receipt-manager-entry .btn{width:100%;min-height:48px}
+.v4-receipt-manager-entry small{font-size:10px;color:var(--muted);line-height:1.4}
+.v4-receipt-manager-tools{display:grid;grid-template-columns:1fr auto;align-items:end;gap:9px}
+.v4-receipt-manager-tools label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:11px}
+.v4-receipt-manager-tools select{min-width:0;min-height:43px}
+.v4-receipt-manager-tools button{min-height:43px}
+.v4-receipt-manager-list{display:flex;flex-direction:column;gap:9px;max-height:48vh;overflow-y:auto}
+.v4-receipt-manager-row{padding:12px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.025)}
+.v4-receipt-manager-row-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.v4-receipt-manager-row-head strong{font-size:13px}.v4-receipt-manager-row-head span{font-size:10px;color:var(--muted);text-align:right}
+.v4-receipt-manager-meta{font-size:10px;color:var(--muted);line-height:1.5;margin-top:5px;overflow-wrap:anywhere}
+.v4-receipt-manager-actions{margin-top:10px;display:flex;justify-content:flex-end;align-items:center}
+.v4-receipt-manager-actions .btn{min-height:40px}
+@media(max-width:390px){.v4-receipt-manager-tools{grid-template-columns:1fr}.v4-receipt-manager-tools button{width:100%}}
