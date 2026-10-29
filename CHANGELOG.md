@@ -2,7 +2,7 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
-## Inventory / Employee v0.8.0 · 库存页提速 + 吸顶栏遮挡修复 + 员工端 中文 / Italiano / বাংলা
+## Inventory / Employee v0.8.0 · 库存页提速 + 吸顶栏修复 + 员工端三语 + SKU 小图
 **2026-10-29** · 由 Claude Opus 在分支 `opus/v0.8-upgrade` 完成，待 Piccola / Pietro 合并
 
 **1. 库存页卡顿（越用越卡）**
@@ -24,8 +24,15 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 主管自己写的内容（盘货任务标签、供应商名、备注）不翻译。`cloud-sync.js` 的少量连接状态提示仍为中文。
 - 孟加拉语译文由 AI 完成，**需要孟加拉同事实机过目**；意大利语同理建议过一遍。
 
-- 修改：`v03-core.js`、`app.js`、`v03-ui.js`、`ui-extras.js`、`hub.js`、`employee-tools.js`、`index.html`、`sw.js`；新增 `v08-polish.css`、`i18n.js`、`i18n-ui.js`、`i18n-sku.js`。PWA cache **v109**。
-- 未改任何 localStorage key / IndexedDB / Supabase 表 / Edge Function / 生产数据。
+**4. SKU 小图：自动插图 + 可选实拍**
+- Pietro 不用拍照：新增 `sku-art.js`，用代码画出每个现有 SKU 的原创插图（瓶、罐、袋、箱、蔬果、海鲜、甜点、酒水、饮料……共 150+ 个），胖胖可爱风，跟随日间 / 夜间主题换底色。只画通用包装和食物，不复制任何品牌 logo 或包装设计。新建 SKU：同名沿用已有插图，其次按名称关键词，再按分类给通用插图。
+- 插图是内联 SVG，随 App 一起被离线缓存，**员工手机也能看到**，不需要网络、不占 Cloud。
+- 仍可实拍：SKU 编辑页新增「📷 拍照 / 相册」（iPhone 会让你选相机或照片库），裁成 256px 方图 JPEG（约 3–20KB），存在独立 IndexedDB `cassola_sku_photos_v01`。**照片暂时只在拍照的这台设备显示**，其他手机继续看插图；要同步给员工需以后做 Cloud 图片存储（Supabase Storage + Edge 接口）。移除照片即恢复插图。
+- 显示优先级：本机照片 > 专属插图 > SKU 自定义 emoji > 分类插图 > 默认 emoji。覆盖库存卡、商品族 / 规格行、盘货页、订货、收货，以及员工盘货 / 收货行（员工行新增图片位）。
+- 实测：保存照片不改 `cassola_inventory_v01`；刷新后照片仍在；移除后恢复插图；带图片 + 2500 条历史时库存页渲染约 20ms。
+
+- 修改：`v03-core.js`、`v03-orders.js`、`app.js`、`v03-ui.js`、`ui-extras.js`、`hub.js`、`employee-tools.js`、`index.html`、`sw.js`；新增 `v08-polish.css`、`i18n.js`、`i18n-ui.js`、`i18n-sku.js`、`sku-art.js`、`sku-photos.js`。PWA cache **v109**。
+- 未改任何既有 localStorage key / IndexedDB / Supabase 表 / Edge Function / 生产数据（仅新增独立的照片 IndexedDB）。
 - 验证：所有 JS `node --check` 通过；Chromium 预览（390 / 375 宽，日间 / 夜间）无页面错误；员工盘货草稿写入、对话框按语言重建、Supervisor 保持中文均已自动化检查。**GitHub Pages 部署与 iPhone 实机验收待完成。**
 
 ---

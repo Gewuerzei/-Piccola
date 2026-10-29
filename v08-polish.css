@@ -59,3 +59,42 @@
 /* Bengali script needs a little more line height to stay readable. */
 #cassolaEmployee:lang(bn),#cassolaGate:lang(bn),.employee-tool-dialog:lang(bn){line-height:1.5}
 #cassolaEmployee:lang(bn) small,.employee-tool-dialog:lang(bn) small{line-height:1.45}
+
+/* ---------- SKU pictures (sku-art.js illustrations / device photos) ----------
+   The tile colour follows the theme; the drawing itself has fixed colours. */
+.sku-art{display:block;width:100%;height:100%;border-radius:inherit;overflow:hidden}
+.sku-art svg,.sku-art img{display:block;width:100%;height:100%}
+.sku-art img{object-fit:cover}
+.sku-icon:has(> .sku-art),.count-mini-icon:has(> .sku-art){padding:0;overflow:hidden;background:none}
+.art-tile{fill:#2a3040}
+.art-tile.k-base{fill:#3a2f2a}.art-tile.k-dry{fill:#3b3324}.art-tile.k-sauce{fill:#3d2c26}
+.art-tile.k-dairy{fill:#2c3442}.art-tile.k-produce{fill:#26392b}.art-tile.k-frozen{fill:#22364a}
+.art-tile.k-prep{fill:#3c2b2d}.art-tile.k-supply{fill:#2e323a}.art-tile.k-dessert{fill:#3d2836}
+.art-tile.k-alcohol{fill:#33283d}.art-tile.k-syrup{fill:#3a2733}.art-tile.k-drink{fill:#213a3c}
+.art-tile.k-sala{fill:#323524}.art-tile.k-fish{fill:#1f3346}
+:root[data-theme="light"] .art-tile{fill:#eceef2}
+:root[data-theme="light"] .art-tile.k-base{fill:#f3e9e1}:root[data-theme="light"] .art-tile.k-dry{fill:#f4ecda}:root[data-theme="light"] .art-tile.k-sauce{fill:#f5e4dc}
+:root[data-theme="light"] .art-tile.k-dairy{fill:#e4ecf6}:root[data-theme="light"] .art-tile.k-produce{fill:#e2f0e1}:root[data-theme="light"] .art-tile.k-frozen{fill:#dde9f5}
+:root[data-theme="light"] .art-tile.k-prep{fill:#f5e3e3}:root[data-theme="light"] .art-tile.k-supply{fill:#e8eaee}:root[data-theme="light"] .art-tile.k-dessert{fill:#f6e3ec}
+:root[data-theme="light"] .art-tile.k-alcohol{fill:#ebe3f3}:root[data-theme="light"] .art-tile.k-syrup{fill:#f5e1ea}:root[data-theme="light"] .art-tile.k-drink{fill:#dcefee}
+:root[data-theme="light"] .art-tile.k-sala{fill:#eef0dc}:root[data-theme="light"] .art-tile.k-fish{fill:#dce8f4}
+
+/* Employee rows: picture next to the SKU name (helps colleagues who do not read Chinese). */
+.v8-has-art{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.v8-copy-text{min-width:0;flex:1}
+.cassola-employee-art{flex:0 0 auto;width:50px;height:50px;border-radius:18px;overflow:hidden;display:grid;place-items:center;font-size:26px;background:rgba(255,255,255,.05)}
+.cassola-employee-receipt-line-head .cassola-employee-art{width:44px;height:44px;border-radius:16px;font-size:22px}
+:root[data-theme="light"] .cassola-employee-art{background:rgba(31,37,48,.05)}
+
+/* SKU editor: photo row */
+.v8-photo-row{display:flex;align-items:center;gap:14px;margin:4px 0 14px;padding:12px;border-radius:24px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.v8-photo-preview{flex:0 0 auto;width:76px;height:76px;border-radius:24px;overflow:hidden;display:grid;place-items:center;font-size:34px;background:rgba(255,255,255,.05)}
+.v8-photo-empty{opacity:.5}
+.v8-photo-side{min-width:0;flex:1;display:flex;flex-direction:column;gap:8px}
+.v8-photo-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.v8-photo-pick{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;min-height:46px}
+.v8-photo-pick input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.v8-photo-pick.disabled{opacity:.45;pointer-events:none}
+.v8-photo-side small{color:var(--muted);font-size:11.5px;line-height:1.4}
+:root[data-theme="light"] .v8-photo-row{background:rgba(31,37,48,.025)}
+:root[data-theme="light"] .v8-photo-preview{background:rgba(31,37,48,.05)}

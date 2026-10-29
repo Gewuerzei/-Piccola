@@ -8,7 +8,8 @@
     unit:u=>window.CassolaI18n?window.CassolaI18n.unit(u):u,
     locale:()=>window.CassolaI18n?window.CassolaI18n.locale():'zh-CN',
     lang:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN',
-    switcher:()=>window.CassolaI18n?window.CassolaI18n.switcherHtml():''
+    switcher:()=>window.CassolaI18n?window.CassolaI18n.switcherHtml():'',
+    pic:s=>typeof window.CassolaSkuVisual==='function'?window.CassolaSkuVisual(s,'📦'):'📦'
   };
   const FAIL_KEY='cassola_access_fail_v02';
   const EMPLOYEE_DRAFT_PREFIX='cassola_employee_count_v01';
@@ -231,7 +232,7 @@
       '<div class="cassola-employee-counts">'+
       (rows.length?rows.map(s=>{
         const v=draft.counts?.[s.id],eventCount=eventCounts.get(String(s.id))||0;
-        return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(L.sku(s.name||'SKU'))+'</strong><small>'+(L.orig(s.name)?escapeHtml(L.orig(s.name))+' · ':'')+escapeHtml(s.spec||T('无规格'))+' · '+escapeHtml(L.unit(s.unit||''))+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">'+T('查看详情')+(eventCount?' · '+T('变动 {n}',{n:eventCount}):'')+'</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(L.unit(s.unit||''))+'</span></div></div>';
+        return '<div class="cassola-employee-row"><div class="cassola-employee-copy v8-has-art"><span class="cassola-employee-art">'+L.pic(s)+'</span><div class="v8-copy-text"><strong>'+escapeHtml(L.sku(s.name||'SKU'))+'</strong><small>'+(L.orig(s.name)?escapeHtml(L.orig(s.name))+' · ':'')+escapeHtml(s.spec||T('无规格'))+' · '+escapeHtml(L.unit(s.unit||''))+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">'+T('查看详情')+(eventCount?' · '+T('变动 {n}',{n:eventCount}):'')+'</button></div></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(L.unit(s.unit||''))+'</span></div></div>';
       }).join(''):('<div class="empty">'+T('这个责任区没有可盘 SKU。')+'</div>'))+
       '</div>'+
       '<div class="cassola-employee-foot">'+(queued?T('📵 本机还有 {n} 份待发送 · 点底部“待{n}”手动提交',{n:queued}):T('联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用'))+'</div>'+
@@ -277,7 +278,7 @@
         const pack=(factor!==1||String(line.orderUnit||line.unit||'')!==String(line.unit||''))?(' · 1'+escapeHtml(line.orderUnit||line.unit||'')+' = '+escapeHtml(String(factor))+escapeHtml(line.unit||'')):'';
         const meta=employeeReceiptStatusMeta(d.status);
         return '<div class="cassola-employee-receipt-line" data-receipt-line="'+escapeHtml(line.skuId)+'">'+
-          '<div class="cassola-employee-receipt-line-head"><div><strong>'+escapeHtml(L.sku(line.skuName||line.skuId))+'</strong><small>'+(L.orig(line.skuName)?escapeHtml(L.orig(line.skuName))+' · ':'')+T('库存规格')+' '+escapeHtml(line.spec||T('未填写'))+pack+'</small></div><b>'+T('待收')+' '+escapeHtml(String(remaining))+' '+escapeHtml(L.unit(line.orderUnit||line.unit||''))+'</b></div>'+
+          '<div class="cassola-employee-receipt-line-head"><div class="v8-has-art"><span class="cassola-employee-art">'+L.pic({id:line.skuId,name:line.skuName})+'</span><div class="v8-copy-text"><strong>'+escapeHtml(L.sku(line.skuName||line.skuId))+'</strong><small>'+(L.orig(line.skuName)?escapeHtml(L.orig(line.skuName))+' · ':'')+T('库存规格')+' '+escapeHtml(line.spec||T('未填写'))+pack+'</small></div></div><b>'+T('待收')+' '+escapeHtml(String(remaining))+' '+escapeHtml(L.unit(line.orderUnit||line.unit||''))+'</b></div>'+
           ('<div class="cassola-employee-receipt-qty"><label>'+T('本次到货')+'<input type="text" inputmode="decimal" autocomplete="off" data-employee-receipt-qty="')+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.qty??'')+'" placeholder="0"></label><span>'+escapeHtml(L.unit(line.orderUnit||line.unit||''))+'</span></div>'+
           '<div class="cassola-employee-receipt-status">'+['received','later','other','out','short','over'].map(st=>{const m=employeeReceiptStatusMeta(st);return '<button type="button" class="'+(d.status===st?'active':'')+'" data-employee-receipt-status="'+st+'" data-task-id="'+escapeHtml(task.task_id)+'" data-sku-id="'+escapeHtml(line.skuId)+'">'+m[0]+' '+m[1]+'</button>'}).join('')+'</div>'+
           ('<label class="cassola-employee-receipt-note">'+T('备注')+'<input type="text" maxlength="300" data-employee-receipt-note="')+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.note||'')+('" placeholder="'+T('可空')+'"></label>')+

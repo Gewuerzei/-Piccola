@@ -165,6 +165,8 @@ function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s
 function v3Cats(){return typeof inventoryCategories==='function'?inventoryCategories():[...new Set([...categories,...(state.customCategories||[]),...v3Skus().map(s=>s.category).filter(Boolean)])]}
 function v3Suppliers(){return ['全部',...new Set([...suppliers.filter(s=>s!=='全部'),...v3Skus().map(s=>s.supplier).filter(Boolean)])]}
 function v3Icon(s){return s?.icon||skuIcons[s?.id]||categoryIcons[s?.category]||'📦'}
+/* v0.8: picture for icon slots (device photo > illustration > emoji). v3Icon stays the plain emoji. */
+function skuVisual(s){return typeof window.CassolaSkuVisual==='function'?window.CassolaSkuVisual(s,v3Icon(s)):v3Icon(s)}
 function v3ParseCount(h){const m=String(h.text||'').match(/(-?\d+(?:\.\d+)?)\s*→\s*(-?\d+(?:\.\d+)?)/);return m?{old:Number(m[1]),next:Number(m[2])}:null}
 function v3ParseMove(h){const m=String(h.text||'').match(/([+-])\s*(\d+(?:\.\d+)?)/);return m?Number(m[2]):0}
 /* v0.8 performance: weekly use used to rescan the whole history for every SKU,
