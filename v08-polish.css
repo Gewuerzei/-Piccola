@@ -1,114 +1,60 @@
-/* Cassola v0.8 · Inventory polish layer
-   CSS-only and loaded last. It keeps the Fat UI contract (rounded shapes, touch
-   targets >= 44px) but removes wasted vertical space so the first SKU appears
-   on the first screen. No data, storage key or behaviour depends on this file:
-   deleting the <link> restores the previous look exactly. */
+/* Cassola v0.8 · small layer on top of the Fat UI (loaded last)
+   Pietro wants the fat look, so this file does NOT shrink anything: header,
+   tabs, cards, buttons and radii stay exactly as Piccola designed them.
+   It only fixes the sticky rows, adds a search icon, makes primary buttons
+   visible in the light graphite theme and styles the language switch.
+   No data, storage key or behaviour depends on this file. */
 
-/* ---------- Top bar: one compact row ---------- */
-body:not([data-cassola-mode]) > .topbar,
-body[data-cassola-mode="inventory"] > .topbar{
-  gap:6px;
-  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+/* ---------- Sticky rows under the real header ----------
+   --cassola-topbar-h / --cassola-staff-topbar-h are measured in ui-extras.js
+   (status-bar inset + two-line title included). Fallbacks = the old values. */
+.sticky-panel{top:var(--cassola-topbar-h,76px)}
+.staff-board-tools,
+.staff-week-tools,
+.staff-month-tools{top:var(--cassola-staff-topbar-h,77px)}
+
+/* Now that the search row really stays visible while scrolling, let its
+   background run edge to edge so it reads as one bar under the header. */
+#view-stock .toolbar.sticky-panel{
+  margin-left:-15px;margin-right:-15px;
+  padding-left:15px;padding-right:15px;
 }
-.topbar .brand-lockup{flex:1 1 auto;gap:10px}
-.topbar .brand-lockup > div:last-child{min-width:0}
-.topbar .brand-mark{width:38px;height:38px;border-radius:14px;font-size:20px}
-.topbar .eyebrow{font-size:8.5px;letter-spacing:.14em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar h1{font-size:18px;line-height:1.15;margin:1px 0 0;letter-spacing:-.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar .cassola-home-btn,
-.topbar .global-search-trigger{width:38px;height:38px;min-height:38px;border-radius:14px;flex:0 0 auto}
-.topbar #offlineBadge{font-size:10px;padding:5px 8px;flex:0 0 auto}
 
-/* The sticky search row must sit under the (now shorter) top bar, including the
-   iPhone status-bar inset, otherwise it slides behind the bar while scrolling. */
-.sticky-panel{top:calc(58px + env(safe-area-inset-top))}
-
-/* ---------- Area tabs ---------- */
-#view-stock .v4-area-tabs,
-#view-count .v4-area-tabs{margin-bottom:10px;padding:5px;gap:5px}
-#view-stock .v4-area-tabs button,
-#view-count .v4-area-tabs button{min-height:42px;padding:9px 4px;font-size:11px;border-radius:16px}
-
-/* ---------- Search row ---------- */
-#view-stock .toolbar{grid-template-columns:minmax(0,1fr) 108px 66px;gap:8px;margin:0 -15px 8px;padding:4px 15px 10px}
+/* ---------- Search field with a magnifier ---------- */
 #view-stock .toolbar .search{
-  padding-left:40px;
+  padding-left:44px;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238a93a5' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:14px 50%;background-size:17px 17px;
+  background-repeat:no-repeat;background-position:16px 50%;background-size:18px 18px;
 }
-#view-stock .toolbar select{font-size:14px;padding:0 8px 0 11px;min-width:0;text-overflow:ellipsis}
-#view-stock .toolbar #addSkuBtn{padding:0 6px;font-size:13.5px;white-space:nowrap;min-height:50px}
-
-/* ---------- Sort row: a single slim line ---------- */
-#view-stock .v6-stock-sortbar{
-  display:flex;flex-direction:row;align-items:center;gap:10px;
-  margin:0 0 10px;padding:5px 12px 5px 6px;border-radius:20px;
-}
-#view-stock .v6-stock-sortbar label{flex:0 0 auto;gap:6px;font-size:11px;padding-left:8px}
-#view-stock .v6-stock-sortbar select{min-height:40px;width:auto;max-width:150px;font-size:13px;padding:0 10px;border-radius:15px}
-#view-stock .v6-stock-sortbar > span{
-  flex:1 1 auto;min-width:0;text-align:left;font-size:10.5px;line-height:1.3;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-}
-
-/* ---------- Summary: three slim tiles in one row ---------- */
-#view-stock .summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px}
-#view-stock .summary-card{padding:10px 12px;border-radius:20px;min-width:0}
-#view-stock .summary-card:last-child{grid-column:auto}
-#view-stock .summary-card span{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#view-stock .summary-card b{font-size:20px;margin-top:2px}
-
-/* ---------- SKU cards: same shapes, less padding ---------- */
-#view-stock .sku-card{padding:14px}
-#view-stock .sku-icon{width:48px;height:48px;border-radius:18px;font-size:25px}
-#view-stock .sku-name{font-size:16px;line-height:1.25}
-#view-stock .stock-value{min-height:46px;min-width:72px;padding:8px 12px}
-#view-stock .sku-actions{gap:7px;margin-top:12px}
-#view-stock .sku-actions .mini-btn{min-height:44px;padding:9px 6px;font-size:13px;border-radius:16px}
-
-/* ---------- Count page header ---------- */
-#view-count .section-head{align-items:center;margin:2px 0 12px}
-#view-count .section-head p{font-size:12px}
-#view-count #fillCurrentBtn{flex:0 0 auto;white-space:nowrap;font-size:13.5px;padding:0 14px;min-height:46px}
-
-/* ---------- Light theme touches ---------- */
 :root[data-theme="light"] #view-stock .toolbar .search{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b7385' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E");
 }
 
-/* Graphite accent is cream: on the light background primary buttons almost
-   disappeared ("＋ SKU", "保存本轮盘货"). Give them ink instead. Other accents
-   are already coloured and keep their own fill. */
-:root[data-theme="light"][data-accent="graphite"] .btn.primary{background:#262b36;color:#f8f7f3;box-shadow:0 8px 20px rgba(38,43,54,.18)}
+/* ---------- Light theme · graphite accent ----------
+   Graphite's accent is cream, so on the light background the primary buttons
+   ("＋ SKU", "保存本轮盘货"…) almost disappeared. Give them ink instead.
+   Matcha / ocean / sakura already have coloured fills and keep them. */
+:root[data-theme="light"][data-accent="graphite"] .btn.primary{background:#262b36;color:#f8f7f3;box-shadow:0 10px 24px rgba(38,43,54,.18)}
 
-/* Very narrow phones (iPhone SE / mini) */
-@media (max-width:380px){
-  .topbar .brand-mark{display:none}
-}
-@media (max-width:360px){
-  .topbar .eyebrow{display:none}
-  #view-stock .toolbar{grid-template-columns:minmax(0,1fr) 96px 60px}
-  #view-stock .v6-stock-sortbar > span{display:none}
-}
-
-/* ---------- Language switch (Access gate + employee screens) ---------- */
+/* ---------- Language switch (Access gate + employee screens) ----------
+   Same fat proportions as the area tabs: 50px pills inside a soft tray. */
 .cassola-lang-switch{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;
-  margin:0 0 14px;padding:5px;border-radius:20px;
-  background:rgba(255,255,255,.04);border:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+  margin:0 0 16px;padding:6px;border-radius:24px;
+  background:rgba(255,255,255,.035);border:1px solid var(--line);
 }
 .cassola-lang-switch button{
-  min-height:44px;border:0;border-radius:15px;background:transparent;color:var(--muted);
-  font:inherit;font-size:14px;font-weight:800;padding:8px 6px;cursor:pointer;
+  min-height:50px;border:0;border-radius:18px;background:transparent;color:var(--muted);
+  font:inherit;font-size:15px;font-weight:850;padding:10px 6px;cursor:pointer;
 }
 .cassola-lang-switch button.active{
   background:var(--panel3);color:var(--text);
-  box-shadow:0 5px 14px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06);
+  box-shadow:0 6px 16px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06);
 }
-.cassola-lang-switch button[lang="bn"]{font-size:15px}
+.cassola-lang-switch button[lang="bn"]{font-size:16px}
 #cassolaGate .cassola-lang-switch{max-width:520px}
-:root[data-theme="light"] .cassola-lang-switch{background:rgba(31,37,48,.04)}
-:root[data-theme="light"] .cassola-lang-switch button.active{background:#fff;box-shadow:0 5px 14px rgba(54,48,38,.10)}
+:root[data-theme="light"] .cassola-lang-switch{background:rgba(31,37,48,.035)}
+:root[data-theme="light"] .cassola-lang-switch button.active{background:#fff;box-shadow:0 6px 16px rgba(54,48,38,.10)}
 
 /* Bengali script needs a little more line height to stay readable. */
 #cassolaEmployee:lang(bn),#cassolaGate:lang(bn),.employee-tool-dialog:lang(bn){line-height:1.5}

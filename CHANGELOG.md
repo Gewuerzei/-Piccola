@@ -2,7 +2,7 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
-## Inventory / Employee v0.8.0 · 库存页提速 + 界面精简 + 员工端 中文 / Italiano / বাংলা
+## Inventory / Employee v0.8.0 · 库存页提速 + 吸顶栏遮挡修复 + 员工端 中文 / Italiano / বাংলা
 **2026-10-29** · 由 Claude Opus 在分支 `opus/v0.8-upgrade` 完成，待 Piccola / Pietro 合并
 
 **1. 库存页卡顿（越用越卡）**
@@ -11,12 +11,10 @@ All notable changes to the Cassola PWA suite are recorded here.
 - `app.js`：删除重复的搜索 / 分类监听；`saveState()` 顺带让缓存失效。`v03-ui.js`：手动输入搜索延迟 120ms 再渲染；全局搜索 / Analytics 跳转等程序触发的搜索仍立即渲染。
 - 实测（Chromium，Sushi 区 + 2500 条历史）：库存页一次渲染 4296 ms → 23 ms；搜索框每打一字的同步耗时 879 ms → 14 ms。
 
-**2. 库存页界面（CSS-only，新文件 `v08-polish.css`，最后加载）**
-- 顶栏压成一行（iPhone 实机上原标题会折成两行）；区域标签、搜索行、排序行、统计卡变薄，让第一张 SKU 卡更靠上。
-- **注意：界面部分只在 Chromium（Linux）预览中调试，未在 Safari / iPhone 渲染。** Chromium 里看到的「分类下拉截断」「统计卡 2+1 排列」在 Pietro 的 iPhone 实机截图里并不存在（Safari 原生 select 与系统字体不同），相关样式对 iPhone 无害但不是必需。合并前后请以 iPhone 实机为准。
-- 吸顶搜索行的 `top` 改为计入 `safe-area-inset-top`：原值固定 76px，按代码推算在带灵动岛的 iPhone PWA 中滚动时会被顶栏遮住一截，**待实机确认**。
-- 日间主题 + 石墨 accent 下，主按钮（「＋ SKU」「保存本轮盘货」等）原本是米色叠米色几乎看不见，改为深墨色。其余 accent 不变。
-- 保留 Fat UI 契约：圆角不变，触控目标仍 ≥ 44px。删除 `<link>` 即可完整回退。
+**2. 吸顶栏被遮挡（保留胖胖风格）**
+- Pietro iPhone 实机截图确认：库存页往下滑时，搜索栏**整条**藏在顶栏后面。根因：`.sticky-panel` 写死 `top:76px`，而带灵动岛的 iPhone PWA 顶栏 = 状态栏 inset（约 59px）+ 两行标题，实际约 140px。Staff 的周表 / 月表 / 看板工具条写死 `top:77px`，同理。
+- `ui-extras.js` 新增一小段：用 ResizeObserver 量出 Inventory 顶栏和 Staff 顶栏的实际高度，写成 CSS 变量 `--cassola-topbar-h` / `--cassola-staff-topbar-h`；`v08-polish.css` 让吸顶栏用这个变量（旧值作后备）。不管一行还是两行标题、有没有灵动岛都能对齐。Chromium 模拟 59px inset：修复前搜索栏 76–142px 被 156px 高的顶栏完全挡住，修复后停在 156px 正下方。
+- 按 Pietro 的要求保持 Piccola 的**胖胖风格**：顶栏、标签、卡片、按钮、圆角全部不改（撤回了上一版里压缩尺寸的样式）。只加了：搜索框放大镜图标；搜索吸顶栏背景左右铺满；日间主题 + 石墨 accent 的主按钮改深墨色（米色叠米色看不见）。
 
 **3. 员工端语言切换：中文 / Italiano / বাংলা**
 - 新增 `i18n.js`（切换逻辑）、`i18n-ui.js`（230 条界面文案，意 / 孟双语）、`i18n-sku.js`（SKU 名称 / 单位 / 分类显示翻译）。
@@ -26,7 +24,7 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 主管自己写的内容（盘货任务标签、供应商名、备注）不翻译。`cloud-sync.js` 的少量连接状态提示仍为中文。
 - 孟加拉语译文由 AI 完成，**需要孟加拉同事实机过目**；意大利语同理建议过一遍。
 
-- 修改：`v03-core.js`、`app.js`、`v03-ui.js`、`hub.js`、`employee-tools.js`、`index.html`、`sw.js`；新增 `v08-polish.css`、`i18n.js`、`i18n-ui.js`、`i18n-sku.js`。PWA cache **v109**。
+- 修改：`v03-core.js`、`app.js`、`v03-ui.js`、`ui-extras.js`、`hub.js`、`employee-tools.js`、`index.html`、`sw.js`；新增 `v08-polish.css`、`i18n.js`、`i18n-ui.js`、`i18n-sku.js`。PWA cache **v109**。
 - 未改任何 localStorage key / IndexedDB / Supabase 表 / Edge Function / 生产数据。
 - 验证：所有 JS `node --check` 通过；Chromium 预览（390 / 375 宽，日间 / 夜间）无页面错误；员工盘货草稿写入、对话框按语言重建、Supervisor 保持中文均已自动化检查。**GitHub Pages 部署与 iPhone 实机验收待完成。**
 
