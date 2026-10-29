@@ -118,3 +118,5 @@
 /* Language switch on the employee screen: still 44px targets, a bit less height. */
 #cassolaEmployee .cassola-lang-switch{margin-bottom:12px;padding:4px;gap:5px}
 #cassolaEmployee .cassola-lang-switch button{min-height:44px;font-size:14px;border-radius:16px}
+/* Bengali eyebrows: wide letter-spacing breaks up the script, keep it tight. */
+#cassolaEmployee:lang(bn) .eyebrow,.employee-tool-dialog:lang(bn) .eyebrow{letter-spacing:.02em;text-transform:none}

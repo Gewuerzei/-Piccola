@@ -1,4 +1,4 @@
-/* Cassola i18n · SKU display names, units and categories (Italiano / বাংলা)
+/* Cassola i18n · SKU display names, units, categories and suppliers (Italiano / বাংলা)
    Display only: the stored SKU name, unit and category stay exactly as they are.
    Keys are the Chinese (or mixed) text as stored. Names already written in
    Italian / Japanese (Ikura, Panna, Tiramisu…) need no entry and show as-is.
@@ -101,6 +101,17 @@ window.CASSOLA_I18N_SKU={
     '糖浆':{it:'Sciroppi',bn:'সিরাপ'},
     '饮料':{it:'Bevande',bn:'পানীয়'},
     'Sala调味':{it:'Condimenti sala',bn:'সালার সস ও মসলা'},
-    '鲜鱼':{it:'Pesce fresco',bn:'তাজা মাছ'}
+    '鲜鱼':{it:'Pesce fresco',bn:'তাজা মাছ'},
+    '待确认':{it:'Da confermare',bn:'নিশ্চিত নয়'}
+  },
+  /* Supplier names written in Chinese. Latin names (Tosano, Cattel, Lodi) need
+     no entry. Bengali uses the Latin name too: it is what is on the invoice. */
+  suppliers:{
+    '米兰':{it:'Milano',bn:'Milano'},
+    '大兴':{it:'Da Xing',bn:'Da Xing'},
+    '恒丰':{it:'Heng Feng',bn:'Heng Feng'},
+    '内部':{it:'Interno',bn:'নিজস্ব'},
+    '自种':{it:'Coltivato da noi',bn:'নিজেদের চাষ'},
+    '待确认':{it:'Da confermare',bn:'নিশ্চিত নয়'}
   }
 };

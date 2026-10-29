@@ -235,5 +235,17 @@ window.CASSOLA_I18N_UI={
   "🏷️ 归类提议已交给 Supervisor":{it:"🏷️ Proposta di categoria inviata al Supervisor",bn:"🏷️ ক্যাটাগরি প্রস্তাব সুপারভাইজারের কাছে পাঠানো হয়েছে"},
   "ⓘ 怎么用":{it:"ⓘ Come si usa",bn:"ⓘ কীভাবে ব্যবহার করবেন"},
   "☁️ 今日盘货已提交给 Supervisor":{it:"☁️ Inventario di oggi inviato al Supervisor",bn:"☁️ আজকের গণনা সুপারভাইজারের কাছে পাঠানো হয়েছে"},
-  "🧪 SKU 提议已交给 Supervisor":{it:"🧪 Proposta SKU inviata al Supervisor",bn:"🧪 SKU প্রস্তাব সুপারভাইজারের কাছে পাঠানো হয়েছে"}
+  "🧪 SKU 提议已交给 Supervisor":{it:"🧪 Proposta SKU inviata al Supervisor",bn:"🧪 SKU প্রস্তাব সুপারভাইজারের কাছে পাঠানো হয়েছে"},
+  "EMPLOYEE MODE":{it:"MODALITÀ DIPENDENTE",bn:"কর্মী মোড"},
+  "AUTHORIZED RECEIVING":{it:"RICEZIONE AUTORIZZATA",bn:"অনুমোদিত মাল গ্রহণ"},
+  "SKU FIELD TOOLS":{it:"STRUMENTI SKU",bn:"SKU টুলস"},
+  "SKU DETAIL":{it:"DETTAGLIO SKU",bn:"SKU বিবরণ"},
+  "FIELD SKU PROPOSAL":{it:"PROPOSTA SKU",bn:"SKU প্রস্তাব"},
+  "CATEGORY PROPOSAL":{it:"PROPOSTA CATEGORIA",bn:"ক্যাটাগরি প্রস্তাব"},
+  "RECLASSIFY PROPOSAL":{it:"CAMBIO CATEGORIA",bn:"ক্যাটাগরি বদল"},
+  "无盘货任务":{it:"Nessun conteggio assegnato",bn:"গণনার কাজ নেই"},
+  "Staff 个人任务":{it:"Conteggio personale",bn:"ব্যক্তিগত গণনা"},
+  "组合盘货 · {n} SKU":{it:"Conteggio misto · {n} SKU",bn:"মিশ্র গণনা · {n} SKU"},
+  "岗位 {name}":{it:"Ruolo {name}",bn:"পদ: {name}"},
+  "个人任务":{it:"compiti personali",bn:"ব্যক্তিগত কাজ"}
 };

@@ -10,7 +10,9 @@
     lang:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN',
     switcher:()=>window.CassolaI18n?window.CassolaI18n.switcherHtml():'',
     pic:s=>typeof window.CassolaSkuVisual==='function'?window.CassolaSkuVisual(s,'📦'):'📦',
-    cat:c=>window.CassolaI18n?window.CassolaI18n.category(c):c
+    cat:c=>window.CassolaI18n?window.CassolaI18n.category(c):c,
+    supplier:v=>window.CassolaI18n?window.CassolaI18n.supplier(v):v,
+    label:v=>window.CassolaI18n?window.CassolaI18n.label(v):v
   };
   const FAIL_KEY='cassola_access_fail_v02';
   const EMPLOYEE_DRAFT_PREFIX='cassola_employee_count_v01';
@@ -222,7 +224,7 @@
     if(!tasks.length)return'';
     return '<div class="cassola-employee-task-picker">'+tasks.map(t=>{
       const shared=t.source_kind==='role'||t.shared_role_task===true;
-      return '<button type="button" data-employee-count-task="'+escapeHtml(t.task_id)+'" class="'+(String(t.task_id)===String(selectedId)?'active':'')+'"><span>'+(shared?'👥 ':'📋 ')+escapeHtml(t.label||T('盘货任务'))+(shared?('<small>'+T('岗位共享 · 谁先提交谁生效')+'</small>'):'')+'</span><b>'+((t.resolved_sku_ids||[]).length)+' SKU</b></button>';
+      return '<button type="button" data-employee-count-task="'+escapeHtml(t.task_id)+'" class="'+(String(t.task_id)===String(selectedId)?'active':'')+'"><span>'+(shared?'👥 ':'📋 ')+escapeHtml(t.label?L.label(t.label):T('盘货任务'))+(shared?('<small>'+T('岗位共享 · 谁先提交谁生效')+'</small>'):'')+'</span><b>'+((t.resolved_sku_ids||[]).length)+' SKU</b></button>';
     }).join('')+'</div>';
   }
   function employeeCountPanelHtml(rows,draft,filled,queued){
@@ -285,13 +287,13 @@
     const queued=window.CassolaCloud?.employeeReceiptQueued?.(task.task_id,accessSession?.id);
     if(task.claim_required){
       return '<article class="cassola-employee-receipt-task cassola-role-receipt-claim">'+
-        ('<div class="cassola-employee-receipt-head"><div><span class="eyebrow">'+T('👥 岗位共享 · 待领取')+'</span><h2>🚚 ')+escapeHtml(task.supplier||T('收货任务'))+'</h2><small>'+T('岗位：')+escapeHtml(task.source_role_name||T('当前岗位'))+' · '+T('{n} 项待收',{n:(task.order_snapshot?.items?.length||0)})+'</small></div></div>'+
+        ('<div class="cassola-employee-receipt-head"><div><span class="eyebrow">'+T('👥 岗位共享 · 待领取')+'</span><h2>🚚 ')+escapeHtml(task.supplier?L.supplier(task.supplier):T('收货任务'))+'</h2><small>'+T('岗位：')+escapeHtml(task.source_role_name||T('当前岗位'))+' · '+T('{n} 项待收',{n:(task.order_snapshot?.items?.length||0)})+'</small></div></div>'+
         ('<p class="cassola-employee-note">'+T('任务不绑定特定员工。第一位符合岗位权限并成功领取的人负责提交，其他人不能重复领取；提交后仍由 Supervisor 审核。')+'</p>')+
         '<button type="button" class="btn primary large" data-employee-receipt-claim="'+escapeHtml(task.task_id)+('">'+T('👷 领取本岗位收货')+'</button>')+
       '</article>';
     }
     return '<article class="cassola-employee-receipt-task" data-employee-receipt-task="'+escapeHtml(task.task_id)+'">'+
-      '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">AUTHORIZED RECEIVING</span><h2>🚚 '+escapeHtml(task.supplier||T('收货任务'))+('</h2><small>'+T('Supervisor 授权')+' · ')+escapeHtml(new Date(task.authorized_at).toLocaleString(L.locale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cassola-role-pill">'+(queued?T('📵 待发送'):T('👷 已授权'))+'</span></div>'+
+      '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">'+T('AUTHORIZED RECEIVING')+'</span><h2>🚚 '+escapeHtml(task.supplier?L.supplier(task.supplier):T('收货任务'))+('</h2><small>'+T('Supervisor 授权')+' · ')+escapeHtml(new Date(task.authorized_at).toLocaleString(L.locale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cassola-role-pill">'+(queued?T('📵 待发送'):T('👷 已授权'))+'</span></div>'+
       ('<div class="cassola-employee-note">'+T('只记录这次现场实际收到的货。提交后不会直接入库，仍要 Supervisor 确认。')+'</div>')+
       '<div class="cassola-employee-receipt-lines">'+lines.map(line=>{
         const d=draft.lines?.[line.skuId]||{},remaining=receiptRemainingOrder(line),factor=Number(line.unitsPerOrder)>0?Number(line.unitsPerOrder):1;
@@ -327,14 +329,14 @@
     const receiptMode=employeePanel==='receipt',skuMode=employeePanel==='sku',countMode=!receiptMode&&!skuMode;
     const noManagedCountTask=countMode&&ctx.managed&&!inventoryTasks.length;
     const panelClass=receiptMode?'receipt-mode':skuMode?'sku-mode':'count-mode';
-    const title=receiptMode?T('收货任务'):skuMode?T('SKU 提议'):(scope.label||T('责任区盘货'));
+    const title=receiptMode?T('收货任务'):skuMode?T('SKU 提议'):(scope.label?L.label(scope.label):T('责任区盘货'));
     let content='';
     if(receiptMode)content=employeeReceiptPanelHtml(receiptTasks);
     else if(skuMode)content=window.CassolaEmployeeTools?.panelHtml?.()||('<div class="cassola-employee-no-task"><span>📦</span><h2>'+T('SKU 功能加载中')+'</h2></div>');
     else content=noManagedCountTask?('<div class="cassola-employee-no-task"><span>📋</span><h2>'+T('无任务')+'</h2><p>'+T('Supervisor 还没有从 Staff 给你发布盘货 SKU。')+'</p></div>'):employeeTaskPickerHtml(inventoryTasks,ctx.task?.task_id)+employeeCountPanelHtml(rows,draft,filled,queued);
     box.lang=L.lang();
     box.innerHTML='<div class="cassola-employee-shell '+panelClass+'">'+
-      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(title)+('</h1><p><b>'+T('负责人：'))+escapeHtml(responsible)+'</b> · '+todayKey()+('</p></div><span class="cassola-role-pill">'+T('👷 员工')+'</span></div>')+
+      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">'+T('EMPLOYEE MODE')+'</div><h1>'+escapeHtml(title)+('</h1><p><b>'+T('负责人：'))+escapeHtml(responsible)+'</b> · '+todayKey()+('</p></div><span class="cassola-role-pill">'+T('👷 员工')+'</span></div>')+
       L.switcher()+
       '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(countMode?'active':'')+('">'+T('📋 盘货'))+(inventoryTasks.length?' <b>'+inventoryTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+('">'+T('🚚 收货'))+(receiptTasks.length?' <b>'+receiptTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="sku" class="'+(skuMode?'active':'')+'">📦 SKU</button></div>'+
       content+

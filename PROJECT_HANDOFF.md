@@ -523,7 +523,8 @@ Supervisor Hub / Inventory 顶部提供全局搜索。当前索引：
 - SKU 显示规则：外语模式下显示翻译名，小字保留原中文名；单位 `瓶/罐` 这种组合按 `/` 分段翻译。
 - Supervisor 界面（Inventory / Staff / Hub）保持中文，不调用 `T()`。
 - 员工对话框在语言切换后、下次打开前按新语言重建（只在对话框关闭时重建）。
-- 已知未覆盖：`cloud-sync.js` 的部分连接状态 toast；主管输入的任务标签、供应商名、备注按原文显示。
+- 任务 / 责任区标签用 `CassolaI18n.label()` 显示：Cloud 生成的固定格式（`无盘货任务`、`Staff 个人任务`、`供应商 · X`、`分类 · X`、`区域 · X`、`SKU · X`、`组合盘货 · N SKU`、`岗位 X + 个人任务`、`emoji + 分类名`）会翻译；Edge Function 若新增标签格式，要同步改 `label()`。供应商用 `CassolaI18n.supplier()`，按 `/` 分段查 `i18n-sku.js` 的 `suppliers`；新增中文供应商要加一行（孟加拉语也写拉丁名，和发票一致）。
+- 已知未覆盖：`cloud-sync.js` 的部分连接状态 toast；主管自己输入的任务名、备注按原文显示。
 
 ### 吸顶栏高度（v0.8.0）
 - 任何 `position:sticky` 的工具条都不要再写死 `top: 7xpx`。用 `var(--cassola-topbar-h)`（Inventory）或 `var(--cassola-staff-topbar-h)`（Staff），它们由 `ui-extras.js` 实测顶栏高度得到，已包含 iPhone 状态栏 inset 和多行标题。
