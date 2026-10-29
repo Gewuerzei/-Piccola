@@ -3,6 +3,8 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
+> **2026-10-29 Inventory v0.7.9 / Employee Receipt Cloud Lifecycle：**生产只读核对发现 employee_receipt_tasks 仍有两条 authorized 历史授权：10/06 米兰个人收货 7 SKU、10/20 米兰岗位收货 11 SKU（10/27 被领取）。此前管理入口仅在当前未结案的订单「授权员工收货」弹窗，结案订单不显示按钮，收货审核 Inbox 也不显示未提交授权，因此旧授权不会随着本机订单结案自动撤销。新增 Inventory → 已下单 →「🚚 管理员工收货授权」独立弹窗，使用现有 Supervisor receipt_tasks Cloud API 列出全部订单的 authorized / submitted，并支持查看历史状态；只有 authorized 可以二次确认调用 receipt_revoke，submitted 进入人工审核，accepted / rejected / revoked 为只读。员工收货新增「🔄 刷新收货」及 Cloud 核对时间/本机旧快照提示；成功的 status 会用真实 Cloud 列表（可为空）覆盖本机任务缓存，失败不丢草稿或 Outbox。没有新建 Supabase 表、RPC 或 Edge Function；未修改生产收货任务状态、Inventory / Staff 数据。静态检查与隔离模拟通过，iPhone 实机验收待完成。PWA cache v107。
+
 > **2026-10-13 Staff 新架构已定稿，但尚未执行迁移：**正式按照 **Sushi / Cucina / Sala** 三部门隔离排休数据，多 Supervisor 可管理同一部门；共享人员目录与独立部门周排休/发布版本。完整的安全迁移步骤、数据模型、身份映射与三方合并冲突规则见 [STAFF_DEPARTMENT_MIGRATION_PLAN.md](./STAFF_DEPARTMENT_MIGRATION_PLAN.md)。
 > **重要：**这只是设计批准，不代表 Supabase 新 scope、Access 权限或 Staff v2 数据已上线。现有 `staff` legacy scope / `cassola_staff_v01` 及历史版本应保持原样，继续使用 v0.4.6 的危险下载拦截。不得把旧 Cloud 两组名单自动猜测归到任一部门。
 
@@ -49,7 +51,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.7.8 · Visible SKU Save Feedback + Same-Spec Pack Edit**
+- Inventory: **v0.7.9 · Global Cloud Receipt Authorization Manager**
 - Staff: **v0.5.2 · Unified Department Cloud Manager + Legacy Archive**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
