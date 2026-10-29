@@ -279,8 +279,12 @@
     '</article>';
   }
   function employeeReceiptPanelHtml(tasks){
-    if(!tasks.length)return '<div class="cassola-employee-no-task"><span>🚚</span><h2>无任务</h2><p>只有 Supervisor 明确“授权员工收货”后，这里才会出现订单。</p></div>';
-    return '<div class="cassola-employee-receipt-summary"><span>当前授权</span><b>'+tasks.length+' 个收货任务</b></div>'+tasks.map(employeeReceiptTaskHtml).join('');
+    const sync=window.CassolaCloud?.receiptTaskSyncInfo?.(accessSession?.id)||{};
+    const when=sync.checkedAt?new Date(sync.checkedAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'从未确认';
+    const note=sync.verified?'☁️ 上次 Cloud 成功核对：'+when:'⚠️ 本机旧任务快照 · 上次核对：'+when+'。已撤销的任务可能仍显示，需联网刷新确认。';
+    const toolbar='<div class="cassola-employee-receipt-sync"><small role="status">'+escapeHtml(note)+'</small><button type="button" class="btn secondary" data-employee-receipt-refresh>🔄 刷新收货</button></div>';
+    if(!tasks.length)return toolbar+'<div class="cassola-employee-no-task"><span>🚚</span><h2>无任务</h2><p>只有 Supervisor 明确“授权员工收货”后，这里才会出现订单。</p></div>';
+    return toolbar+'<div class="cassola-employee-receipt-summary"><span>当前授权</span><b>'+tasks.length+' 个收货任务</b></div>'+tasks.map(employeeReceiptTaskHtml).join('');
   }
   function renderEmployee(){
     const box=document.getElementById('cassolaEmployee');if(!box||!isEmployee())return;
@@ -383,6 +387,20 @@
     }
   }
 
+  async function refreshEmployeeReceiptTasks(){
+    if(!isEmployee())return;
+    if(!window.CassolaCloud?.connected?.()){
+      alert('☁️ 当前未连接 Cloud。请联网并重新登录；本机旧缓存不能证明任务仍有效。');return;
+    }
+    const btn=document.querySelector('[data-employee-receipt-refresh]');
+    if(btn){btn.disabled=true;btn.textContent='⏳ 正在刷新';}
+    try{
+      await window.CassolaCloud.refreshStatus({silent:true});
+      showToast('✅ 已向 Cloud 确认收货授权');
+    }catch(err){
+      alert('Cloud 刷新失败：'+(err?.message||'未知错误')+'。当前是未确认的本机旧任务快照。');
+    }finally{renderEmployee();}
+  }
   function switchEmployeePanel(mode){
     employeePanel=mode==='receipt'?'receipt':mode==='sku'?'sku':'count';
     // Show locally cached tasks immediately. Do not keep the tab frozen
@@ -641,6 +659,7 @@
       const panel=e.target.closest('[data-employee-panel]');if(panel){switchEmployeePanel(panel.dataset.employeePanel);return}
       const countTask=e.target.closest('[data-employee-count-task]');if(countTask){employeeCountTaskId=countTask.dataset.employeeCountTask;renderEmployee();return}
       const receiptStatus=e.target.closest('[data-employee-receipt-status]');if(receiptStatus){setEmployeeReceiptStatus(receiptStatus.dataset.taskId,receiptStatus.dataset.skuId,receiptStatus.dataset.employeeReceiptStatus);return}
+      if(e.target.closest('[data-employee-receipt-refresh]')){refreshEmployeeReceiptTasks();return}
       const receiptClaim=e.target.closest('[data-employee-receipt-claim]');if(receiptClaim){claimRoleReceiptTask(receiptClaim.dataset.employeeReceiptClaim);return}
       const receiptSubmit=e.target.closest('[data-employee-receipt-submit]');if(receiptSubmit){submitEmployeeReceiptTask(receiptSubmit.dataset.employeeReceiptSubmit);return}
       if(e.target.closest('[data-employee-clear]')){clearEmployeeDraft();return}
