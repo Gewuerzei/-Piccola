@@ -9,7 +9,7 @@ All notable changes to the Cassola PWA suite are recorded here.
 - 根因：主管只能通过本机未结案订单的「授权员工收货」查看/撤销；历史订单结案后授权入口消失；收货审核 Inbox 只显示 submitted，不显示 authorized。员工离线缓存可以临时复现旧任务。
 - 已增加 Inventory → 已下单 →「🚚 管理员工收货授权」：现有 Supervisor receipt_tasks API 跨全部订单读取授权，包括本机已结案/缺少的订单。支持筛选 authorized/submitted 和全部状态历史（接口最多返回 100 条）；仅 authorized 可二次确认调用 receipt_revoke，submitted 进入原人工审核，历史状态只读。
 - 员工「🚚 收货」新增手动刷新及 Cloud 核对时间/本机旧快照提醒。成功刷新后以 Cloud 返回覆盖任务缓存（即使空列表）；失败不删除草稿/Outbox，不误报旧任务仍有效。
-- 修改 index.html、v03-orders.js、cloud-sync.js、hub.js、v03.css、hub.css、sw.js。PWA cache 版本 v107。无数据库/Edge 变更，未自动撤销任务，未清除任何正式 Inventory/Staff 数据。
+- 修改 index.html、v03-orders.js、cloud-sync.js、hub.js、v03.css、hub.css、sw.js。PWA cache 版本 v108。无数据库/Edge 变更，未自动撤销任务，未清除任何正式 Inventory/Staff 数据。
 - JS 静态编译及 UI 模拟通过：缺失本机订单、历史结案、岗位已领取、已提交审核场景均可正确显示与分流；GitHub Pages 和真实 iPhone 多端验收待确认。
 
 ---
