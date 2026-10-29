@@ -98,3 +98,23 @@
 .v8-photo-side small{color:var(--muted);font-size:11.5px;line-height:1.4}
 :root[data-theme="light"] .v8-photo-row{background:rgba(31,37,48,.025)}
 :root[data-theme="light"] .v8-photo-preview{background:rgba(31,37,48,.05)}
+
+/* ---------- Employee count v0.8.1: groups, progress, done / missing rows ---------- */
+.v8-emp-progress{height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin:-2px 2px 14px}
+.v8-emp-progress span{display:block;height:100%;border-radius:inherit;background:var(--good);transition:width .25s ease}
+.v8-emp-guide summary{list-style:none;cursor:pointer;font-weight:850;color:var(--muted);min-height:30px;display:flex;align-items:center}
+.v8-emp-guide summary::-webkit-details-marker{display:none}
+.v8-emp-guide[open] summary{margin-bottom:6px}
+.v8-emp-group{display:flex;justify-content:space-between;align-items:center;margin:16px 6px 4px;color:var(--muted);font-size:13px;font-weight:850}
+.v8-emp-group:first-child{margin-top:2px}
+.v8-emp-group b{font-size:12.5px;font-variant-numeric:tabular-nums}
+.cassola-employee-row .cassola-employee-art{overflow:visible;position:relative}
+.cassola-employee-row.is-done{border-color:color-mix(in srgb,var(--good) 45%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--good) 12%,var(--panel)),var(--panel))}
+.cassola-employee-row.is-done .cassola-employee-art::after{content:'✓';position:absolute;right:-5px;bottom:-5px;width:21px;height:21px;border-radius:50%;background:var(--good);color:#0f2a17;font-size:12px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2px var(--panel)}
+.cassola-employee-row.is-missing{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 50%,transparent)}
+:root[data-theme="light"] .v8-emp-progress{background:rgba(31,37,48,.08)}
+:root[data-theme="light"] .cassola-employee-row.is-done{border-color:color-mix(in srgb,var(--good) 45%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--good) 10%,#fff),#fff)}
+:root[data-theme="light"] .cassola-employee-row.is-missing{border-color:var(--warn)}
+/* Language switch on the employee screen: still 44px targets, a bit less height. */
+#cassolaEmployee .cassola-lang-switch{margin-bottom:12px;padding:4px;gap:5px}
+#cassolaEmployee .cassola-lang-switch button{min-height:44px;font-size:14px;border-radius:16px}

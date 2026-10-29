@@ -9,7 +9,8 @@
     locale:()=>window.CassolaI18n?window.CassolaI18n.locale():'zh-CN',
     lang:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN',
     switcher:()=>window.CassolaI18n?window.CassolaI18n.switcherHtml():'',
-    pic:s=>typeof window.CassolaSkuVisual==='function'?window.CassolaSkuVisual(s,'📦'):'📦'
+    pic:s=>typeof window.CassolaSkuVisual==='function'?window.CassolaSkuVisual(s,'📦'):'📦',
+    cat:c=>window.CassolaI18n?window.CassolaI18n.category(c):c
   };
   const FAIL_KEY='cassola_access_fail_v02';
   const EMPLOYEE_DRAFT_PREFIX='cassola_employee_count_v01';
@@ -17,6 +18,8 @@
   let accessSession=null;
   let employeePanel='count';
   let employeeCountTaskId=null;
+  /* v0.8.1: SKUs still empty when the employee pressed upload / JSON (display only). */
+  let employeeMissingIds=new Set(),employeeFocusMissing=false;
   let employeeUploadBusy=false;
   let employeeUploadNotice='';
 
@@ -227,13 +230,30 @@
     // employee draft from localStorage, causing avoidable iOS main-thread work.
     const eventCounts=new Map();
     (draft.events||[]).forEach(ev=>{const id=String(ev.skuId||'');eventCounts.set(id,(eventCounts.get(id)||0)+1)});
-    return ('<div class="cassola-employee-summary"><div><span>'+T('责任区 SKU')+'</span><b>')+rows.length+('</b></div><div><span>'+T('今日已填')+'</span><b id="cassolaEmployeeFilled">')+filled+'/'+rows.length+'</b></div></div>'+
-      ('<div class="cassola-employee-note">'+T('数量可以离线填写。报损 / 熟化转化在“查看详情”记录，会和今日盘货一起交给 Supervisor；规格 / 单位异常仍走提议审核。')+'</div>')+
-      '<div class="cassola-employee-counts">'+
-      (rows.length?rows.map(s=>{
+    /* v0.8.1: group by category in the same order as the stock room (Chinese name
+       order meant nothing to colleagues who do not read Chinese). Display only:
+       ctx.rows and the upload payload keep their original order. */
+    const hasValue=s=>{const v=draft.counts?.[s.id];return v!==undefined&&v!==null&&v!==''};
+    const order=typeof categories!=='undefined'&&Array.isArray(categories)?categories:[];
+    const groups=new Map();
+    rows.forEach(s=>{const c=String(s.category||'').trim();if(!groups.has(c))groups.set(c,[]);groups.get(c).push(s)});
+    const cats=[...groups.keys()].sort((a,b)=>{const ia=order.indexOf(a),ib=order.indexOf(b);return((ia<0?999:ia)-(ib<0?999:ib))||a.localeCompare(b,'zh-CN')});
+    const showHeads=cats.length>1||(cats.length===1&&cats[0]!=='');
+    const pct=rows.length?Math.round(filled/rows.length*100):0;
+    const rowHtml=s=>{
         const v=draft.counts?.[s.id],eventCount=eventCounts.get(String(s.id))||0;
-        return '<div class="cassola-employee-row"><div class="cassola-employee-copy v8-has-art"><span class="cassola-employee-art">'+L.pic(s)+'</span><div class="v8-copy-text"><strong>'+escapeHtml(L.sku(s.name||'SKU'))+'</strong><small>'+(L.orig(s.name)?escapeHtml(L.orig(s.name))+' · ':'')+escapeHtml(s.spec||T('无规格'))+' · '+escapeHtml(L.unit(s.unit||''))+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">'+T('查看详情')+(eventCount?' · '+T('变动 {n}',{n:eventCount}):'')+'</button></div></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(L.unit(s.unit||''))+'</span></div></div>';
-      }).join(''):('<div class="empty">'+T('这个责任区没有可盘 SKU。')+'</div>'))+
+        const state=hasValue(s)?' is-done':(employeeMissingIds.has(String(s.id))?' is-missing':'');
+        return '<div class="cassola-employee-row'+state+'" data-employee-row="'+escapeHtml(s.id)+'" data-employee-group="'+escapeHtml(String(s.category||'').trim())+'"><div class="cassola-employee-copy v8-has-art"><span class="cassola-employee-art">'+L.pic(s)+'</span><div class="v8-copy-text"><strong>'+escapeHtml(L.sku(s.name||'SKU'))+'</strong><small>'+(L.orig(s.name)?escapeHtml(L.orig(s.name))+' · ':'')+escapeHtml(s.spec||T('无规格'))+' · '+escapeHtml(L.unit(s.unit||''))+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">'+T('查看详情')+(eventCount?' · '+T('变动 {n}',{n:eventCount}):'')+'</button></div></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(L.unit(s.unit||''))+'</span></div></div>';
+    };
+    const listHtml=rows.length?cats.map(c=>{
+        const list=groups.get(c),done=list.filter(hasValue).length;
+        const icon=typeof categoryIcons!=='undefined'&&categoryIcons[c]?categoryIcons[c]+' ':'';
+        return (showHeads?'<div class="v8-emp-group" data-employee-group-head="'+escapeHtml(c)+'"><span>'+icon+escapeHtml(c?L.cat(c):T('未分类'))+'</span><b>'+done+'/'+list.length+'</b></div>':'')+list.map(rowHtml).join('');
+      }).join(''):('<div class="empty">'+T('这个责任区没有可盘 SKU。')+'</div>');
+    return ('<div class="cassola-employee-summary"><div><span>'+T('责任区 SKU')+'</span><b>')+rows.length+('</b></div><div><span>'+T('今日已填')+'</span><b id="cassolaEmployeeFilled">')+filled+'/'+rows.length+'</b></div></div>'+
+      '<div class="v8-emp-progress" aria-hidden="true"><span id="cassolaEmployeeProgress" style="width:'+pct+'%"></span></div>'+
+      '<details class="cassola-employee-note v8-emp-guide"><summary>'+T('ⓘ 怎么用')+'</summary>'+T('数量可以离线填写。报损 / 熟化转化在“查看详情”记录，会和今日盘货一起交给 Supervisor；规格 / 单位异常仍走提议审核。')+'</details>'+
+      '<div class="cassola-employee-counts">'+listHtml+
       '</div>'+
       '<div class="cassola-employee-foot">'+(queued?T('📵 本机还有 {n} 份待发送 · 点底部“待{n}”手动提交',{n:queued}):T('联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用'))+'</div>'+
       '<div class="cassola-employee-upload-dock">'+
@@ -320,6 +340,11 @@
       content+
       '</div>';
     window.CassolaEmployeeTools?.enhance?.();
+    if(employeeFocusMissing&&countMode){
+      employeeFocusMissing=false;
+      const first=box.querySelector('.cassola-employee-row.is-missing');
+      if(first){first.scrollIntoView({behavior:'smooth',block:'center'});first.querySelector('[data-employee-sku]')?.focus({preventScroll:true})}
+    }
   }
   function parseEmployeeQty(raw){
     if(typeof parseLocaleDecimal==='function')return parseLocaleDecimal(raw);
@@ -438,11 +463,25 @@
     saveEmployeeDraft(draft);
     const p=employeeProgress(),el=document.getElementById('cassolaEmployeeFilled');
     if(el)el.textContent=p.filled+'/'+p.total;
+    /* v0.8.1: tick the row, update its group and the progress bar without re-rendering */
+    const done=draft.counts[id]!==undefined;
+    if(done)employeeMissingIds.delete(String(id));
+    const row=input.closest('.cassola-employee-row');
+    if(row){row.classList.toggle('is-done',done);if(done)row.classList.remove('is-missing')}
+    const bar=document.getElementById('cassolaEmployeeProgress');
+    if(bar)bar.style.width=(p.total?Math.round(p.filled/p.total*100):0)+'%';
+    const g=row?.dataset.employeeGroup;
+    if(g!==undefined){
+      const box=document.getElementById('cassolaEmployee');
+      const head=box?.querySelector('[data-employee-group-head="'+CSS.escape(g)+'"] b');
+      if(head){const all=[...box.querySelectorAll('.cassola-employee-row[data-employee-group="'+CSS.escape(g)+'"]')];head.textContent=all.filter(x=>x.classList.contains('is-done')).length+'/'+all.length}
+    }
   }
   function clearEmployeeDraft(){
     if(!isEmployee())return;
     if(!confirm(T('清空今天已经填写的盘货数字和报损 / 转化记录？')))return;
     localStorage.removeItem(draftKey());
+    employeeMissingIds=new Set();
     renderEmployee();
   }
   function buildEmployeePayload(){
@@ -457,7 +496,10 @@
     });
     if(!filled.length){if(typeof showToast==='function')showToast(T('还没有填写盘货数量'));return null}
     const missing=rows.length-filled.length;
-    if(missing>0){if(typeof showToast==='function')showToast(`${T('还有 {v0} 个责任区 SKU 没盘，先盘完再上传',{v0:missing})}`);return null}
+    if(missing>0){
+      const have=new Set(filled.map(x=>String(x.skuId)));
+      employeeMissingIds=new Set(rows.map(s=>String(s.id)).filter(id=>!have.has(id)));
+      employeeFocusMissing=true;if(typeof showToast==='function')showToast(`${T('还有 {v0} 个责任区 SKU 没盘，先盘完再上传',{v0:missing})}`);return null}
     draft.exportRevision=(Number(draft.exportRevision)||0)+1;
     draft.lastExportedAt=new Date().toISOString();
     saveEmployeeDraft(draft);
@@ -487,7 +529,7 @@
     };
   }
   function exportEmployeeCount(){
-    const payload=buildEmployeePayload();if(!payload)return;
+    const payload=buildEmployeePayload();if(!payload){renderEmployee();return}
     const scope=employeeCountContext().scope||{};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -680,7 +722,7 @@
     document.getElementById('cassolaEmployee').addEventListener('click',e=>{
       if(e.target.closest('[data-cassola-logout]')){logout();return}
       const panel=e.target.closest('[data-employee-panel]');if(panel){switchEmployeePanel(panel.dataset.employeePanel);return}
-      const countTask=e.target.closest('[data-employee-count-task]');if(countTask){employeeCountTaskId=countTask.dataset.employeeCountTask;renderEmployee();return}
+      const countTask=e.target.closest('[data-employee-count-task]');if(countTask){employeeCountTaskId=countTask.dataset.employeeCountTask;employeeMissingIds=new Set();renderEmployee();return}
       const receiptStatus=e.target.closest('[data-employee-receipt-status]');if(receiptStatus){setEmployeeReceiptStatus(receiptStatus.dataset.taskId,receiptStatus.dataset.skuId,receiptStatus.dataset.employeeReceiptStatus);return}
       if(e.target.closest('[data-employee-receipt-refresh]')){refreshEmployeeReceiptTasks();return}
       const receiptClaim=e.target.closest('[data-employee-receipt-claim]');if(receiptClaim){claimRoleReceiptTask(receiptClaim.dataset.employeeReceiptClaim);return}

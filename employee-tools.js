@@ -7,7 +7,8 @@
     unit:u=>window.CassolaI18n?window.CassolaI18n.unit(u):u,
     cat:c=>window.CassolaI18n?window.CassolaI18n.category(c):c,
     lang:()=>window.CassolaI18n?window.CassolaI18n.lang():'zh',
-    html:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN'
+    html:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN',
+    pic:s=>typeof window.CassolaSkuVisual==='function'?window.CassolaSkuVisual(s,'📦'):'📦'
   };
   const EMPLOYEE_DIALOG_IDS=['employeeSkuDetailDialog','employeeNewSkuDialog','employeeNewCategoryDialog','employeeReclassifyDialog'];
   const UNITS=['个','颗','包','盒','袋','箱','瓶','罐','kg','g','L','ml','份','把','托','件'];
@@ -205,7 +206,7 @@
       ('<div class="employee-sku-center-intro"><div><span class="eyebrow">SKU FIELD TOOLS</span><h2>'+T('📦 SKU 现场功能')+'</h2><p>'+T('发现现实可以，改正式数据库不行。新 SKU / 新分类 / 重新归类都先交给 Supervisor。🗿💢')+'</p></div></div>')+
       ('<div class="employee-sku-center-actions"><button type="button" class="btn primary" data-employee-new-sku>'+T('＋ 新 SKU')+'</button><button type="button" class="btn secondary" data-employee-new-category>'+T('🏷️ 新分类')+'</button></div>')+
       '<div class="employee-sku-center-list">'+
-        (rows.length?rows.map(x=>'<article class="employee-sku-center-row"><div><strong>'+esc(L.sku(x.name||'SKU'))+'</strong><small>'+esc(x.spec||T('无规格'))+' · '+esc(x.category?L.cat(x.category):T('未分类'))+' · '+esc(x.supplier||T('未设供应商'))+'</small></div><button type="button" class="btn secondary" data-employee-reclassify="'+esc(x.id)+('">'+T('重新归类')+'</button></article>')).join(''):('<div class="empty">'+T('当前还没有可查看的正式 SKU。新 SKU 仍可以单独提议。')+'</div>'))+
+        (rows.length?rows.map(x=>'<article class="employee-sku-center-row"><div class="v8-has-art"><span class="cassola-employee-art">'+L.pic(x)+'</span><div class="v8-copy-text"><strong>'+esc(L.sku(x.name||'SKU'))+'</strong><small>'+esc(x.spec||T('无规格'))+' · '+esc(x.category?L.cat(x.category):T('未分类'))+' · '+esc(x.supplier||T('未设供应商'))+'</small></div></div><button type="button" class="btn secondary" data-employee-reclassify="'+esc(x.id)+('">'+T('重新归类')+'</button></article>')).join(''):('<div class="empty">'+T('当前还没有可查看的正式 SKU。新 SKU 仍可以单独提议。')+'</div>'))+
       '</div>'+
       ('<div class="employee-sku-center-foot">'+T('员工提交的是 proposal，不会直接创建 / 改名 / 改分类 / 改库存。Supervisor 可以看完再决定要不要收编这只 SKU。')+'</div>')+
     '</section>';

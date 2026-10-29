@@ -3,6 +3,8 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
+> **2026-10-29 Employee v0.8.1：**员工盘货按分类分组（只改显示，payload 顺序不变）、已填行 ✓ + 进度条、上传 / JSON 被拒时高亮并聚焦第一个空行、长说明折叠为「ⓘ 怎么用」。PWA cache v110。
+
 > **2026-10-29 v0.8.0 · 库存页提速 + 吸顶栏遮挡修复 + 员工端三语（分支 `opus/v0.8-upgrade`）：**`v3WeeklyUse()` 改为按 SKU 建索引并缓存（输出与旧实现逐一比对一致），去掉搜索框重复监听，库存页在 2500 条历史下从约 4.3 秒降到约 23 毫秒。吸顶搜索栏 / Staff 工具条改用实测顶栏高度（`ui-extras.js` → CSS 变量 `--cassola-topbar-h` / `--cassola-staff-topbar-h`），修复 iPhone 上整条被顶栏挡住；胖胖风格不变，`v08-polish.css` 只做小补充。员工端新增 中文 / Italiano / বাংলা 切换（`i18n.js` / `i18n-ui.js` / `i18n-sku.js`），只翻译显示文字，不改任何上传数据。规则见下方 **2.4 员工端多语言**。SKU 新增自动插图（`sku-art.js`，员工也可见）和本机实拍（`sku-photos.js`，暂不同步），规则见 **2.5 SKU 小图**。PWA cache v109。iPhone 实机验收待完成；孟加拉语译文需孟加拉同事过目。
 
 > **2026-10-29 Inventory v0.7.9 / Employee Receipt Cloud Lifecycle：**生产只读核对发现 employee_receipt_tasks 仍有两条 authorized 历史授权：10/06 米兰个人收货 7 SKU、10/20 米兰岗位收货 11 SKU（10/27 被领取）。此前管理入口仅在当前未结案的订单「授权员工收货」弹窗，结案订单不显示按钮，收货审核 Inbox 也不显示未提交授权，因此旧授权不会随着本机订单结案自动撤销。新增 Inventory → 已下单 →「🚚 管理员工收货授权」独立弹窗，使用现有 Supervisor receipt_tasks Cloud API 列出全部订单的 authorized / submitted，并支持查看历史状态；只有 authorized 可以二次确认调用 receipt_revoke，submitted 进入人工审核，accepted / rejected / revoked 为只读。员工收货新增「🔄 刷新收货」及 Cloud 核对时间/本机旧快照提示；成功的 status 会用真实 Cloud 列表（可为空）覆盖本机任务缓存，失败不丢草稿或 Outbox。没有新建 Supabase 表、RPC 或 Edge Function；未修改生产收货任务状态、Inventory / Staff 数据。静态检查与隔离模拟通过，iPhone 实机验收待完成。PWA cache v108。

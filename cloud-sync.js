@@ -534,14 +534,14 @@
   async function submitEmployee(payload){
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
     const data=await api('employee_submit',{payload},12000);
-    if(typeof showToast==='function')showToast('☁️ 今日盘货已提交给 Supervisor');
+    if(typeof showToast==='function')showToast((window.CassolaI18n?window.CassolaI18n.t('☁️ 今日盘货已提交给 Supervisor'):'☁️ 今日盘货已提交给 Supervisor'));
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
   }
   async function submitSkuProposal(proposal){
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
     const data=await api('employee_sku_proposal',{proposal,deviceId:deviceId()},10000);
-    if(typeof showToast==='function')showToast('🧪 SKU 提议已交给 Supervisor');
+    if(typeof showToast==='function')showToast((window.CassolaI18n?window.CassolaI18n.t('🧪 SKU 提议已交给 Supervisor'):'🧪 SKU 提议已交给 Supervisor'));
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
   }

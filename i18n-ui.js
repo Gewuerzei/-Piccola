@@ -232,5 +232,8 @@ window.CASSOLA_I18N_UI={
   "未设置":{it:"non indicato",bn:"নেই"},
   "先填写建议分类":{it:"Scrivi prima la categoria proposta",bn:"আগে প্রস্তাবিত ক্যাটাগরি লিখুন"},
   "它现在已经是这个分类":{it:"È già in questa categoria",bn:"এটা আগেই এই ক্যাটাগরিতে আছে"},
-  "🏷️ 归类提议已交给 Supervisor":{it:"🏷️ Proposta di categoria inviata al Supervisor",bn:"🏷️ ক্যাটাগরি প্রস্তাব সুপারভাইজারের কাছে পাঠানো হয়েছে"}
+  "🏷️ 归类提议已交给 Supervisor":{it:"🏷️ Proposta di categoria inviata al Supervisor",bn:"🏷️ ক্যাটাগরি প্রস্তাব সুপারভাইজারের কাছে পাঠানো হয়েছে"},
+  "ⓘ 怎么用":{it:"ⓘ Come si usa",bn:"ⓘ কীভাবে ব্যবহার করবেন"},
+  "☁️ 今日盘货已提交给 Supervisor":{it:"☁️ Inventario di oggi inviato al Supervisor",bn:"☁️ আজকের গণনা সুপারভাইজারের কাছে পাঠানো হয়েছে"},
+  "🧪 SKU 提议已交给 Supervisor":{it:"🧪 Proposta SKU inviata al Supervisor",bn:"🧪 SKU প্রস্তাব সুপারভাইজারের কাছে পাঠানো হয়েছে"}
 };
