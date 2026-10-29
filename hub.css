@@ -567,3 +567,9 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 .cassola-role-receipt-claim{border:1px solid var(--line)}
 .cassola-role-receipt-claim .cassola-employee-note{font-size:12px;line-height:1.65}
 .cassola-role-receipt-claim [data-employee-receipt-claim]{min-height:54px}
+
+/* v0.7.9 · Employee receipt Cloud verification */
+.cassola-employee-receipt-sync{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:0 0 12px;padding:10px 11px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.025)}
+.cassola-employee-receipt-sync small{color:var(--muted);font-size:10px;line-height:1.45;flex:1;min-width:0}
+.cassola-employee-receipt-sync .btn{flex:0 0 auto;min-height:42px;font-size:11px}
+@media(max-width:420px){.cassola-employee-receipt-sync{flex-direction:column;align-items:stretch}.cassola-employee-receipt-sync .btn{width:100%}}
