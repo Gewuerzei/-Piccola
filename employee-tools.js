@@ -7,7 +7,9 @@
     unit:u=>window.CassolaI18n?window.CassolaI18n.unit(u):u,
     cat:c=>window.CassolaI18n?window.CassolaI18n.category(c):c,
     lang:()=>window.CassolaI18n?window.CassolaI18n.lang():'zh',
-    html:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN'
+    html:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN',
+    pic:s=>typeof window.CassolaSkuVisual==='function'?window.CassolaSkuVisual(s,'📦'):'📦',
+    supplier:v=>window.CassolaI18n?window.CassolaI18n.supplier(v):v
   };
   const EMPLOYEE_DIALOG_IDS=['employeeSkuDetailDialog','employeeNewSkuDialog','employeeNewCategoryDialog','employeeReclassifyDialog'];
   const UNITS=['个','颗','包','盒','袋','箱','瓶','罐','kg','g','L','ml','份','把','托','件'];
@@ -57,7 +59,7 @@
       d.innerHTML=`
         <form method="dialog" id="employeeSkuDetailForm">
           <div class="dialog-head">
-            <div><div class="eyebrow">SKU DETAIL</div><h3 id="employeeSkuDetailTitle">${T('SKU 详情')}</h3></div>
+            <div><div class="eyebrow">${T('SKU DETAIL')}</div><h3 id="employeeSkuDetailTitle">${T('SKU 详情')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
           <input type="hidden" id="employeeSkuDetailId" />
@@ -111,7 +113,7 @@
       d.innerHTML=`
         <form method="dialog" id="employeeNewSkuForm">
           <div class="dialog-head">
-            <div><div class="eyebrow">FIELD SKU PROPOSAL</div><h3>${T('＋ 现场新 SKU')}</h3></div>
+            <div><div class="eyebrow">${T('FIELD SKU PROPOSAL')}</div><h3>${T('＋ 现场新 SKU')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
           <div class="employee-proposal-banner">${T('🟠 新 SKU 只会进入待审核区。Supervisor 接受以后才会进入正式库存。')}</div>
@@ -145,7 +147,7 @@
       d.innerHTML=`
         <form method="dialog">
           <div class="dialog-head">
-            <div><div class="eyebrow">CATEGORY PROPOSAL</div><h3>${T('＋ 提议新分类')}</h3></div>
+            <div><div class="eyebrow">${T('CATEGORY PROPOSAL')}</div><h3>${T('＋ 提议新分类')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
           <div class="employee-proposal-banner">${T('🏷️ 只是提议。Supervisor 批准后才会进入正式 Inventory 分类。')}</div>
@@ -162,7 +164,7 @@
       d.innerHTML=`
         <form method="dialog">
           <div class="dialog-head">
-            <div><div class="eyebrow">RECLASSIFY PROPOSAL</div><h3 id="employeeReclassifyTitle">${T('🏷️ 重新归类 SKU')}</h3></div>
+            <div><div class="eyebrow">${T('RECLASSIFY PROPOSAL')}</div><h3 id="employeeReclassifyTitle">${T('🏷️ 重新归类 SKU')}</h3></div>
             <button value="cancel" formnovalidate class="icon-btn">✕</button>
           </div>
           <input type="hidden" id="employeeReclassifySkuId" />
@@ -202,10 +204,10 @@
   function panelHtml(){
     const rows=proposalCatalog();
     return '<section class="employee-sku-center">'+
-      ('<div class="employee-sku-center-intro"><div><span class="eyebrow">SKU FIELD TOOLS</span><h2>'+T('📦 SKU 现场功能')+'</h2><p>'+T('发现现实可以，改正式数据库不行。新 SKU / 新分类 / 重新归类都先交给 Supervisor。🗿💢')+'</p></div></div>')+
+      ('<div class="employee-sku-center-intro"><div><span class="eyebrow">'+T('SKU FIELD TOOLS')+'</span><h2>'+T('📦 SKU 现场功能')+'</h2><p>'+T('发现现实可以，改正式数据库不行。新 SKU / 新分类 / 重新归类都先交给 Supervisor。🗿💢')+'</p></div></div>')+
       ('<div class="employee-sku-center-actions"><button type="button" class="btn primary" data-employee-new-sku>'+T('＋ 新 SKU')+'</button><button type="button" class="btn secondary" data-employee-new-category>'+T('🏷️ 新分类')+'</button></div>')+
       '<div class="employee-sku-center-list">'+
-        (rows.length?rows.map(x=>'<article class="employee-sku-center-row"><div><strong>'+esc(L.sku(x.name||'SKU'))+'</strong><small>'+esc(x.spec||T('无规格'))+' · '+esc(x.category?L.cat(x.category):T('未分类'))+' · '+esc(x.supplier||T('未设供应商'))+'</small></div><button type="button" class="btn secondary" data-employee-reclassify="'+esc(x.id)+('">'+T('重新归类')+'</button></article>')).join(''):('<div class="empty">'+T('当前还没有可查看的正式 SKU。新 SKU 仍可以单独提议。')+'</div>'))+
+        (rows.length?rows.map(x=>'<article class="employee-sku-center-row"><div class="v8-has-art"><span class="cassola-employee-art">'+L.pic(x)+'</span><div class="v8-copy-text"><strong>'+esc(L.sku(x.name||'SKU'))+'</strong><small>'+esc(x.spec||T('无规格'))+' · '+esc(x.category?L.cat(x.category):T('未分类'))+' · '+esc(x.supplier?L.supplier(x.supplier):T('未设供应商'))+'</small></div></div><button type="button" class="btn secondary" data-employee-reclassify="'+esc(x.id)+('">'+T('重新归类')+'</button></article>')).join(''):('<div class="empty">'+T('当前还没有可查看的正式 SKU。新 SKU 仍可以单独提议。')+'</div>'))+
       '</div>'+
       ('<div class="employee-sku-center-foot">'+T('员工提交的是 proposal，不会直接创建 / 改名 / 改分类 / 改库存。Supervisor 可以看完再决定要不要收编这只 SKU。')+'</div>')+
     '</section>';
@@ -424,7 +426,7 @@
     const sku=proposalCatalog().find(x=>String(x.id)===String(id));if(!sku){alert(T('找不到这个正式 SKU。'));return}
     document.getElementById('employeeReclassifySkuId').value=sku.id;
     document.getElementById('employeeReclassifyTitle').textContent='🏷️ '+L.sku(sku.name||'SKU')+' · '+T('重新归类');
-    document.getElementById('employeeReclassifyCurrent').innerHTML=('<div><span>'+T('当前分类')+'</span><b>')+esc(sku.category?L.cat(sku.category):T('未分类'))+('</b></div><div><span>'+T('供应商')+'</span><b>')+esc(sku.supplier||T('未设置'))+'</b></div>';
+    document.getElementById('employeeReclassifyCurrent').innerHTML=('<div><span>'+T('当前分类')+'</span><b>')+esc(sku.category?L.cat(sku.category):T('未分类'))+('</b></div><div><span>'+T('供应商')+'</span><b>')+esc(sku.supplier?L.supplier(sku.supplier):T('未设置'))+'</b></div>';
     document.getElementById('employeeReclassifyCategory').value='';
     document.getElementById('employeeReclassifyNote').value='';
     document.getElementById('employeeReclassifyDialog').showModal();

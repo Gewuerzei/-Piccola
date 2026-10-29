@@ -2,6 +2,20 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Employee v0.8.1 · 员工盘货更顺手
+**2026-10-29** · 由 Claude Opus 在分支 `opus/v0.8.1-employee` 完成
+
+- **按分类分组**：员工盘货列表不再按中文名排序（对不读中文的同事等于乱序），改为按库存房的分类顺序分组（同 `categories`），每组标题显示已填 / 总数，分类名随语言翻译。只改显示：`employeeCountContext().rows` 与上传 payload 的顺序不变。
+- **已填一目了然**：填了数字的行变绿并在图片角上打 ✓；顶部新增进度条；分组计数、进度条随输入即时更新，不重绘整页。
+- **没盘完时直接定位**：点「上传」或「JSON」时若还有空行，空行用黄色框标出，并自动滚到第一个、把光标放进去；填上后标记自动消失。清空草稿或切换任务时清除标记。
+- **第一屏更短**：每天都一样的长说明收进「ⓘ 怎么用」折叠框；员工页的语言切换略矮（仍是 44px 触控目标）。
+- 员工 SKU 列表也显示 SKU 小图；`cloud-sync.js` 两条员工提交成功提示改为可翻译。
+- **补齐漏翻（iPhone 实测发现）**：Cloud 自动生成的任务标签（`无盘货任务`、`Staff 个人任务`、`供应商 · 米兰`、`分类 · …`、`组合盘货 · 42 SKU`、`岗位 … + 个人任务`、`🥬 蔬果`）在员工端按语言显示（`CassolaI18n.label()`）；中文供应商名（米兰、大兴、恒丰、内部、自种、待确认）按语言显示（`CassolaI18n.supplier()`，`i18n-sku.js` 新增 `suppliers`）；员工页英文小标题（EMPLOYEE MODE 等）也翻译，孟加拉语小标题不加宽字距。只改显示，上传的标签 / 供应商仍是原值；Supervisor 自己输入的任务名照原文显示。已用 Cloud 现有数据核对：所有带中文的 SKU 名、单位、分类、供应商都有译名。
+- 修改：`hub.js`、`employee-tools.js`、`cloud-sync.js`、`i18n.js`、`i18n-ui.js`、`i18n-sku.js`、`v08-polish.css`、`sw.js`。PWA cache **v110**。无数据 / Cloud / Edge 变更。
+- 验证（Chromium 预览，孟加拉语）：分组顺序正确、进度条与 ✓ 实时更新、缺 3 项时高亮并聚焦第一项、补齐后可提交且 payload 顺序与旧版一致、无页面错误。iPhone 实机验收待完成。
+
+---
+
 ## Inventory / Employee v0.8.0 · 库存页提速 + 吸顶栏修复 + 员工端三语 + SKU 小图
 **2026-10-29** · 由 Claude Opus 在分支 `opus/v0.8-upgrade` 完成，待 Piccola / Pietro 合并
 

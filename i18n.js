@@ -17,7 +17,7 @@
   try{const saved=localStorage.getItem(KEY);if(LANGS.some(x=>x.id===saved))lang=saved}catch(_){}
 
   const UI=window.CASSOLA_I18N_UI||{};
-  const SKU=window.CASSOLA_I18N_SKU||{names:{},units:{},categories:{}};
+  const SKU=window.CASSOLA_I18N_SKU||{names:{},units:{},categories:{},suppliers:{}};
 
   function fill(text,vars){
     if(!vars)return text;
@@ -42,6 +42,32 @@
     return String(u).split('/').map(p=>lookup(SKU.units,p)||p).join('/');
   }
   function category(c){if(!c)return c;return lookup(SKU.categories,c)||c}
+  /* Supplier names like "Cattel/Lodi/恒丰" are translated part by part. */
+  function supplier(v){
+    if(lang==='zh'||!v)return v;
+    return String(v).split('/').map(p=>lookup(SKU.suppliers||{},p)||p).join('/');
+  }
+  /* Task / scope labels. The Cloud generates a few fixed patterns
+     ("供应商 · 米兰", "组合盘货 · 42 SKU", "岗位 Sushi + 个人任务", "🥬 蔬果",
+     "无盘货任务"); those are translated, anything a Supervisor typed shows as-is. */
+  function label(v){
+    if(lang==='zh'||!v)return v;
+    const s=String(v).trim();
+    if(Object.prototype.hasOwnProperty.call(UI,s))return t(s);
+    let m=s.match(/^岗位 (.*?)( \+ 个人任务)?$/);
+    if(m)return t('岗位 {name}',{name:m[1]})+(m[2]?' + '+t('个人任务'):'');
+    m=s.match(/^组合盘货 · (\d+) SKU$/);
+    if(m)return t('组合盘货 · {n} SKU',{n:m[1]});
+    m=s.match(/^(供应商|分类|区域|SKU) · (.+)$/);
+    if(m){
+      const k=m[1],x=m[2];
+      const shown=k==='供应商'?supplier(x):k==='分类'?category(x):k==='SKU'?sku(x):x;
+      return (k==='SKU'?'SKU':t(k))+' · '+shown;
+    }
+    m=s.match(/^(\p{Extended_Pictographic}[\uFE0F\u200D\p{Extended_Pictographic}]*)\s+(.+)$/u);
+    if(m){const c=lookup(SKU.categories,m[2]);if(c)return m[1]+' '+c}
+    return s;
+  }
   function locale(){return (LANGS.find(x=>x.id===lang)||LANGS[0]).locale}
   function htmlLang(){return (LANGS.find(x=>x.id===lang)||LANGS[0]).html}
   function setLang(next){
@@ -60,5 +86,5 @@
     if(b){e.preventDefault();setLang(b.dataset.cassolaLang)}
   });
 
-  window.CassolaI18n={t,sku,skuOriginal,unit,category,locale,htmlLang,setLang,switcherHtml,lang:()=>lang,languages:()=>LANGS.map(x=>({...x}))};
+  window.CassolaI18n={t,sku,skuOriginal,unit,category,supplier,label,locale,htmlLang,setLang,switcherHtml,lang:()=>lang,languages:()=>LANGS.map(x=>({...x}))};
 })();
