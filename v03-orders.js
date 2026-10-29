@@ -772,7 +772,7 @@ async function v4ReloadReceiptTaskManager(){
   }
 }
 async function v4RevokeEmployeeReceiptTask(taskId){
-  if(!confirm('撤销这份员工收货授权？\\n\\nCloud 授权将立即终止，员工下次联网刷新后任务消失。历史及库存保留。'))return;
+  if(!confirm('撤销这份员工收货授权？\n\nCloud 授权将立即终止，员工下次联网刷新后任务消失。历史及库存保留。'))return;
   try{
     await window.CassolaCloud.revokeReceiptTask(taskId,'Supervisor revoked receipt authorization');
     showToast('✅ Cloud 已撤销收货授权');
