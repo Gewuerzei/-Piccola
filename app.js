@@ -161,7 +161,7 @@ function migrate(s){
   base.customCategories=[...new Set((Array.isArray(s.customCategories)?s.customCategories:[]).map(x=>String(x||'').trim()).filter(Boolean))];
   return {...base,...s,version:2,skus:base.skus,history:base.history,order:base.order,customCategories:base.customCategories};
 }
-function saveState(){localStorage.setItem(APP_KEY,JSON.stringify(state));}
+function saveState(){localStorage.setItem(APP_KEY,JSON.stringify(state));if(typeof v8InvalidateUseCache==='function')v8InvalidateUseCache();}
 /* Shelf groups are a display-only hierarchy. Existing persisted categories,
    employee selector snapshots and supplier task permissions must not migrate. */
 const V7_PRODUCE_ROOM_FILTER='@produce-room';
@@ -388,8 +388,8 @@ document.addEventListener('click',e=>{
   const sup=e.target.closest('[data-supplier]');if(sup){activeSupplier=sup.dataset.supplier;renderSupplierTabs();renderOrder();return;}
   const rem=e.target.closest('[data-remove-order]');if(rem){delete state.order[rem.dataset.removeOrder];saveState();renderOrder();renderStock();return;}
 });
-document.getElementById('searchInput').addEventListener('input',renderStock);
-document.getElementById('categoryFilter').addEventListener('change',renderStock);
+/* v0.8: search/category listeners now live only in v03-ui.js. The old ones here held a
+   reference to the original renderStock, so every keystroke rendered the list twice. */
 document.getElementById('historyFilter').addEventListener('change',renderHistory);
 document.getElementById('actionType').addEventListener('change',syncActionForm);
 document.getElementById('confirmActionBtn').addEventListener('click',confirmAction);

@@ -1,5 +1,15 @@
 /* Cassola Hub · pre-registered role gate + scoped employee count */
 (function(){
+  /* v0.8 i18n: display-only helpers. Without i18n.js everything stays Chinese. */
+  const T=(s,v)=>window.CassolaI18n?window.CassolaI18n.t(s,v):(v?String(s).replace(/\{(\w+)\}/g,(m,k)=>k in v?v[k]:m):s);
+  const L={
+    sku:n=>window.CassolaI18n?window.CassolaI18n.sku(n):n,
+    orig:n=>window.CassolaI18n?window.CassolaI18n.skuOriginal(n):'',
+    unit:u=>window.CassolaI18n?window.CassolaI18n.unit(u):u,
+    locale:()=>window.CassolaI18n?window.CassolaI18n.locale():'zh-CN',
+    lang:()=>window.CassolaI18n?window.CassolaI18n.htmlLang():'zh-CN',
+    switcher:()=>window.CassolaI18n?window.CassolaI18n.switcherHtml():''
+  };
   const FAIL_KEY='cassola_access_fail_v02';
   const EMPLOYEE_DRAFT_PREFIX='cassola_employee_count_v01';
   const OFFLINE_ACCESS_KEY='cassola_access_offline_v01';
@@ -200,15 +210,15 @@
   }
   function employeeReceiptStatusMeta(status){
     return {
-      received:['✅','收齐'],later:['🕒','晚到'],other:['👥','待他人'],
-      out:['❌','缺货'],short:['⬇️','少到'],over:['⬆️','多到']
-    }[status]||['·','未选择'];
+      received:['✅',T('收齐')],later:['🕒',T('晚到')],other:['👥',T('待他人')],
+      out:['❌',T('缺货')],short:['⬇️',T('少到')],over:['⬆️',T('多到')]
+    }[status]||['·',T('未选择')];
   }
   function employeeTaskPickerHtml(tasks,selectedId){
     if(!tasks.length)return'';
     return '<div class="cassola-employee-task-picker">'+tasks.map(t=>{
       const shared=t.source_kind==='role'||t.shared_role_task===true;
-      return '<button type="button" data-employee-count-task="'+escapeHtml(t.task_id)+'" class="'+(String(t.task_id)===String(selectedId)?'active':'')+'"><span>'+(shared?'👥 ':'📋 ')+escapeHtml(t.label||'盘货任务')+(shared?'<small>岗位共享 · 谁先提交谁生效</small>':'')+'</span><b>'+((t.resolved_sku_ids||[]).length)+' SKU</b></button>';
+      return '<button type="button" data-employee-count-task="'+escapeHtml(t.task_id)+'" class="'+(String(t.task_id)===String(selectedId)?'active':'')+'"><span>'+(shared?'👥 ':'📋 ')+escapeHtml(t.label||T('盘货任务'))+(shared?('<small>'+T('岗位共享 · 谁先提交谁生效')+'</small>'):'')+'</span><b>'+((t.resolved_sku_ids||[]).length)+' SKU</b></button>';
     }).join('')+'</div>';
   }
   function employeeCountPanelHtml(rows,draft,filled,queued){
@@ -216,35 +226,35 @@
     // employee draft from localStorage, causing avoidable iOS main-thread work.
     const eventCounts=new Map();
     (draft.events||[]).forEach(ev=>{const id=String(ev.skuId||'');eventCounts.set(id,(eventCounts.get(id)||0)+1)});
-    return '<div class="cassola-employee-summary"><div><span>责任区 SKU</span><b>'+rows.length+'</b></div><div><span>今日已填</span><b id="cassolaEmployeeFilled">'+filled+'/'+rows.length+'</b></div></div>'+
-      '<div class="cassola-employee-note">数量可以离线填写。报损 / 熟化转化在“查看详情”记录，会和今日盘货一起交给 Supervisor；规格 / 单位异常仍走提议审核。</div>'+
+    return ('<div class="cassola-employee-summary"><div><span>'+T('责任区 SKU')+'</span><b>')+rows.length+('</b></div><div><span>'+T('今日已填')+'</span><b id="cassolaEmployeeFilled">')+filled+'/'+rows.length+'</b></div></div>'+
+      ('<div class="cassola-employee-note">'+T('数量可以离线填写。报损 / 熟化转化在“查看详情”记录，会和今日盘货一起交给 Supervisor；规格 / 单位异常仍走提议审核。')+'</div>')+
       '<div class="cassola-employee-counts">'+
       (rows.length?rows.map(s=>{
         const v=draft.counts?.[s.id],eventCount=eventCounts.get(String(s.id))||0;
-        return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(s.name||'SKU')+'</strong><small>'+escapeHtml(s.spec||'无规格')+' · '+escapeHtml(s.unit||'')+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">查看详情'+(eventCount?' · 变动 '+eventCount:'')+'</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(s.unit||'')+'</span></div></div>';
-      }).join(''):'<div class="empty">这个责任区没有可盘 SKU。</div>')+
+        return '<div class="cassola-employee-row"><div class="cassola-employee-copy"><strong>'+escapeHtml(L.sku(s.name||'SKU'))+'</strong><small>'+(L.orig(s.name)?escapeHtml(L.orig(s.name))+' · ':'')+escapeHtml(s.spec||T('无规格'))+' · '+escapeHtml(L.unit(s.unit||''))+'</small><button type="button" class="cassola-employee-detail" data-employee-detail="'+escapeHtml(s.id)+'">'+T('查看详情')+(eventCount?' · '+T('变动 {n}',{n:eventCount}):'')+'</button></div><div class="cassola-employee-input"><input data-employee-sku="'+escapeHtml(s.id)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value="'+(v===undefined||v===null?'':escapeHtml(String(v)))+'"><span>'+escapeHtml(L.unit(s.unit||''))+'</span></div></div>';
+      }).join(''):('<div class="empty">'+T('这个责任区没有可盘 SKU。')+'</div>'))+
       '</div>'+
-      '<div class="cassola-employee-foot">'+(queued?('📵 本机还有 '+queued+' 份待发送 · 点底部“待'+queued+'”手动提交'):'联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用')+'</div>'+
+      '<div class="cassola-employee-foot">'+(queued?T('📵 本机还有 {n} 份待发送 · 点底部“待{n}”手动提交',{n:queued}):T('联网优先直接提交 Cloud · JSON 仍保留作离线 / 灾难恢复备用'))+'</div>'+
       '<div class="cassola-employee-upload-dock">'+
         '<div id="cassolaEmployeeUploadNotice" class="cassola-employee-upload-notice" role="status" aria-live="polite">'+(employeeUploadNotice?escapeHtml(employeeUploadNotice):'')+'</div>'+
-        '<button type="button" class="btn secondary employee-dock-btn" data-employee-clear><span>🧹</span><small>清空</small></button>'+
-        '<button type="button" class="btn secondary employee-dock-btn" data-employee-new-sku><span>＋</span><small>新 SKU</small></button>'+
-        '<div class="cassola-employee-dock-cell"><button type="button" class="btn primary employee-dock-btn employee-dock-upload" data-employee-cloud '+(employeeUploadBusy?'disabled aria-busy="true"':'')+'><span>'+(employeeUploadBusy?'⏳':'☁️')+'</span><small>'+(employeeUploadBusy?'正在提交':'上传')+'</small></button>'+(queued?'<button type="button" class="employee-outbox-badge" data-employee-outbox aria-label="上传待发送 '+queued+'">待'+queued+'</button>':'')+'</div>'+
+        ('<button type="button" class="btn secondary employee-dock-btn" data-employee-clear><span>🧹</span><small>'+T('清空')+'</small></button>')+
+        ('<button type="button" class="btn secondary employee-dock-btn" data-employee-new-sku><span>＋</span><small>'+T('新 SKU')+'</small></button>')+
+        '<div class="cassola-employee-dock-cell"><button type="button" class="btn primary employee-dock-btn employee-dock-upload" data-employee-cloud '+(employeeUploadBusy?'disabled aria-busy="true"':'')+'><span>'+(employeeUploadBusy?'⏳':'☁️')+'</span><small>'+(employeeUploadBusy?T('正在提交'):T('上传'))+'</small></button>'+(queued?'<button type="button" class="employee-outbox-badge" data-employee-outbox aria-label="'+T('上传待发送 {n}',{n:queued})+'">'+T('待{n}',{n:queued})+'</button>':'')+'</div>'+
         '<button type="button" class="btn secondary employee-dock-btn" data-employee-export><span>📄</span><small>JSON</small></button>'+
       '</div>';
   }
   async function claimRoleReceiptTask(taskId){
     const btn=document.querySelector('[data-employee-receipt-claim="'+CSS.escape(String(taskId))+'"]');
-    if(!window.CassolaCloud?.connected?.()){alert('领取岗位收货需要联网确认。离线时不会占用任务，请联网后再试。');return}
-    if(btn){btn.disabled=true;btn.textContent='⏳ 正在领取…'}
+    if(!window.CassolaCloud?.connected?.()){alert(T('领取岗位收货需要联网确认。离线时不会占用任务，请联网后再试。'));return}
+    if(btn){btn.disabled=true;btn.textContent=T('⏳ 正在领取…')}
     try{
       await window.CassolaCloud.claimRoleReceiptTask(taskId);
-      if(typeof showToast==='function')showToast('👷 岗位收货已领取，仅你可以提交这份任务');
+      if(typeof showToast==='function')showToast(T('👷 岗位收货已领取，仅你可以提交这份任务'));
       renderEmployee();
     }catch(err){
       if(err?.data?.error==='role_receipt_already_claimed_or_unavailable')
-        alert('这份岗位收货已被同岗位其他员工领取或撤销。请刷新收货列表。');
-      else alert('领取岗位任务失败：'+(err?.message||'未知错误'));
+        alert(T('这份岗位收货已被同岗位其他员工领取或撤销。请刷新收货列表。'));
+      else alert(T('领取岗位任务失败：')+(err?.message||T('未知错误')));
       await window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{});
       renderEmployee();
     }
@@ -254,56 +264,58 @@
     const queued=window.CassolaCloud?.employeeReceiptQueued?.(task.task_id,accessSession?.id);
     if(task.claim_required){
       return '<article class="cassola-employee-receipt-task cassola-role-receipt-claim">'+
-        '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">👥 岗位共享 · 待领取</span><h2>🚚 '+escapeHtml(task.supplier||'收货任务')+'</h2><small>岗位：'+escapeHtml(task.source_role_name||'当前岗位')+' · '+(task.order_snapshot?.items?.length||0)+' 项待收</small></div></div>'+
-        '<p class="cassola-employee-note">任务不绑定特定员工。第一位符合岗位权限并成功领取的人负责提交，其他人不能重复领取；提交后仍由 Supervisor 审核。</p>'+
-        '<button type="button" class="btn primary large" data-employee-receipt-claim="'+escapeHtml(task.task_id)+'">👷 领取本岗位收货</button>'+
+        ('<div class="cassola-employee-receipt-head"><div><span class="eyebrow">'+T('👥 岗位共享 · 待领取')+'</span><h2>🚚 ')+escapeHtml(task.supplier||T('收货任务'))+'</h2><small>'+T('岗位：')+escapeHtml(task.source_role_name||T('当前岗位'))+' · '+T('{n} 项待收',{n:(task.order_snapshot?.items?.length||0)})+'</small></div></div>'+
+        ('<p class="cassola-employee-note">'+T('任务不绑定特定员工。第一位符合岗位权限并成功领取的人负责提交，其他人不能重复领取；提交后仍由 Supervisor 审核。')+'</p>')+
+        '<button type="button" class="btn primary large" data-employee-receipt-claim="'+escapeHtml(task.task_id)+('">'+T('👷 领取本岗位收货')+'</button>')+
       '</article>';
     }
     return '<article class="cassola-employee-receipt-task" data-employee-receipt-task="'+escapeHtml(task.task_id)+'">'+
-      '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">AUTHORIZED RECEIVING</span><h2>🚚 '+escapeHtml(task.supplier||'收货任务')+'</h2><small>Supervisor 授权 · '+escapeHtml(new Date(task.authorized_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cassola-role-pill">'+(queued?'📵 待发送':'👷 已授权')+'</span></div>'+
-      '<div class="cassola-employee-note">只记录这次现场实际收到的货。提交后不会直接入库，仍要 Supervisor 确认。</div>'+
+      '<div class="cassola-employee-receipt-head"><div><span class="eyebrow">AUTHORIZED RECEIVING</span><h2>🚚 '+escapeHtml(task.supplier||T('收货任务'))+('</h2><small>'+T('Supervisor 授权')+' · ')+escapeHtml(new Date(task.authorized_at).toLocaleString(L.locale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</small></div><span class="cassola-role-pill">'+(queued?T('📵 待发送'):T('👷 已授权'))+'</span></div>'+
+      ('<div class="cassola-employee-note">'+T('只记录这次现场实际收到的货。提交后不会直接入库，仍要 Supervisor 确认。')+'</div>')+
       '<div class="cassola-employee-receipt-lines">'+lines.map(line=>{
         const d=draft.lines?.[line.skuId]||{},remaining=receiptRemainingOrder(line),factor=Number(line.unitsPerOrder)>0?Number(line.unitsPerOrder):1;
         const pack=(factor!==1||String(line.orderUnit||line.unit||'')!==String(line.unit||''))?(' · 1'+escapeHtml(line.orderUnit||line.unit||'')+' = '+escapeHtml(String(factor))+escapeHtml(line.unit||'')):'';
         const meta=employeeReceiptStatusMeta(d.status);
         return '<div class="cassola-employee-receipt-line" data-receipt-line="'+escapeHtml(line.skuId)+'">'+
-          '<div class="cassola-employee-receipt-line-head"><div><strong>'+escapeHtml(line.skuName||line.skuId)+'</strong><small>库存规格 '+escapeHtml(line.spec||'未填写')+pack+'</small></div><b>待收 '+escapeHtml(String(remaining))+' '+escapeHtml(line.orderUnit||line.unit||'')+'</b></div>'+
-          '<div class="cassola-employee-receipt-qty"><label>本次到货<input type="text" inputmode="decimal" autocomplete="off" data-employee-receipt-qty="'+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.qty??'')+'" placeholder="0"></label><span>'+escapeHtml(line.orderUnit||line.unit||'')+'</span></div>'+
+          '<div class="cassola-employee-receipt-line-head"><div><strong>'+escapeHtml(L.sku(line.skuName||line.skuId))+'</strong><small>'+(L.orig(line.skuName)?escapeHtml(L.orig(line.skuName))+' · ':'')+T('库存规格')+' '+escapeHtml(line.spec||T('未填写'))+pack+'</small></div><b>'+T('待收')+' '+escapeHtml(String(remaining))+' '+escapeHtml(L.unit(line.orderUnit||line.unit||''))+'</b></div>'+
+          ('<div class="cassola-employee-receipt-qty"><label>'+T('本次到货')+'<input type="text" inputmode="decimal" autocomplete="off" data-employee-receipt-qty="')+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.qty??'')+'" placeholder="0"></label><span>'+escapeHtml(L.unit(line.orderUnit||line.unit||''))+'</span></div>'+
           '<div class="cassola-employee-receipt-status">'+['received','later','other','out','short','over'].map(st=>{const m=employeeReceiptStatusMeta(st);return '<button type="button" class="'+(d.status===st?'active':'')+'" data-employee-receipt-status="'+st+'" data-task-id="'+escapeHtml(task.task_id)+'" data-sku-id="'+escapeHtml(line.skuId)+'">'+m[0]+' '+m[1]+'</button>'}).join('')+'</div>'+
-          '<label class="cassola-employee-receipt-note">备注<input type="text" maxlength="300" data-employee-receipt-note="'+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.note||'')+'" placeholder="可空"></label>'+
-          '<button type="button" class="cassola-employee-receipt-spec" data-employee-spec-report="'+escapeHtml(line.skuId)+'">🧪 现场规格 / 包装不一致</button>'+
+          ('<label class="cassola-employee-receipt-note">'+T('备注')+'<input type="text" maxlength="300" data-employee-receipt-note="')+escapeHtml(line.skuId)+'" data-task-id="'+escapeHtml(task.task_id)+'" value="'+escapeHtml(d.note||'')+('" placeholder="'+T('可空')+'"></label>')+
+          '<button type="button" class="cassola-employee-receipt-spec" data-employee-spec-report="'+escapeHtml(line.skuId)+('">'+T('🧪 现场规格 / 包装不一致')+'</button>')+
           '<div class="cassola-employee-receipt-current">'+meta[0]+' '+meta[1]+'</div>'+
         '</div>';
       }).join('')+'</div>'+
-      '<button type="button" class="btn primary large cassola-employee-receipt-submit" data-employee-receipt-submit="'+escapeHtml(task.task_id)+'" '+(queued?'disabled':'')+'>'+(queued?'📵 已保存待发送':'📤 提交本次收货')+'</button>'+
+      '<button type="button" class="btn primary large cassola-employee-receipt-submit" data-employee-receipt-submit="'+escapeHtml(task.task_id)+'" '+(queued?'disabled':'')+'>'+(queued?T('📵 已保存待发送'):T('📤 提交本次收货'))+'</button>'+
     '</article>';
   }
   function employeeReceiptPanelHtml(tasks){
     const sync=window.CassolaCloud?.receiptTaskSyncInfo?.(accessSession?.id)||{};
-    const when=sync.checkedAt?new Date(sync.checkedAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'从未确认';
-    const note=sync.verified?'☁️ 上次 Cloud 成功核对：'+when:'⚠️ 本机旧任务快照 · 上次核对：'+when+'。已撤销的任务可能仍显示，需联网刷新确认。';
-    const toolbar='<div class="cassola-employee-receipt-sync"><small role="status">'+escapeHtml(note)+'</small><button type="button" class="btn secondary" data-employee-receipt-refresh>🔄 刷新收货</button></div>';
-    if(!tasks.length)return toolbar+'<div class="cassola-employee-no-task"><span>🚚</span><h2>无任务</h2><p>只有 Supervisor 明确“授权员工收货”后，这里才会出现订单。</p></div>';
-    return toolbar+'<div class="cassola-employee-receipt-summary"><span>当前授权</span><b>'+tasks.length+' 个收货任务</b></div>'+tasks.map(employeeReceiptTaskHtml).join('');
+    const when=sync.checkedAt?new Date(sync.checkedAt).toLocaleString(L.locale(),{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):T('从未确认');
+    const note=sync.verified?T('☁️ 上次 Cloud 成功核对：{when}',{when}):T('⚠️ 本机旧任务快照 · 上次核对：{when}。已撤销的任务可能仍显示，需联网刷新确认。',{when});
+    const toolbar='<div class="cassola-employee-receipt-sync"><small role="status">'+escapeHtml(note)+('</small><button type="button" class="btn secondary" data-employee-receipt-refresh>'+T('🔄 刷新收货')+'</button></div>');
+    if(!tasks.length)return toolbar+('<div class="cassola-employee-no-task"><span>🚚</span><h2>'+T('无任务')+'</h2><p>'+T('只有 Supervisor 明确“授权员工收货”后，这里才会出现订单。')+'</p></div>');
+    return toolbar+'<div class="cassola-employee-receipt-summary"><span>'+T('当前授权')+'</span><b>'+T('{n} 个收货任务',{n:tasks.length})+'</b></div>'+tasks.map(employeeReceiptTaskHtml).join('');
   }
   function renderEmployee(){
     const box=document.getElementById('cassolaEmployee');if(!box||!isEmployee())return;
     const ctx=employeeCountContext(),scope=ctx.scope||{},rows=ctx.rows||[],draft=loadEmployeeDraft();
     const filled=rows.filter(s=>draft.counts?.[s.id]!==undefined&&draft.counts?.[s.id]!==null&&draft.counts?.[s.id]!=='').length;
     const cached=window.CassolaCloud?.cachedIdentity?.(accessSession.id);
-    const responsible=accessSession.displayName||cached?.displayName||'责任区员工';
+    const responsible=accessSession.displayName||cached?.displayName||T('责任区员工');
     const queued=window.CassolaCloud?.outboxCount?.(accessSession.id)||0,receiptTasks=employeeReceiptTasks(),inventoryTasks=employeeInventoryTasks();
     const receiptMode=employeePanel==='receipt',skuMode=employeePanel==='sku',countMode=!receiptMode&&!skuMode;
     const noManagedCountTask=countMode&&ctx.managed&&!inventoryTasks.length;
     const panelClass=receiptMode?'receipt-mode':skuMode?'sku-mode':'count-mode';
-    const title=receiptMode?'收货任务':skuMode?'SKU 提议':(scope.label||'责任区盘货');
+    const title=receiptMode?T('收货任务'):skuMode?T('SKU 提议'):(scope.label||T('责任区盘货'));
     let content='';
     if(receiptMode)content=employeeReceiptPanelHtml(receiptTasks);
-    else if(skuMode)content=window.CassolaEmployeeTools?.panelHtml?.()||'<div class="cassola-employee-no-task"><span>📦</span><h2>SKU 功能加载中</h2></div>';
-    else content=noManagedCountTask?'<div class="cassola-employee-no-task"><span>📋</span><h2>无任务</h2><p>Supervisor 还没有从 Staff 给你发布盘货 SKU。</p></div>':employeeTaskPickerHtml(inventoryTasks,ctx.task?.task_id)+employeeCountPanelHtml(rows,draft,filled,queued);
+    else if(skuMode)content=window.CassolaEmployeeTools?.panelHtml?.()||('<div class="cassola-employee-no-task"><span>📦</span><h2>'+T('SKU 功能加载中')+'</h2></div>');
+    else content=noManagedCountTask?('<div class="cassola-employee-no-task"><span>📋</span><h2>'+T('无任务')+'</h2><p>'+T('Supervisor 还没有从 Staff 给你发布盘货 SKU。')+'</p></div>'):employeeTaskPickerHtml(inventoryTasks,ctx.task?.task_id)+employeeCountPanelHtml(rows,draft,filled,queued);
+    box.lang=L.lang();
     box.innerHTML='<div class="cassola-employee-shell '+panelClass+'">'+
-      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(title)+'</h1><p><b>负责人：'+escapeHtml(responsible)+'</b> · '+todayKey()+'</p></div><span class="cassola-role-pill">👷 员工</span></div>'+
-      '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(countMode?'active':'')+'">📋 盘货'+(inventoryTasks.length?' <b>'+inventoryTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+'">🚚 收货'+(receiptTasks.length?' <b>'+receiptTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="sku" class="'+(skuMode?'active':'')+'">📦 SKU</button></div>'+
+      '<div class="cassola-employee-top"><button type="button" class="cassola-home-btn" data-cassola-logout>⌂</button><div><div class="eyebrow">EMPLOYEE MODE</div><h1>'+escapeHtml(title)+('</h1><p><b>'+T('负责人：'))+escapeHtml(responsible)+'</b> · '+todayKey()+('</p></div><span class="cassola-role-pill">'+T('👷 员工')+'</span></div>')+
+      L.switcher()+
+      '<div class="cassola-employee-mode-tabs"><button type="button" data-employee-panel="count" class="'+(countMode?'active':'')+('">'+T('📋 盘货'))+(inventoryTasks.length?' <b>'+inventoryTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="receipt" class="'+(receiptMode?'active':'')+('">'+T('🚚 收货'))+(receiptTasks.length?' <b>'+receiptTasks.length+'</b>':'')+'</button><button type="button" data-employee-panel="sku" class="'+(skuMode?'active':'')+'">📦 SKU</button></div>'+
       content+
       '</div>';
     window.CassolaEmployeeTools?.enhance?.();
@@ -336,15 +348,15 @@
     const draft=loadReceiptDraft(task),lines=Array.isArray(task.order_snapshot?.items)?task.order_snapshot.items:[],out=[];
     for(const line of lines){
       const d=draft.lines?.[line.skuId]||{},status=String(d.status||''),remaining=receiptRemainingOrder(line);
-      if(!['received','later','other','out','short','over'].includes(status)){showToast((line.skuName||'SKU')+' 还没选择收货结果');return null}
+      if(!['received','later','other','out','short','over'].includes(status)){showToast((line.skuName||'SKU')+(' '+T('还没选择收货结果')));return null}
       const qty=parseEmployeeQty(d.qty??'');
-      if(!Number.isFinite(qty)||qty<0){showToast((line.skuName||'SKU')+' 的到货数量不对');return null}
+      if(!Number.isFinite(qty)||qty<0){showToast((line.skuName||'SKU')+(' '+T('的到货数量不对')));return null}
       const eps=.000001;
-      if(status==='received'&&Math.abs(qty-remaining)>eps){showToast((line.skuName||'SKU')+' 点“收齐”时数量必须等于待收数量');return null}
-      if((status==='out'||status==='other')&&qty>eps){showToast((line.skuName||'SKU')+' 的“缺货 / 待他人”本次数量应为 0');return null}
-      if(status==='short'&&!(qty>eps&&qty<remaining-eps)){showToast((line.skuName||'SKU')+' 的“少到”数量要在 0 和待收量之间');return null}
-      if(status==='over'&&!(qty>remaining+eps)){showToast((line.skuName||'SKU')+' 的“多到”数量要大于待收量');return null}
-      if(status==='later'&&!(qty>=0&&qty<remaining-eps)){showToast((line.skuName||'SKU')+' 已经到齐时不要选“晚到”');return null}
+      if(status==='received'&&Math.abs(qty-remaining)>eps){showToast((line.skuName||'SKU')+(' '+T('点“收齐”时数量必须等于待收数量')));return null}
+      if((status==='out'||status==='other')&&qty>eps){showToast((line.skuName||'SKU')+(' '+T('的“缺货 / 待他人”本次数量应为 0')));return null}
+      if(status==='short'&&!(qty>eps&&qty<remaining-eps)){showToast((line.skuName||'SKU')+(' '+T('的“少到”数量要在 0 和待收量之间')));return null}
+      if(status==='over'&&!(qty>remaining+eps)){showToast((line.skuName||'SKU')+(' '+T('的“多到”数量要大于待收量')));return null}
+      if(status==='later'&&!(qty>=0&&qty<remaining-eps)){showToast((line.skuName||'SKU')+(' '+T('已经到齐时不要选“晚到”')));return null}
       out.push({skuId:line.skuId,status,receivedOrderQty:qty,note:String(d.note||'').slice(0,300)});
     }
     return{
@@ -356,30 +368,30 @@
   }
   async function submitEmployeeReceiptTask(taskId){
     const task=receiptTaskById(taskId);
-    if(!task){alert('这份收货任务已经失效或还没刷新。请重新打开“收货”。');return}
-    if(window.CassolaCloud?.employeeReceiptQueued?.(taskId,accessSession.id)){showToast('这份收货已经在待发送队列里');return}
+    if(!task){alert(T('这份收货任务已经失效或还没刷新。请重新打开“收货”。'));return}
+    if(window.CassolaCloud?.employeeReceiptQueued?.(taskId,accessSession.id)){showToast(T('这份收货已经在待发送队列里'));return}
     const btn=document.querySelector('[data-employee-receipt-submit="'+CSS.escape(String(taskId))+'"]');
-    const oldText=btn?.textContent||'📤 提交本次收货';
+    const oldText=btn?.textContent||T('📤 提交本次收货');
     let payload=null;
     try{
       payload=buildEmployeeReceiptPayload(task);
       if(!payload)return;
-      if(btn){btn.disabled=true;btn.textContent='⏳ 正在提交…'}
+      if(btn){btn.disabled=true;btn.textContent=T('⏳ 正在提交…')}
       if(!window.CassolaCloud?.connected?.()){
         window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload);
-        showToast('📵 收货已保存到待发送队列');renderEmployee();return;
+        showToast(T('📵 收货已保存到待发送队列'));renderEmployee();return;
       }
       await window.CassolaCloud.submitEmployeeReceipt(taskId,payload);
       localStorage.removeItem(receiptDraftKey(taskId));
-      showToast('🚚 收货事实已提交给 Supervisor');
+      showToast(T('🚚 收货事实已提交给 Supervisor'));
       await window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{});
       renderEmployee();
     }catch(err){
       if(!navigator.onLine||!err?.status||err.status>=500){
         try{if(payload)window.CassolaCloud?.queueEmployeeReceipt?.(taskId,payload)}catch(_){}
-        showToast('📵 Cloud 没接住，收货已保存待发送');renderEmployee();return;
+        showToast(T('📵 Cloud 没接住，收货已保存待发送'));renderEmployee();return;
       }
-      alert('提交收货失败：'+(err?.data?.detail||err?.message||'未知错误'));
+      alert(T('提交收货失败：')+(err?.data?.detail||err?.message||T('未知错误')));
     }finally{
       const live=document.querySelector('[data-employee-receipt-submit="'+CSS.escape(String(taskId))+'"]');
       if(live&&!live.disabled){live.textContent=oldText}
@@ -390,15 +402,15 @@
   async function refreshEmployeeReceiptTasks(){
     if(!isEmployee())return;
     if(!window.CassolaCloud?.connected?.()){
-      alert('☁️ 当前未连接 Cloud。请联网并重新登录；本机旧缓存不能证明任务仍有效。');return;
+      alert(T('☁️ 当前未连接 Cloud。请联网并重新登录；本机旧缓存不能证明任务仍有效。'));return;
     }
     const btn=document.querySelector('[data-employee-receipt-refresh]');
-    if(btn){btn.disabled=true;btn.textContent='⏳ 正在刷新';}
+    if(btn){btn.disabled=true;btn.textContent=T('⏳ 正在刷新');}
     try{
       await window.CassolaCloud.refreshStatus({silent:true});
-      showToast('✅ 已向 Cloud 确认收货授权');
+      showToast(T('✅ 已向 Cloud 确认收货授权'));
     }catch(err){
-      alert('Cloud 刷新失败：'+(err?.message||'未知错误')+'。当前是未确认的本机旧任务快照。');
+      alert(T('Cloud 刷新失败：')+(err?.message||T('未知错误'))+T('。当前是未确认的本机旧任务快照。'));
     }finally{renderEmployee();}
   }
   function switchEmployeePanel(mode){
@@ -408,7 +420,7 @@
     renderEmployee();
     if((employeePanel==='receipt'||employeePanel==='sku')&&window.CassolaCloud?.connected?.()){
       window.CassolaCloud.refreshStatus?.({silent:true}).catch(()=>{
-        if(typeof showToast==='function')showToast('☁️ 更新暂时失败，当前显示本机缓存');
+        if(typeof showToast==='function')showToast(T('☁️ 更新暂时失败，当前显示本机缓存'));
       });
     }
   }
@@ -428,23 +440,23 @@
   }
   function clearEmployeeDraft(){
     if(!isEmployee())return;
-    if(!confirm('清空今天已经填写的盘货数字和报损 / 转化记录？'))return;
+    if(!confirm(T('清空今天已经填写的盘货数字和报损 / 转化记录？')))return;
     localStorage.removeItem(draftKey());
     renderEmployee();
   }
   function buildEmployeePayload(){
     if(!isEmployee())return null;
     const ctx=employeeCountContext(),scope=ctx.scope||{},rows=ctx.rows||[],draft=loadEmployeeDraft(),filled=[];
-    if(ctx.managed&&!ctx.task){if(typeof showToast==='function')showToast('当前没有 Supervisor 发布的盘货任务');return null}
+    if(ctx.managed&&!ctx.task){if(typeof showToast==='function')showToast(T('当前没有 Supervisor 发布的盘货任务'));return null}
     rows.forEach(s=>{
       const v=draft.counts?.[s.id];
       if(v===undefined||v===null||v==='')return;
       const n=Number(v);if(!Number.isFinite(n)||n<0)return;
       filled.push({skuId:s.id,name:s.name,qty:n,unit:s.unit||'',spec:s.spec||''});
     });
-    if(!filled.length){if(typeof showToast==='function')showToast('还没有填写盘货数量');return null}
+    if(!filled.length){if(typeof showToast==='function')showToast(T('还没有填写盘货数量'));return null}
     const missing=rows.length-filled.length;
-    if(missing>0){if(typeof showToast==='function')showToast(`还有 ${missing} 个责任区 SKU 没盘，先盘完再上传`);return null}
+    if(missing>0){if(typeof showToast==='function')showToast(`${T('还有 {v0} 个责任区 SKU 没盘，先盘完再上传',{v0:missing})}`);return null}
     draft.exportRevision=(Number(draft.exportRevision)||0)+1;
     draft.lastExportedAt=new Date().toISOString();
     saveEmployeeDraft(draft);
@@ -481,31 +493,31 @@
     const hh=String(new Date().getHours()).padStart(2,'0'),mm=String(new Date().getMinutes()).padStart(2,'0');
     a.download=`cassola-count-${scope.id||'scope'}-${todayKey()}-${hh}${mm}.json`;
     a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    if(typeof showToast==='function')showToast('JSON 备用盘货包已生成');
+    if(typeof showToast==='function')showToast(T('JSON 备用盘货包已生成'));
     renderEmployee();
   }
   async function uploadEmployeeCount(){
     if(employeeUploadBusy)return;
     const payload=buildEmployeePayload();
     if(!payload){
-      employeeUploadNotice='⚠️ 尚未提交：请确认所有 SKU 都已填写有效数量；没有任务时请联系 Supervisor。';
+      employeeUploadNotice=T('⚠️ 尚未提交：请确认所有 SKU 都已填写有效数量；没有任务时请联系 Supervisor。');
       renderEmployee();
       return;
     }
     if(!window.CassolaCloud?.connected?.()){
       try{
         window.CassolaCloud?.queueEmployeeSubmission?.(payload);
-        employeeUploadNotice='📵 当前没有 Cloud 会话，已存入本机待发送，不是已提交成功。';
-        if(typeof showToast==='function')showToast('📵 已保存到待发送队列');
+        employeeUploadNotice=T('📵 当前没有 Cloud 会话，已存入本机待发送，不是已提交成功。');
+        if(typeof showToast==='function')showToast(T('📵 已保存到待发送队列'));
       }catch(err){
-        employeeUploadNotice='⚠️ 保存待发送失败，请导出 JSON 备用';
-        alert('本机待发送保存失败：'+(err?.message||'未知错误'));
+        employeeUploadNotice=T('⚠️ 保存待发送失败，请导出 JSON 备用');
+        alert(T('本机待发送保存失败：')+(err?.message||T('未知错误')));
       }
       renderEmployee();
       return;
     }
     employeeUploadBusy=true;
-    employeeUploadNotice='⏳ 正在提交盘货，请不要重复点击；约 12 秒未确认则保存为待发送。';
+    employeeUploadNotice=T('⏳ 正在提交盘货，请不要重复点击；约 12 秒未确认则保存为待发送。');
     renderEmployee();
     try{
       // Allow WebKit to paint the loading state before network work.
@@ -517,24 +529,24 @@
       draft.lastCloudSubmissionId=payload.submissionId;
       draft.lastCloudSubmittedAt=payload.submittedAt;
       saveEmployeeDraft(draft);
-      employeeUploadNotice='✅ Cloud 已确认接收本次盘货 · '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+      employeeUploadNotice=(T('✅ Cloud 已确认接收本次盘货')+' · ')+new Date().toLocaleTimeString(L.locale(),{hour:'2-digit',minute:'2-digit'});
     }catch(err){
       if(err?.data?.error==='inventory_task_not_active'){
-        employeeUploadNotice='⚠️ 任务已失效。原盘货草稿保留，未作为新任务提交。';
+        employeeUploadNotice=T('⚠️ 任务已失效。原盘货草稿保留，未作为新任务提交。');
         await window.CassolaCloud?.refreshStatus?.({silent:true}).catch(()=>{});
-        alert('这份岗位 / 个人盘货任务已经失效。\n\n如果它是岗位共享任务，说明同岗位已经有人先提交了。你的本机草稿不会被删除。');
+        alert(T('这份岗位 / 个人盘货任务已经失效。\n\n如果它是岗位共享任务，说明同岗位已经有人先提交了。你的本机草稿不会被删除。'));
       }else if(!navigator.onLine||!err?.status||err?.status>=500){
         try{
           window.CassolaCloud?.queueEmployeeSubmission?.(payload);
-          employeeUploadNotice='📵 云端未确认，已保存到本机待发送。下次需要手动点「待N」发送。';
-          if(typeof showToast==='function')showToast('📵 Cloud 未确认，已保存待发送');
+          employeeUploadNotice=T('📵 云端未确认，已保存到本机待发送。下次需要手动点「待N」发送。');
+          if(typeof showToast==='function')showToast(T('📵 Cloud 未确认，已保存待发送'));
         }catch(queueErr){
-          employeeUploadNotice='⚠️ 云端未确认，本机队列写入失败，请立即导出 JSON';
-          alert('无法写入本机待发送队列：'+(queueErr?.message||'未知错误'));
+          employeeUploadNotice=T('⚠️ 云端未确认，本机队列写入失败，请立即导出 JSON');
+          alert(T('无法写入本机待发送队列：')+(queueErr?.message||T('未知错误')));
         }
       }else{
-        employeeUploadNotice='⚠️ Cloud 拒绝了提交，盘货草稿仍保留在本机。';
-        alert('上传 Cloud 失败：'+(err?.data?.detail||err?.message||'未知错误')+'\n\n盘货草稿还在本机，可以稍后重试或导出 JSON。');
+        employeeUploadNotice=T('⚠️ Cloud 拒绝了提交，盘货草稿仍保留在本机。');
+        alert(T('上传 Cloud 失败：')+(err?.data?.detail||err?.message||T('未知错误'))+T('\n\n盘货草稿还在本机，可以稍后重试或导出 JSON。'));
       }
     }finally{
       employeeUploadBusy=false;
@@ -543,14 +555,14 @@
   }
   async function flushEmployeeOutbox(){
     if(!window.CassolaCloud?.connected?.()){
-      if(typeof showToast==='function')showToast(navigator.onLine?'Cloud 正在重连':'现在仍然没网');
+      if(typeof showToast==='function')showToast(navigator.onLine?T('Cloud 正在重连'):T('现在仍然没网'));
       return;
     }
     const result=await window.CassolaCloud.flushOutbox();
     if(typeof showToast==='function'){
-      const parts=['已发 '+result.sent];
-      if(result.expired)parts.push('失效 '+result.expired);
-      if(result.failed)parts.push('失败 '+result.failed);
+      const parts=[(T('已发')+' ')+result.sent];
+      if(result.expired)parts.push((T('失效')+' ')+result.expired);
+      if(result.failed)parts.push((T('失败')+' ')+result.failed);
       showToast((result.failed||result.expired?'📤 ':'☁️ ')+parts.join(' · '));
     }
     renderEmployee();
@@ -566,8 +578,8 @@
     const input=document.getElementById('cassolaGateCode'),btn=document.getElementById('cassolaGateSubmit'),err=document.getElementById('cassolaGateError');
     const code=input?.value.trim()||'',left=cooldownSeconds();
     err.classList.add('hidden');err.textContent='';
-    if(left>0){err.textContent=`尝试太多，请 ${left} 秒后再试。`;err.classList.remove('hidden');return}
-    if(!code){err.textContent='请输入 Access Code。';err.classList.remove('hidden');return}
+    if(left>0){err.textContent=`${T('尝试太多，请 {v0} 秒后再试。',{v0:left})}`;err.classList.remove('hidden');return}
+    if(!code){err.textContent=T('请输入 Access Code。');err.classList.remove('hidden');return}
     btn.disabled=true;
     try{
       const localRecord=await verifyAccessCode(code);
@@ -584,7 +596,7 @@
       if(!record){
         const f=registerFailure(),cool=Math.max(0,Math.ceil(((Number(f.until)||0)-Date.now())/1000));
         const serverCool=Number(cloudError?.data?.retryAfterSeconds)||0;
-        err.textContent=(serverCool||cool)>0?`Code 不正确。已冷却 ${Math.max(serverCool,cool)} 秒。`:'Code 不正确。';
+        err.textContent=(serverCool||cool)>0?`${T('Code 不正确。已冷却 {v0} 秒。',{v0:Math.max(serverCool,cool)})}`:T('Code 不正确。');
         err.classList.remove('hidden');input.value='';input.focus();return;
       }
       clearFailures();
@@ -600,9 +612,9 @@
       employeeCountTaskId=null;employeeUploadBusy=false;employeeUploadNotice='';
       input.value='';
       showMode(record.role==='supervisor'?'hub':'employee');
-      if(!cloudConnected&&navigator.onLine&&typeof showToast==='function')showToast('已进入本地模式 · Cloud 暂未连接');
+      if(!cloudConnected&&navigator.onLine&&typeof showToast==='function')showToast(T('已进入本地模式 · Cloud 暂未连接'));
     }catch(ex){
-      err.textContent='这台浏览器无法验证 Access Code。';
+      err.textContent=T('这台浏览器无法验证 Access Code。');
       err.classList.remove('hidden');
     }finally{btn.disabled=false}
   }
@@ -613,14 +625,24 @@
     setTimeout(()=>document.getElementById('cassolaGateCode')?.focus(),80);
   }
 
+  function renderGate(){
+    const gate=document.getElementById('cassolaGate');if(!gate)return;
+    gate.lang=L.lang();
+    gate.innerHTML=('<div class="cassola-gate-shell"><div class="cassola-hub-mark">🗿</div><div class="cassola-hub-head"><div class="eyebrow">CASSOLA ACCESS</div><h1>'+T('进入 Cassola')+'</h1><p>'+T('输入预先登记的 Access Code。不同 Code 会进入不同责任界面。')+'</p></div>')+L.switcher()+('<form id="cassolaGateForm" class="cassola-gate-card"><label>Access Code<input id="cassolaGateCode" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••"></label><div id="cassolaGateError" class="cassola-access-error hidden"></div><button id="cassolaGateSubmit" type="submit" class="btn primary large">'+T('进入')+'</button><small>'+T('Access Code 由 Supervisor 预先分配，员工设备不能自行创建管理员权限。')+'</small></form><div class="cassola-hub-foot">Offline-first · Pre-registered roles · Scoped employee data</div></div>');
+    gate.querySelector('form').addEventListener('submit',submitGate);
+  }
+  window.addEventListener('cassola-lang-change',()=>{
+    const mode=document.body.dataset.cassolaMode;
+    if(mode==='gate'){renderGate();setTimeout(()=>document.getElementById('cassolaGateCode')?.focus(),60)}
+    else if(mode==='employee')renderEmployee();
+  });
   function makeShells(){
     if(!document.getElementById('cassolaGate')){
       const gate=document.createElement('section');
       gate.id='cassolaGate';
       gate.setAttribute('aria-label','Cassola Access');
-      gate.innerHTML='<div class="cassola-gate-shell"><div class="cassola-hub-mark">🗿</div><div class="cassola-hub-head"><div class="eyebrow">CASSOLA ACCESS</div><h1>进入 Cassola</h1><p>输入预先登记的 Access Code。不同 Code 会进入不同责任界面。</p></div><form id="cassolaGateForm" class="cassola-gate-card"><label>Access Code<input id="cassolaGateCode" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••"></label><div id="cassolaGateError" class="cassola-access-error hidden"></div><button id="cassolaGateSubmit" type="submit" class="btn primary large">进入</button><small>Access Code 由 Supervisor 预先分配，员工设备不能自行创建管理员权限。</small></form><div class="cassola-hub-foot">Offline-first · Pre-registered roles · Scoped employee data</div></div>';
       document.body.appendChild(gate);
-      gate.querySelector('form').addEventListener('submit',submitGate);
+      renderGate();
     }
     if(!document.getElementById('cassolaHub')){
       const hub=document.createElement('section');

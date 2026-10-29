@@ -167,17 +167,52 @@ function v3Suppliers(){return ['全部',...new Set([...suppliers.filter(s=>s!=='
 function v3Icon(s){return s?.icon||skuIcons[s?.id]||categoryIcons[s?.category]||'📦'}
 function v3ParseCount(h){const m=String(h.text||'').match(/(-?\d+(?:\.\d+)?)\s*→\s*(-?\d+(?:\.\d+)?)/);return m?{old:Number(m[1]),next:Number(m[2])}:null}
 function v3ParseMove(h){const m=String(h.text||'').match(/([+-])\s*(\d+(?:\.\d+)?)/);return m?Number(m[2]):0}
+/* v0.8 performance: weekly use used to rescan the whole history for every SKU,
+   several times per render (quadratic as history grows). The history is now
+   indexed once per SKU and the derived result is cached. Output is identical to
+   the previous implementation (same filters, same ordering, same arithmetic).
+   The cache is a view only: it never writes to state and is dropped when the
+   history array changes, when saveState() runs, and at the end of each task. */
+var v8UseIndex=null;
+function v8InvalidateUseCache(){v8UseIndex=null}
+function v8UseIndexFor(){
+  const hist=state.history||[],last=hist.length?hist[hist.length-1]:null;
+  if(v8UseIndex&&v8UseIndex.hist===hist&&v8UseIndex.len===hist.length&&v8UseIndex.last===last)return v8UseIndex;
+  const counts=new Map(),moves=new Map();
+  const add=(map,key,value)=>{let list=map.get(key);if(!list)map.set(key,list=[]);list.push(value)};
+  for(const h of hist){
+    if(!h||h.employeeSuperseded)continue;
+    if(h.type==='count'){const c=v3ParseCount(h);if(c)add(counts,h.skuId,{h,c});continue}
+    if(h.type!=='arrival'&&h.type!=='loss'&&h.type!=='transfer')continue;
+    const t=new Date(h.at).getTime(),q=v3ParseMove(h);
+    if(h.type==='arrival')add(moves,h.skuId,{t,q,k:'a'});
+    else if(h.type==='loss')add(moves,h.skuId,{t,q,k:'l'});
+    else{add(moves,h.skuId,{t,q,k:'o'});add(moves,h.targetId,{t,q,k:'i'})}
+  }
+  counts.forEach(list=>list.sort((a,b)=>new Date(a.h.at)-new Date(b.h.at)));
+  const index={hist,len:hist.length,last,counts,moves,results:new Map()};
+  v8UseIndex=index;
+  setTimeout(()=>{if(v8UseIndex===index)v8UseIndex=null},0);
+  return index;
+}
 function v3WeeklyUse(s){
   if(Number(s.manualWeeklyUse)>0)return Number(s.manualWeeklyUse);
-  const counts=state.history.filter(h=>!h.employeeSuperseded).map(h=>({h,c:h.type==='count'&&h.skuId===s.id?v3ParseCount(h):null})).filter(x=>x.c).sort((a,b)=>new Date(a.h.at)-new Date(b.h.at));
-  if(counts.length<2)return null; const samples=[];
-  for(let i=1;i<counts.length;i++){
-    const a=counts[i-1],b=counts[i],start=new Date(a.h.at).getTime(),end=new Date(b.h.at).getTime(),days=(end-start)/86400000;if(days<1)continue;
-    let arrivals=0,losses=0,out=0,into=0;
-    state.history.forEach(h=>{if(h.employeeSuperseded)return;const t=new Date(h.at).getTime();if(t<=start||t>end)return;const q=v3ParseMove(h);if(h.skuId===s.id&&h.type==='arrival')arrivals+=q;if(h.skuId===s.id&&h.type==='loss')losses+=q;if(h.skuId===s.id&&h.type==='transfer')out+=q;if(h.targetId===s.id&&h.type==='transfer')into+=q});
-    const used=a.c.next+arrivals+into-losses-out-b.c.next;if(used>=0)samples.push(used*7/days);
+  const index=v8UseIndexFor();
+  if(index.results.has(s.id))return index.results.get(s.id);
+  const counts=index.counts.get(s.id)||[],moves=index.moves.get(s.id)||[];
+  let result=null;
+  if(counts.length>=2){
+    const samples=[];
+    for(let i=1;i<counts.length;i++){
+      const a=counts[i-1],b=counts[i],start=new Date(a.h.at).getTime(),end=new Date(b.h.at).getTime(),days=(end-start)/86400000;if(days<1)continue;
+      let arrivals=0,losses=0,out=0,into=0;
+      for(const m of moves){if(m.t<=start||m.t>end)continue;if(m.k==='a')arrivals+=m.q;else if(m.k==='l')losses+=m.q;else if(m.k==='o')out+=m.q;else into+=m.q}
+      const used=a.c.next+arrivals+into-losses-out-b.c.next;if(used>=0)samples.push(used*7/days);
+    }
+    result=samples.length?samples.slice(-4).reduce((a,b)=>a+b,0)/Math.min(4,samples.length):null;
   }
-  return samples.length?samples.slice(-4).reduce((a,b)=>a+b,0)/Math.min(4,samples.length):null;
+  index.results.set(s.id,result);
+  return result;
 }
 function v3Coverage(s){const w=v3WeeklyUse(s);return w>0?Number(s.qty)/w:null}
 function v3Level(s){

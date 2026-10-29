@@ -2,6 +2,35 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory / Employee v0.8.0 · 库存页提速 + 界面精简 + 员工端 中文 / Italiano / বাংলা
+**2026-10-29** · 由 Claude Opus 在分支 `opus/v0.8-upgrade` 完成，待 Piccola / Pietro 合并
+
+**1. 库存页卡顿（越用越卡）**
+- 根因：`v3WeeklyUse()` 每次都对整份 `state.history` 做全量扫描，且一次渲染里每个 SKU 会被调用多次（警示色、家族卡排序、见底预估），复杂度随历史条数近似平方增长。另外 `app.js` 与 `v03-ui.js` 都给搜索框绑定了 `input`，旧监听持有原始 `renderStock`，导致每打一个字整张列表渲染两次。
+- `v03-core.js`：按 SKU 一次性建立历史索引并缓存周耗结果（只读视图，不写回 state）。缓存在 history 数组变化、`saveState()`、以及当前事件循环结束时失效。与旧实现做了 5200 组随机历史（含 superseded、非法日期、自转移、同 ID 数字/字符串）逐一比对，结果完全一致。
+- `app.js`：删除重复的搜索 / 分类监听；`saveState()` 顺带让缓存失效。`v03-ui.js`：手动输入搜索延迟 120ms 再渲染；全局搜索 / Analytics 跳转等程序触发的搜索仍立即渲染。
+- 实测（Chromium，Sushi 区 + 2500 条历史）：库存页一次渲染 4296 ms → 23 ms；搜索框每打一字的同步耗时 879 ms → 14 ms。
+
+**2. 库存页界面（CSS-only，新文件 `v08-polish.css`，最后加载）**
+- 顶栏压成一行（标题不再折成两行）；区域标签、搜索行、排序行、统计卡变薄；三张统计卡固定一行；分类下拉不再截断成「全部分⋮」。首屏可见 SKU 从 1 张变为 2 张。
+- 修正吸顶搜索行的 `top`：此前固定 76px，未计入 iPhone 状态栏 `safe-area-inset-top`，滚动时会被顶栏遮住一截。
+- 日间主题 + 石墨 accent 下，主按钮（「＋ SKU」「保存本轮盘货」等）原本是米色叠米色几乎看不见，改为深墨色。其余 accent 不变。
+- 保留 Fat UI 契约：圆角不变，触控目标仍 ≥ 44px。删除 `<link>` 即可完整回退。
+
+**3. 员工端语言切换：中文 / Italiano / বাংলা**
+- 新增 `i18n.js`（切换逻辑）、`i18n-ui.js`（230 条界面文案，意 / 孟双语）、`i18n-sku.js`（SKU 名称 / 单位 / 分类显示翻译）。
+- 覆盖范围：Access 入口页、员工盘货 / 收货 / SKU 提议页面、SKU 详情 / 报损转化 / 新 SKU / 新分类 / 重新归类对话框、员工端提示与确认框。Supervisor 界面保持中文。
+- 语言是设备偏好（`cassola_ui_lang_v01`），和主题一样不进 Cloud。入口页和员工页顶部都有切换按钮，切换后立即重绘，未打开的员工对话框会按新语言重建。
+- **只翻译显示**：上传 Cloud 的单位、分类、SKU 名、任务标签、提议内容全部保持原值；单位候选 datalist 仍是中文原值。SKU 显示翻译名，下方小字保留原中文名，方便和主管对照。
+- 主管自己写的内容（盘货任务标签、供应商名、备注）不翻译。`cloud-sync.js` 的少量连接状态提示仍为中文。
+- 孟加拉语译文由 AI 完成，**需要孟加拉同事实机过目**；意大利语同理建议过一遍。
+
+- 修改：`v03-core.js`、`app.js`、`v03-ui.js`、`hub.js`、`employee-tools.js`、`index.html`、`sw.js`；新增 `v08-polish.css`、`i18n.js`、`i18n-ui.js`、`i18n-sku.js`。PWA cache **v109**。
+- 未改任何 localStorage key / IndexedDB / Supabase 表 / Edge Function / 生产数据。
+- 验证：所有 JS `node --check` 通过；Chromium 预览（390 / 375 宽，日间 / 夜间）无页面错误；员工盘货草稿写入、对话框按语言重建、Supervisor 保持中文均已自动化检查。**GitHub Pages 部署与 iPhone 实机验收待完成。**
+
+---
+
 ## Inventory / Employee v0.7.9 · Global Receipt Authorization Manager
 **2026-10-29**
 
