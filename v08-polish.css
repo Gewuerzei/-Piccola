@@ -120,3 +120,15 @@
 #cassolaEmployee .cassola-lang-switch button{min-height:44px;font-size:14px;border-radius:16px}
 /* Bengali eyebrows: wide letter-spacing breaks up the script, keep it tight. */
 #cassolaEmployee:lang(bn) .eyebrow,.employee-tool-dialog:lang(bn) .eyebrow{letter-spacing:.02em;text-transform:none}
+
+/* ---------- v0.8.2 · 箱规 pill（1箱 = N盒）----------
+   直接显示在库存卡 / 商品卡上，比普通 meta pill 醒目一点；字号和圆角不变。 */
+.meta-pill.v82-pack{
+  color:var(--text);font-weight:850;
+  background:var(--soft-blue-bg,rgba(185,201,255,.11));
+  border-color:color-mix(in srgb,var(--soft-blue,#b9c9ff) 30%,transparent)
+}
+:root[data-theme="light"] .meta-pill.v82-pack{
+  background:color-mix(in srgb,var(--accent) 16%,transparent);
+  border-color:color-mix(in srgb,var(--text) 14%,transparent)
+}
