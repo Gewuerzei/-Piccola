@@ -3,6 +3,8 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
+> **2026-11-08 Inventory v0.8.2：**Scampi大 / Scampi小 / Philadelphia 供应商改为 Cattel/Lodi（一次性本机修正，只改仍为「米兰」的这 3 个 SKU；修正后须手动上传 Sushi）。库存页「供应商」排序显示分组标题；库存卡直接显示「📦 1箱 = N盒」。PWA cache v111。
+
 > **2026-10-29 Employee v0.8.1：**员工盘货按分类分组（只改显示，payload 顺序不变）、已填行 ✓ + 进度条、上传 / JSON 被拒时高亮并聚焦第一个空行、长说明折叠为「ⓘ 怎么用」。PWA cache v110。
 
 > **2026-10-29 v0.8.0 · 库存页提速 + 吸顶栏遮挡修复 + 员工端三语（分支 `opus/v0.8-upgrade`）：**`v3WeeklyUse()` 改为按 SKU 建索引并缓存（输出与旧实现逐一比对一致），去掉搜索框重复监听，库存页在 2500 条历史下从约 4.3 秒降到约 23 毫秒。吸顶搜索栏 / Staff 工具条改用实测顶栏高度（`ui-extras.js` → CSS 变量 `--cassola-topbar-h` / `--cassola-staff-topbar-h`），修复 iPhone 上整条被顶栏挡住；胖胖风格不变，`v08-polish.css` 只做小补充。员工端新增 中文 / Italiano / বাংলা 切换（`i18n.js` / `i18n-ui.js` / `i18n-sku.js`），只翻译显示文字，不改任何上传数据。规则见下方 **2.4 员工端多语言**。SKU 新增自动插图（`sku-art.js`，员工也可见）和本机实拍（`sku-photos.js`，暂不同步），规则见 **2.5 SKU 小图**。PWA cache v109。iPhone 实机验收待完成；孟加拉语译文需孟加拉同事过目。
@@ -55,7 +57,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.7.9 · Global Cloud Receipt Authorization Manager**
+- Inventory: **v0.8.2 · Supplier groups + box size on cards**（Cloud 收货授权管理仍为 v0.7.9）
 - Staff: **v0.5.2 · Unified Department Cloud Manager + Legacy Archive**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
@@ -751,6 +753,10 @@ sku.unitsPerOrder  // 1 个订货单位 = 几个库存单位
 - 收货 UI 按采购单位输入，保存时换算回库存单位入库
 - 历史订单若没有采购包装快照，按倍率 1 保留当时语义，不能套用后来修改的 SKU 箱规
 - 不改变 `cassola_inventory_v01`
+
+### 一次性数据修正（v0.8.2）
+- 只在 Pietro 明确要求改某几个 SKU、又不方便逐个手动编辑时使用。写法见 `v03-core.js` 的 `V82_SUPPLIER_FIX`：按 SKU id + 旧值精确匹配，每台设备只执行一次（`cassola_inventory_fixes_v01` 记录修正 id），绝不按名字模糊匹配，不动库存 / 订单 / 历史。
+- 修正只改本机；上传 Cloud 仍是 Supervisor 的手动动作。新的修正用新的 id 追加，不要复用旧 id。
 
 ### Supplier outbound order text
 

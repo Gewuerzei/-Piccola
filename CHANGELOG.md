@@ -2,6 +2,17 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.8.2 · Scampi / Philadelphia 改 Cattel/Lodi + 供应商分组 + 箱规直接显示
+**2026-11-08** · 由 Claude Opus 在分支 `opus/v0.8.2-supplier-pack` 完成，待 Pietro 合并
+
+- **供应商更正（Pietro 2026-11-08 明确要求）**：`scampi_l800` Scampi大、`scampi_s800` Scampi小、`phila165` Philadelphia 的供应商由「米兰」改为「Cattel/Lodi」。`v03-core.js` 新增一次性修正：每台设备只执行一次（本机键 `cassola_inventory_fixes_v01` 记录 `2026-11-08-cattel-lodi`），只改 supplier 仍为「米兰」的这 3 个 SKU，库存、订单、历史、价格与其他字段不动；之后 Supervisor 再手动改成任何供应商都不会被覆盖。`app.js` 种子同步改为 Cattel/Lodi（只影响新设备）。修正后本机显示「有未上传修改」，需 Supervisor 手动**上传 Sushi**，员工目录才会更新。生产 Cloud 只读核对：这 3 个 SKU 目前没有未结案订单或订货草稿。
+- **供应商分组**：库存页排序选「供应商」时，按供应商显示分组标题（🚚 名称 · 商品卡数 · SKU 数），顺序与订货页供应商标签一致，未填供应商放最后。只改显示；「自定义拖动」仍无标题、可拖动。
+- **箱规直接显示**：库存卡上直接显示「📦 1箱 = N盒」，不用点开——单 SKU 卡放在规格旁边；多规格商品卡在卡面汇总（同箱规显示一次，不同则如「1箱 = 40 / 20块」）。展开后的规格行和 Supervisor 盘货行也显示箱规。新 pill 样式 `.meta-pill.v82-pack` 在 `v08-polish.css`。
+- 修改：`app.js`、`v03-core.js`、`v03-orders.js`、`v08-polish.css`、`sw.js`。PWA cache **v111**。无 Supabase / Edge 变更，未写生产数据。
+- 验证（Chromium 预览，模拟 Pietro 数据）：3 个 SKU 改为 Cattel/Lodi，其余 145 个 SKU 全字段不变、订货草稿不变；手动改回米兰后重开不被覆盖；供应商分组顺序正确；分类模式 8 个分类标题照旧；拖动模式列表只有卡片；无页面错误。iPhone 实机验收待完成。
+
+---
+
 ## Employee v0.8.1 · 员工盘货更顺手
 **2026-10-29** · 由 Claude Opus 在分支 `opus/v0.8.1-employee` 完成
 

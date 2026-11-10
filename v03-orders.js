@@ -24,6 +24,21 @@ function v6FamilyRank(g){
 function v6FamilySupplier(g){
   return [...new Set(g.rows.map(x=>String(x.supplier||'')).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN',{numeric:true,sensitivity:'base'}))[0]||'';
 }
+/* v0.8.2 · 「1箱 = N盒」直接显示在库存卡上，不用点开。 */
+function v82PackPill(label){return label?`<span class="meta-pill v82-pack">📦 ${escapeHtml(label)}</span>`:''}
+function v82FamilyPackPill(rows){
+  const packed=rows.filter(v5UsesPurchasePack);
+  if(!packed.length)return '';
+  const packs=[...new Set(packed.map(v5PackLabel))];
+  if(packs.length===1)return v82PackPill(packs[0]);
+  // 同一订货单位 / 库存单位 → 「1箱 = 40 / 20块」；否则最多列两种。
+  const ou=new Set(packed.map(v5OrderUnit)),su=new Set(packed.map(x=>String(x.unit||'')));
+  if(ou.size===1&&su.size===1){
+    const n=[...new Set(packed.map(x=>fmt(v5UnitsPerOrder(x))))];
+    return v82PackPill(`1${[...ou][0]} = ${n.join(' / ')}${[...su][0]}`);
+  }
+  return v82PackPill(packs.slice(0,2).join(' / ')+(packs.length>2?' …':''));
+}
 function v6FamilyAttention(g){
   const score={zero:5,red:4,yellow:3,blue:2,ok:1};
   return Math.max(...g.rows.map(x=>score[v3Level(x)]||0),0);
@@ -63,7 +78,7 @@ function v6SyncStockSortUi(q='',cat='全部'){
   const messages={
     category:'先按分类，再按商品卡 / 品牌 / 规格排列。',
     name:'按商品卡名称排列，不改变正式库存数据。',
-    supplier:'按供应商排列，同商品不同规格仍折叠在一张卡。',
+    supplier:'按供应商分组，同商品不同规格仍折叠在一张卡。',
     attention:'见底 / 红 / 黄库存优先显示。',
     manual:(q||cat!=='全部')?'清除搜索并选择“全部分类”后，可直接拖动商品卡。':'抓住每张卡顶部的 ⠿，上下拖动即可保存顺序。'
   };
@@ -113,7 +128,7 @@ renderStock=function(){
   const dragHandle=g=>canDrag?`<button type="button" class="v6-drag-handle" data-v6-drag-handle aria-label="拖动 ${escapeHtml(g.name)} 排序"><span>⠿</span> 拖动排序</button>`:'';
   function singleCard(x,g){
     const use=v3WeeklyUse(x);
-    return `<article class="sku-card v6-sortable-card" data-v6-family-card="${escapeHtml(g.id)}">${dragHandle(g)}<div class="sku-top"><div class="sku-main"><div class="sku-icon">${skuVisual(x)}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta">${x.spec?`<span class="meta-pill spec">${escapeHtml(x.spec)}</span>`:''}${x.brand?`<span class="meta-pill">🏷️ ${escapeHtml(x.brand)}</span>`:''}<span class="meta-pill">${categoryIcons[v7CategoryLabel(x.category)]||'📦'} ${escapeHtml(v7CategoryLabel(x.category))}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div><div class="sku-actions v3-four"><button class="mini-btn" data-action="operate" data-id="${x.id}">到货/报损</button><button class="mini-btn" data-action="order" data-id="${x.id}">＋订货</button><button class="mini-btn" data-action="set" data-id="${x.id}">设库存</button><button class="mini-btn" data-v3-edit="${x.id}">编辑</button></div></article>`;
+    return `<article class="sku-card v6-sortable-card" data-v6-family-card="${escapeHtml(g.id)}">${dragHandle(g)}<div class="sku-top"><div class="sku-main"><div class="sku-icon">${skuVisual(x)}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta">${x.spec?`<span class="meta-pill spec">${escapeHtml(x.spec)}</span>`:''}${v82PackPill(v5PackLabel(x))}${x.brand?`<span class="meta-pill">🏷️ ${escapeHtml(x.brand)}</span>`:''}<span class="meta-pill">${categoryIcons[v7CategoryLabel(x.category)]||'📦'} ${escapeHtml(v7CategoryLabel(x.category))}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div><div class="sku-actions v3-four"><button class="mini-btn" data-action="operate" data-id="${x.id}">到货/报损</button><button class="mini-btn" data-action="order" data-id="${x.id}">＋订货</button><button class="mini-btn" data-action="set" data-id="${x.id}">设库存</button><button class="mini-btn" data-v3-edit="${x.id}">编辑</button></div></article>`;
   }
   function familyCard(g){
     if(g.rows.length===1)return singleCard(g.rows[0],g);
@@ -125,12 +140,12 @@ renderStock=function(){
     return `<article class="sku-card v6-family-card v6-sortable-card ${expanded?'expanded':''}" data-v6-family-card="${escapeHtml(g.id)}">
       ${dragHandle(g)}
       <button type="button" class="v6-family-toggle" data-v6-family-toggle="${escapeHtml(g.id)}" aria-expanded="${expanded?'true':'false'}">
-        <div class="sku-main"><div class="sku-icon">${icon}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(g.name)}</div><div class="sku-meta"><span class="meta-pill">${categoryIcons[v7CategoryLabel(category)]||'📦'} ${escapeHtml(v7CategoryLabel(category))}</span><span class="meta-pill">🗂️ ${g.rows.length} 个 SKU</span>${alerts?`<span class="meta-pill v6-alert">⚠️ ${alerts} 项</span>`:''}</div><div class="v3-stock-hint">${escapeHtml(summary.detail||'混合包装')} · 点开看规格 / 品牌</div></div></div>
+        <div class="sku-main"><div class="sku-icon">${icon}</div><div class="sku-copy"><div class="sku-name">${escapeHtml(g.name)}</div><div class="sku-meta"><span class="meta-pill">${categoryIcons[v7CategoryLabel(category)]||'📦'} ${escapeHtml(v7CategoryLabel(category))}</span>${v82FamilyPackPill(g.rows)}<span class="meta-pill">🗂️ ${g.rows.length} 个 SKU</span>${alerts?`<span class="meta-pill v6-alert">⚠️ ${alerts} 项</span>`:''}</div><div class="v3-stock-hint">${escapeHtml(summary.detail||'混合包装')} · 点开看规格 / 品牌</div></div></div>
         <div class="v6-family-value"><div class="stock-value v3-${v3Level(worst)}">${escapeHtml(summary.main)} <small>${escapeHtml(summary.unit)}</small></div><span class="v6-family-chevron">⌄</span></div>
       </button>
       <div class="v6-family-body ${expanded?'':'hidden'}">
         ${g.rows.map(x=>{const pack=v5PackLabel(x),use=v3WeeklyUse(x);return `<div class="v6-variant-row">
-          <div class="sku-top"><div class="sku-main"><div class="count-mini-icon">${skuVisual(x)}</div><div class="sku-copy"><div class="v6-variant-name">${escapeHtml(x.name)}${x.brand?` · ${escapeHtml(x.brand)}`:''}</div><div class="sku-meta"><span class="meta-pill spec">库存规格 ${escapeHtml(x.spec||'未填写')}</span><span class="meta-pill">库存单位 ${escapeHtml(x.unit||'')}</span><span class="meta-pill">订货单位 ${escapeHtml(v5OrderUnit(x))}</span>${pack?`<span class="meta-pill">📦 ${escapeHtml(pack)}</span>`:''}<span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div>
+          <div class="sku-top"><div class="sku-main"><div class="count-mini-icon">${skuVisual(x)}</div><div class="sku-copy"><div class="v6-variant-name">${escapeHtml(x.name)}${x.brand?` · ${escapeHtml(x.brand)}`:''}</div><div class="sku-meta"><span class="meta-pill spec">库存规格 ${escapeHtml(x.spec||'未填写')}</span><span class="meta-pill">库存单位 ${escapeHtml(x.unit||'')}</span><span class="meta-pill">订货单位 ${escapeHtml(v5OrderUnit(x))}</span>${v82PackPill(pack)}<span class="meta-pill">${escapeHtml(x.supplier)}</span>${typeof v45PricePill==='function'?v45PricePill(x):''}</div><div class="v3-stock-hint">${escapeHtml(v3Hint(x))}${use?` · 周耗≈${fmt(use)}`:''}</div></div></div><div class="stock-value v3-${v3Level(x)}">${fmt(x.qty)} <small>${escapeHtml(x.unit)}</small></div></div>
           <div class="sku-actions v3-four"><button class="mini-btn" data-action="operate" data-id="${x.id}">到货/报损</button><button class="mini-btn" data-action="order" data-id="${x.id}">＋订货</button><button class="mini-btn" data-action="set" data-id="${x.id}">设库存</button><button class="mini-btn" data-v3-edit="${x.id}">编辑</button></div>
         </div>`}).join('')}
       </div>
@@ -139,6 +154,18 @@ renderStock=function(){
   // Keep canonical SKU categories unchanged. This groups cards visually only;
   // manual drag mode still renders direct card children with no section headers.
   const visibleCardsHtml=(()=>{
+    if(v6StockSortMode==='supplier'){
+      // v0.8.2 · 供应商分组只是显示；SKU 的 supplier / category / 员工任务都不变。
+      const names=[...new Set(families.map(v6FamilySupplier))];
+      // 和订货页供应商标签同一顺序；没填供应商的放最后。
+      const tabOrder=v3Suppliers().filter(x=>x!=='全部'),rank=x=>{const i=tabOrder.indexOf(x);return !x?1e9:i<0?1e8:i};
+      names.sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b,'zh-CN',{numeric:true,sensitivity:'base'}));
+      return names.map(sup=>{
+        const groups=families.filter(g=>v6FamilySupplier(g)===sup);
+        const totalSkus=groups.reduce((sum,g)=>sum+g.rows.length,0);
+        return `<div class="v6-stock-category-head v82-supplier-head"><span class="v6-category-name">🚚 ${escapeHtml(sup||'未填供应商')}</span><span class="v6-category-count">${groups.length} 张商品卡 · ${totalSkus} 个 SKU</span></div>`+groups.map(familyCard).join('');
+      }).join('');
+    }
     if(v6StockSortMode!=='category'||cat!=='全部')return families.map(familyCard).join('');
     const categoryNames=[...new Set(families.map(g=>v7CategoryLabel(g.rows[0]?.category||'未分类')))];
     categoryNames.sort((a,b)=>{
@@ -295,7 +322,7 @@ renderCount=function(){
     const rows=v3Skus().filter(x=>v4AreaOf(x)===v4AreaFilter&&v7CategoryMatches(cat,x.category));
     const roomHead=isRoomCategory(cat)&&!countCats.slice(0,index).some(isRoomCategory)
       ?'<div class="v7-stock-room-head">🥬 蔬果风房 <span>盘货分区</span></div>':'';
-    return roomHead+`<section class="count-group ${isRoomCategory(cat)?'v7-stock-room-count':''}"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${escapeHtml(cat)}</div>${rows.map(x=>`<div class="count-row"><div class="count-label"><span class="count-mini-icon">${skuVisual(x)}</span><div class="count-label-text"><strong>${escapeHtml(x.name)}</strong><small>${escapeHtml(x.spec||'无规格')} · 当前 ${fmt(x.qty)} ${escapeHtml(x.unit)}</small></div></div><div class="input-unit"><input class="count-input" data-id="${x.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="—"><span>${escapeHtml(x.unit)}</span></div></div>`).join('')}</section>`;
+    return roomHead+`<section class="count-group ${isRoomCategory(cat)?'v7-stock-room-count':''}"><div class="count-title"><span class="category-bubble">${categoryIcons[cat]||'📦'}</span>${escapeHtml(cat)}</div>${rows.map(x=>`<div class="count-row"><div class="count-label"><span class="count-mini-icon">${skuVisual(x)}</span><div class="count-label-text"><strong>${escapeHtml(x.name)}</strong><small>${escapeHtml(x.spec||'无规格')}${v5PackLabel(x)?` · 📦 ${escapeHtml(v5PackLabel(x))}`:''} · 当前 ${fmt(x.qty)} ${escapeHtml(x.unit)}</small></div></div><div class="input-unit"><input class="count-input" data-id="${x.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="—"><span>${escapeHtml(x.unit)}</span></div></div>`).join('')}</section>`;
   }).join('');
   document.getElementById('countList').innerHTML=html||`<div class="empty">${area.icon} ${escapeHtml(area.label)} 还没有 SKU</div>`;
 };

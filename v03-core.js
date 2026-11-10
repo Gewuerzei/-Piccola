@@ -160,7 +160,24 @@ function v3EnsureState(){
   state.placedOrders=state.placedOrders.map(v4NormalizeOrder);
   state.version=7;
 }
-v3EnsureState(); saveState();
+v3EnsureState();
+/* v0.8.2 · Pietro 2026-11-08：Scampi大 / Scampi小 / Philadelphia 改由 Cattel/Lodi 供货。
+   每台设备只执行一次；只改仍是旧值「米兰」的这 3 个 SKU 的 supplier，库存 / 订单 / 历史不动。
+   以后 Supervisor 再手动改回任何供应商，都不会被这里覆盖。改完本机会显示有未上传修改，需手动上传 Sushi。 */
+const V82_FIXES_KEY='cassola_inventory_fixes_v01';
+const V82_SUPPLIER_FIX={id:'2026-11-08-cattel-lodi',from:'米兰',to:'Cattel/Lodi',skuIds:['scampi_l800','scampi_s800','phila165']};
+(function v82ApplySupplierFix(){
+  let done=[];
+  try{done=JSON.parse(localStorage.getItem(V82_FIXES_KEY)||'[]')}catch(_){done=[]}
+  if(!Array.isArray(done))done=[];
+  if(done.includes(V82_SUPPLIER_FIX.id))return;
+  (state.skus||[]).forEach(s=>{
+    if(V82_SUPPLIER_FIX.skuIds.includes(String(s.id))&&String(s.supplier||'').trim()===V82_SUPPLIER_FIX.from)s.supplier=V82_SUPPLIER_FIX.to;
+  });
+  done.push(V82_SUPPLIER_FIX.id);
+  try{localStorage.setItem(V82_FIXES_KEY,JSON.stringify(done))}catch(_){}
+})();
+saveState();
 function v3Skus(){const hidden=state.hiddenSkuIds||[];return state.skus.filter(s=>!hidden.includes(s.id)).slice().sort(v6SkuCompare)}
 function v3Cats(){return typeof inventoryCategories==='function'?inventoryCategories():[...new Set([...categories,...(state.customCategories||[]),...v3Skus().map(s=>s.category).filter(Boolean)])]}
 function v3Suppliers(){return ['全部',...new Set([...suppliers.filter(s=>s!=='全部'),...v3Skus().map(s=>s.supplier).filter(Boolean)])]}
