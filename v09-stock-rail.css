@@ -6,33 +6,56 @@
 #view-stock #categoryFilter,
 #view-stock #stockSummary{display:none}
 #view-stock .toolbar{grid-template-columns:minmax(0,1fr) auto}
-/* 搜索栏底色改实心：原来的渐隐底会让下面的排序行 / 卡片文字透出来 */
-#view-stock .toolbar.sticky-panel{background:var(--bg)}
+/* 搜索栏和分组标题用磨砂底：下面滚过的卡片只剩模糊色块，不会透出文字，也不会和页面背景的渐变出现色差 */
+#view-stock .toolbar.sticky-panel,
+.v9-group-head{
+  background:color-mix(in srgb,var(--bg) 86%,transparent);
+  -webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2)
+}
 #stockSortHint[hidden]{display:none}
 
 .v9-stock-body{display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:start}
 
-/* ---------- 侧边栏 ---------- */
+/* ---------- 侧边栏：一格凹进去的「货架」，选中的那一层像抽出来的抽屉 ---------- */
 .v9-rail{
   position:sticky;top:calc(var(--cassola-topbar-h,76px) + var(--v9-toolbar-h,64px) + 8px);
   max-height:calc(100dvh - var(--cassola-topbar-h,76px) - var(--v9-toolbar-h,64px) - 118px);
   overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
-  display:flex;flex-direction:column;gap:6px;padding-bottom:10px
+  display:flex;flex-direction:column;gap:4px;padding:5px;border-radius:26px;
+  background:color-mix(in srgb,var(--panel3,#272d3b) 72%,transparent)
 }
 .v9-rail::-webkit-scrollbar{display:none}
-.v9-seg{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;border-radius:17px;border:1px solid var(--line);background:rgba(255,255,255,.045)}
-.v9-seg button{min-height:40px;border:0;border-radius:14px;background:transparent;color:var(--muted);font-size:12px;font-weight:850;padding:0;letter-spacing:-.02em}
-.v9-seg button.on{background:var(--text);color:var(--bg,#191d27)}
+.v9-seg{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:0 0 3px}
+.v9-seg button{min-height:38px;border:0;border-radius:15px;background:transparent;color:var(--muted);font-size:12px;font-weight:850;padding:0;letter-spacing:-.02em}
+.v9-seg button.on{background:var(--text);color:var(--bg,#101218)}
 .v9-rail-item{
-  position:relative;min-height:56px;border:1px solid transparent;border-radius:18px;background:transparent;
+  position:relative;min-height:66px;border:0;border-radius:20px;background:transparent;
   color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  padding:7px 5px;text-align:center;font-weight:750;-webkit-tap-highlight-color:transparent
+  padding:9px 4px 8px;text-align:center;-webkit-tap-highlight-color:transparent;
+  transition:background .14s ease,color .14s ease,box-shadow .14s ease
 }
-.v9-rail-label{font-size:12.5px;line-height:1.2;overflow-wrap:anywhere}
-.v9-rail-item small{font-size:10.5px;font-weight:700;color:var(--muted)}
-.v9-rail-item.on{background:var(--soft-blue-bg,rgba(185,201,255,.11));border-color:color-mix(in srgb,var(--soft-blue,#b9c9ff) 35%,transparent);color:var(--text)}
+.v9-rail-glyph{font-size:21px;line-height:1;height:26px;display:flex;align-items:center;justify-content:center}
+.v9-rail-mono{
+  width:28px;height:28px;border-radius:10px;font-size:13px;font-weight:900;
+  background:color-mix(in srgb,var(--text) 9%,transparent);color:var(--text)
+}
+.v9-rail-label{font-size:12px;font-weight:800;line-height:1.15;overflow-wrap:anywhere}
+.v9-rail-meta{display:flex;align-items:center;gap:3px;font-size:10.5px;font-weight:750;color:var(--muted)}
+.v9-rail-draft{font-weight:850;font-size:10px;padding:1px 5px;border-radius:999px;background:var(--soft-blue-bg,rgba(185,201,255,.11));color:var(--text)}
+.v9-rail-item.on{background:var(--panel,#1a1e28);color:var(--text);box-shadow:0 6px 16px rgba(0,0,0,.28)}
+.v9-rail-item.on .v9-rail-mono{background:var(--text);color:var(--bg,#101218)}
 .v9-rail-alert,.v9-rail-alert.on{color:var(--danger)}
-.v9-dot{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.v9-dot{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 2px color-mix(in srgb,var(--panel3,#272d3b) 72%,var(--bg,#101218))}
+:root[data-theme="light"] .v9-rail-item.on{box-shadow:0 6px 16px rgba(54,48,38,.10)}
+
+/* ---------- 排序行：不再是一整块卡片，只是右上角一个小选择 ---------- */
+#view-stock .v6-stock-sortbar{
+  background:transparent;border:0;box-shadow:none;border-radius:0;padding:0 2px;margin:-2px 0 10px;
+  display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 10px
+}
+#view-stock .v6-stock-sortbar label{white-space:nowrap;font-size:12px;font-weight:800;color:var(--muted)}
+#view-stock .v6-stock-sortbar select{min-width:132px;min-height:40px;border-radius:15px}
+#view-stock #stockSortHint{flex-basis:100%;order:2;text-align:right;font-size:11.5px}
 
 /* ---------- 精简卡片 ---------- */
 .v9-card{padding:0;overflow:hidden}
@@ -56,8 +79,14 @@
 .v9-variant .count-mini-icon{flex:none}
 .v9-variant-name{font-weight:800;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
 .v9-card .v6-drag-handle{width:calc(100% - 20px);margin:8px 10px 0}
-.v9-group-head{margin-top:4px}
+.v9-group-head{
+  position:sticky;top:calc(var(--cassola-topbar-h,76px) + var(--v9-toolbar-h,64px));z-index:4;
+  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  padding:7px 6px 6px;margin-top:8px;border-radius:0 0 14px 14px
+}
 #stockList>.v9-group-head:first-child,#stockList>.v9-list-note+.v9-group-head{margin-top:0}
+.v9-group-name{font-size:16.5px;font-weight:900;letter-spacing:-.01em;color:var(--text);min-width:0;overflow-wrap:anywhere}
+.v9-group-count{font-size:11.5px;font-weight:750;color:var(--muted);white-space:nowrap}
 .v9-list-note{font-size:12px;color:var(--muted);font-weight:700;padding:2px 4px}
 
 /* ---------- 操作面板（点卡片弹出） ---------- */
@@ -84,12 +113,7 @@ dialog.v9-sheet>form{padding:20px;display:flex;flex-direction:column;gap:14px}
 
 :root[data-theme="light"] dialog.v9-sheet{background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(246,243,237,.98));border-color:var(--line)}
 :root[data-theme="light"] dialog.v9-sheet::backdrop{background:rgba(50,47,42,.42)}
-:root[data-theme="light"] .v9-seg{background:rgba(31,37,48,.04)}
 :root[data-theme="light"] .v9-row:active,
 :root[data-theme="light"] .v9-variant:active{background:rgba(31,37,48,.05)}
 :root[data-theme="light"] .v9-variant{background:rgba(31,37,48,.035)}
 :root[data-theme="light"] .v9-sheet-actions .btn.v9-act{background:rgba(31,37,48,.045)}
-
-/* 排序行：说明文字收起后，「排序」两个字不再竖排 */
-#view-stock .v6-stock-sortbar label{white-space:nowrap;font-size:12px}
-#view-stock .v6-stock-sortbar select{min-width:150px}

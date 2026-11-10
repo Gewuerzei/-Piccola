@@ -3,7 +3,7 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
-> **2026-11-10 Inventory v0.9.0：**库存页改为左侧边栏（分类 / 供应商开关）+ 精简卡片（名字、规格、箱规、数量）+ 点卡片弹出操作面板。代码在 `v09-stock-rail.js` / `v09-stock-rail.css`，它们再次覆盖 `renderStock`。PWA cache v112。
+> **2026-11-10 Inventory v0.9.0：**库存页改为左侧边栏（分类 / 供应商开关）+ 精简卡片（名字、规格、箱规、数量）+ 点卡片弹出操作面板。代码在 `v09-stock-rail.js` / `v09-stock-rail.css`，它们再次覆盖 `renderStock`。v0.9.1 美化：货架式侧边栏、吸顶分组标题、磨砂吸顶栏。PWA cache v113。
 
 > **2026-11-08 Inventory v0.8.2：**Scampi大 / Scampi小 / Philadelphia 供应商改为 Cattel/Lodi（一次性本机修正，只改仍为「米兰」的这 3 个 SKU；修正后须手动上传 Sushi）。库存页「供应商」排序显示分组标题；库存卡直接显示「📦 1箱 = N盒」。PWA cache v111。
 
