@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="analytics.css" />
   <link rel="stylesheet" href="ui-extras.css" />
   <link rel="stylesheet" href="v08-polish.css" />
+  <link rel="stylesheet" href="v09-stock-rail.css" />
   <title>Cassola</title>
 </head>
 <body>
@@ -60,9 +61,8 @@
       <div class="v6-stock-sortbar">
         <label>排序
           <select id="stockSort" aria-label="库存卡片排序">
-            <option value="category">分类 · 商品名</option>
+            <option value="category">默认</option>
             <option value="name">商品名</option>
-            <option value="supplier">供应商</option>
             <option value="attention">需补货优先</option>
             <option value="manual">自定义拖动</option>
           </select>
@@ -70,7 +70,10 @@
         <span id="stockSortHint">同类商品会自动靠在一起。</span>
       </div>
       <div id="stockSummary" class="summary-grid"></div>
-      <div id="stockList" class="card-list"></div>
+      <div class="v9-stock-body">
+        <nav id="v9StockRail" class="v9-rail" aria-label="库存分组"></nav>
+        <div id="stockList" class="card-list"></div>
+      </div>
     </section>
 
     <section id="view-count" class="view">
@@ -391,5 +394,6 @@
   <script src="inventory-insights.js" defer></script>
   <script src="analytics.js" defer></script>
   <script src="ui-extras.js" defer></script>
+  <script src="v09-stock-rail.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,95 @@
+/* Cassola Inventory v0.9.0 · 库存页侧边栏 + 精简卡片 + 操作面板（最后加载）
+   胖胖风格不变：侧边栏项 ≥ 56px、开关 40px、卡片行 ≥ 68px、面板按钮 58px，大圆角。
+   删除这个文件和 v09-stock-rail.js 的引用即可回到 v0.8.2 的库存页。 */
+
+/* 侧边栏取代分类下拉框和统计卡（下拉框仍在 DOM 里，只是不显示） */
+#view-stock #categoryFilter,
+#view-stock #stockSummary{display:none}
+#view-stock .toolbar{grid-template-columns:minmax(0,1fr) auto}
+/* 搜索栏底色改实心：原来的渐隐底会让下面的排序行 / 卡片文字透出来 */
+#view-stock .toolbar.sticky-panel{background:var(--bg)}
+#stockSortHint[hidden]{display:none}
+
+.v9-stock-body{display:grid;grid-template-columns:88px minmax(0,1fr);gap:10px;align-items:start}
+
+/* ---------- 侧边栏 ---------- */
+.v9-rail{
+  position:sticky;top:calc(var(--cassola-topbar-h,76px) + var(--v9-toolbar-h,64px) + 8px);
+  max-height:calc(100dvh - var(--cassola-topbar-h,76px) - var(--v9-toolbar-h,64px) - 118px);
+  overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
+  display:flex;flex-direction:column;gap:6px;padding-bottom:10px
+}
+.v9-rail::-webkit-scrollbar{display:none}
+.v9-seg{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;border-radius:17px;border:1px solid var(--line);background:rgba(255,255,255,.045)}
+.v9-seg button{min-height:40px;border:0;border-radius:14px;background:transparent;color:var(--muted);font-size:12px;font-weight:850;padding:0;letter-spacing:-.02em}
+.v9-seg button.on{background:var(--text);color:var(--bg,#191d27)}
+.v9-rail-item{
+  position:relative;min-height:56px;border:1px solid transparent;border-radius:18px;background:transparent;
+  color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:7px 5px;text-align:center;font-weight:750;-webkit-tap-highlight-color:transparent
+}
+.v9-rail-label{font-size:12.5px;line-height:1.2;overflow-wrap:anywhere}
+.v9-rail-item small{font-size:10.5px;font-weight:700;color:var(--muted)}
+.v9-rail-item.on{background:var(--soft-blue-bg,rgba(185,201,255,.11));border-color:color-mix(in srgb,var(--soft-blue,#b9c9ff) 35%,transparent);color:var(--text)}
+.v9-rail-alert,.v9-rail-alert.on{color:var(--danger)}
+.v9-dot{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+
+/* ---------- 精简卡片 ---------- */
+.v9-card{padding:0;overflow:hidden}
+.v9-row,.v9-variant{
+  width:100%;display:flex;align-items:center;gap:11px;border:0;background:transparent;color:inherit;
+  text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .12s ease
+}
+.v9-row{padding:12px;min-height:72px}
+.v9-row:active,.v9-variant:active{background:rgba(255,255,255,.05)}
+.v9-card .v9-icon{width:44px;height:44px;border-radius:16px;font-size:23px;flex:none}
+.v9-copy{min-width:0;flex:1}
+.v9-card .sku-name{font-size:15.5px;line-height:1.25;overflow-wrap:anywhere}
+.v9-sub{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:5px}
+.v9-spec{font-size:11.5px;color:var(--muted);font-weight:700}
+.stock-value.v9-qty{flex:none;min-width:62px;min-height:46px;padding:8px 10px;font-size:19px;border-radius:17px}
+.v9-family-value{display:flex;align-items:center;gap:3px;flex:none}
+.v9-chevron{font-size:17px;color:var(--muted);transition:transform .15s ease}
+.v9-family.expanded .v9-chevron{transform:rotate(180deg)}
+.v9-variants{border-top:1px solid var(--line);padding:6px 8px 8px;display:flex;flex-direction:column;gap:6px}
+.v9-variant{padding:10px;min-height:64px;border-radius:17px;background:rgba(255,255,255,.035)}
+.v9-variant .count-mini-icon{flex:none}
+.v9-variant-name{font-weight:800;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.v9-card .v6-drag-handle{width:calc(100% - 20px);margin:8px 10px 0}
+.v9-group-head{margin-top:4px}
+#stockList>.v9-group-head:first-child,#stockList>.v9-list-note+.v9-group-head{margin-top:0}
+.v9-list-note{font-size:12px;color:var(--muted);font-weight:700;padding:2px 4px}
+
+/* ---------- 操作面板（点卡片弹出） ---------- */
+dialog.v9-sheet{
+  width:min(94vw,520px);max-height:86vh;margin:auto auto calc(12px + env(safe-area-inset-bottom,0px));
+  padding:0;color:var(--text);border:1px solid rgba(255,255,255,.09);border-radius:34px;
+  background:linear-gradient(155deg,#202531,#191d27);box-shadow:var(--shadow)
+}
+dialog.v9-sheet::backdrop{background:rgba(0,0,0,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+dialog.v9-sheet>form{padding:20px;display:flex;flex-direction:column;gap:14px}
+.v9-sheet .dialog-head{gap:10px;margin-bottom:0}
+.v9-sheet-title{display:flex;gap:12px;align-items:center;min-width:0}
+.v9-sheet-title .sku-icon{flex:none}
+.v9-sheet-title h3{margin:3px 0 0;font-size:19px;line-height:1.25;overflow-wrap:anywhere}
+.v9-sheet-stock{display:flex;gap:12px;align-items:center}
+.v9-sheet-stock .stock-value.v9-qty{font-size:24px;min-width:86px;min-height:60px;border-radius:20px}
+.v9-sheet-info{min-width:0;flex:1}
+.v9-sheet-info p{margin:7px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+.v9-sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.v9-sheet-actions .btn.v9-act{
+  display:flex;align-items:center;justify-content:center;width:100%;max-width:none;margin:0;
+  min-height:58px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font-size:15px
+}
+
+:root[data-theme="light"] dialog.v9-sheet{background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(246,243,237,.98));border-color:var(--line)}
+:root[data-theme="light"] dialog.v9-sheet::backdrop{background:rgba(50,47,42,.42)}
+:root[data-theme="light"] .v9-seg{background:rgba(31,37,48,.04)}
+:root[data-theme="light"] .v9-row:active,
+:root[data-theme="light"] .v9-variant:active{background:rgba(31,37,48,.05)}
+:root[data-theme="light"] .v9-variant{background:rgba(31,37,48,.035)}
+:root[data-theme="light"] .v9-sheet-actions .btn.v9-act{background:rgba(31,37,48,.045)}
+
+/* 排序行：说明文字收起后，「排序」两个字不再竖排 */
+#view-stock .v6-stock-sortbar label{white-space:nowrap;font-size:12px}
+#view-stock .v6-stock-sortbar select{min-width:150px}
