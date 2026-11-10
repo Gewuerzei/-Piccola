@@ -79,22 +79,24 @@
   }
   function groupHead(k,rows){
     const n=rows.length,draft=rows.filter(inDraft).length;
-    return `<div class="v6-stock-category-head v9-group-head"><span class="v6-category-name">${keyIcon(k)} ${escapeHtml(keyLabel(k))}</span><span class="v6-category-count">${n} 个 SKU${draft?` · 🛒 ${draft}`:''}</span></div>`;
+    return `<div class="v9-group-head"><span class="v9-group-name">${keyIcon(k)} ${escapeHtml(keyLabel(k))}</span><span class="v9-group-count">${n} 个 SKU${draft?` · 🛒 ${draft}`:''}</span></div>`;
   }
 
   /* ---------- rail ---------- */
   function renderRail(areaRows,keys){
     const el=document.getElementById('v9StockRail');if(!el)return;
     const sel=selected();
-    const item=(k,label,rows,extraClass='')=>{
+    const item=(k,glyph,label,rows,extraClass='')=>{
       const alert=rows.some(isAlert),draft=rows.filter(inDraft).length;
-      return `<button type="button" class="v9-rail-item ${extraClass} ${k===sel?'on':''}" data-v9-key="${escapeHtml(k)}" aria-pressed="${k===sel?'true':'false'}">${alert&&k!==ALERT?'<i class="v9-dot" aria-label="有要留意的库存"></i>':''}<span class="v9-rail-label">${label}</span><small>${rows.length}${draft?` · 🛒${draft}`:''}</small></button>`;
+      return `<button type="button" class="v9-rail-item ${extraClass} ${k===sel?'on':''}" data-v9-key="${escapeHtml(k)}" aria-pressed="${k===sel?'true':'false'}">${alert&&k!==ALERT?'<i class="v9-dot" aria-label="有要留意的库存"></i>':''}${glyph}<span class="v9-rail-label">${escapeHtml(label)}</span><span class="v9-rail-meta"><span>${rows.length}</span>${draft?`<b class="v9-rail-draft">🛒${draft}</b>`:''}</span></button>`;
     };
+    const emoji=e=>`<span class="v9-rail-glyph" aria-hidden="true">${e}</span>`;
+    const mono=name=>`<span class="v9-rail-glyph v9-rail-mono" aria-hidden="true">${escapeHtml(([...String(name||'?').trim()][0]||'?').toUpperCase())}</span>`;
     const alerts=areaRows.filter(isAlert);
     el.innerHTML=`<div class="v9-seg" role="group" aria-label="侧边栏分组方式"><button type="button" data-v9-mode="category" class="${rail.mode==='category'?'on':''}">分类</button><button type="button" data-v9-mode="supplier" class="${rail.mode==='supplier'?'on':''}">供应商</button></div>`+
-      item(ALL,'全部',areaRows)+
-      (alerts.length?item(ALERT,'⚠️ 需留意',alerts,'v9-rail-alert'):'')+
-      keys.map(k=>item(k,rail.mode==='supplier'?escapeHtml(keyLabel(k)):`${keyIcon(k)} ${escapeHtml(keyLabel(k))}`,areaRows.filter(x=>keyOf(x)===k))).join('');
+      item(ALL,emoji('🗿'),'全部',areaRows)+
+      (alerts.length?item(ALERT,emoji('⚠️'),'需留意',alerts,'v9-rail-alert'):'')+
+      keys.map(k=>item(k,rail.mode==='supplier'?mono(k||'?'):emoji(keyIcon(k)),keyLabel(k),areaRows.filter(x=>keyOf(x)===k))).join('');
   }
 
   /* ---------- list ---------- */
