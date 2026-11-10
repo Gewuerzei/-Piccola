@@ -1,8 +1,8 @@
-const CACHE='cassola-suite-v111';
+const CACHE='cassola-suite-v112';
 const CORE=[
-  './','./index.html','./styles.css','./v03.css','./hub.css','./cloud.css','./staff.css','./employee-tools.css','./inventory-insights.css','./analytics.css','./ui-extras.css','./v08-polish.css',
+  './','./index.html','./styles.css','./v03.css','./hub.css','./cloud.css','./staff.css','./employee-tools.css','./inventory-insights.css','./analytics.css','./ui-extras.css','./v08-polish.css','./v09-stock-rail.css',
   './i18n-sku.js','./i18n-ui.js','./i18n.js','./sku-art.js','./sku-photos.js','./app.js','./v03-core.js','./inventory-prices.js','./v03-orders.js','./v03-ui.js','./v031-handoff.js','./employee-import.js',
-  './staff.js','./staff-departments.js','./access-registry.js','./hub.js','./cloud-sync.js','./employee-tools.js','./inventory-insights.js','./analytics.js','./ui-extras.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'
+  './staff.js','./staff-departments.js','./access-registry.js','./hub.js','./cloud-sync.js','./employee-tools.js','./inventory-insights.js','./analytics.js','./ui-extras.js','./v09-stock-rail.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'
 ];
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())

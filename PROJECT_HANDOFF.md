@@ -3,6 +3,8 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
+> **2026-11-10 Inventory v0.9.0：**库存页改为左侧边栏（分类 / 供应商开关）+ 精简卡片（名字、规格、箱规、数量）+ 点卡片弹出操作面板。代码在 `v09-stock-rail.js` / `v09-stock-rail.css`，它们再次覆盖 `renderStock`。PWA cache v112。
+
 > **2026-11-08 Inventory v0.8.2：**Scampi大 / Scampi小 / Philadelphia 供应商改为 Cattel/Lodi（一次性本机修正，只改仍为「米兰」的这 3 个 SKU；修正后须手动上传 Sushi）。库存页「供应商」排序显示分组标题；库存卡直接显示「📦 1箱 = N盒」。PWA cache v111。
 
 > **2026-10-29 Employee v0.8.1：**员工盘货按分类分组（只改显示，payload 顺序不变）、已填行 ✓ + 进度条、上传 / JSON 被拒时高亮并聚焦第一个空行、长说明折叠为「ⓘ 怎么用」。PWA cache v110。
@@ -57,7 +59,7 @@
 - Default branch: `main`
 - GitHub Pages: `https://gewuerzei.github.io/-Piccola/`
 - 当前 Suite 结构: **主菜单 → Inventory / Staff**
-- Inventory: **v0.8.2 · Supplier groups + box size on cards**（Cloud 收货授权管理仍为 v0.7.9）
+- Inventory: **v0.9.0 · Side rail + compact cards + action sheet**（Cloud 收货授权管理仍为 v0.7.9）
 - Staff: **v0.5.2 · Unified Department Cloud Manager + Legacy Archive**
 - Access: **v0.12 · Shared Role Tasks + Packaging Reports + Employee SKU Proposal Center**
 - 当前实现基线: **以 `main` HEAD 为准**（不在 handoff 硬编码 commit，避免文档漂移）
@@ -753,6 +755,12 @@ sku.unitsPerOrder  // 1 个订货单位 = 几个库存单位
 - 收货 UI 按采购单位输入，保存时换算回库存单位入库
 - 历史订单若没有采购包装快照，按倍率 1 保留当时语义，不能套用后来修改的 SKU 箱规
 - 不改变 `cassola_inventory_v01`
+
+### 库存页侧边栏（v0.9.0）
+- `renderStock` 现在以 `v09-stock-rail.js` 为准（最后加载）。改库存卡片请改那里，不要再改 `v03-orders.js` 里的旧版本（旧版本仍在，作为加载顺序上的前一层）。
+- 侧边栏只改显示：不写 SKU 的 category / supplier / sortRank。`#categoryFilter` 隐藏但保留、固定「全部」，因为旧代码仍会读它。
+- 卡片上的操作都在面板里，按钮必须继续用 `data-action="operate|order|set"` 和 `data-v3-edit`，由 `app.js` / `v03-ui.js` 的全局点击处理。不要给侧边栏按钮用 `data-supplier`（那是订货页标签的全局处理器）。
+- 拖动排序只允许在侧边栏选「全部」且无搜索时出现，列表里只能有卡片。
 
 ### 一次性数据修正（v0.8.2）
 - 只在 Pietro 明确要求改某几个 SKU、又不方便逐个手动编辑时使用。写法见 `v03-core.js` 的 `V82_SUPPLIER_FIX`：按 SKU id + 旧值精确匹配，每台设备只执行一次（`cassola_inventory_fixes_v01` 记录修正 id），绝不按名字模糊匹配，不动库存 / 订单 / 历史。
