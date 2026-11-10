@@ -134,6 +134,7 @@
       html=groupHead(sel,rows)+cardsFor(rows);
     }
     document.getElementById('stockList').innerHTML=html;
+    if(typeof queueFit==='function')queueFit();
   };
 
   function scrollListIntoView(){
@@ -189,9 +190,35 @@
 
   /* 侧边栏吸顶位置 = 顶栏高度（ui-extras.js 实测）+ 搜索栏高度（这里实测），见 v09-stock-rail.css。 */
   const toolbar=document.querySelector('#view-stock .toolbar.sticky-panel');
-  function measure(){document.documentElement.style.setProperty('--v9-toolbar-h',(toolbar?toolbar.offsetHeight:64)+'px')}
-  if(toolbar&&'ResizeObserver' in window)new ResizeObserver(measure).observe(toolbar);
+  function measure(){document.documentElement.style.setProperty('--v9-toolbar-h',(toolbar?toolbar.offsetHeight:64)+'px');queueFit()}
+
+  /* v0.9.2 · 侧边栏高度按底部导航栏的实际位置实时计算。
+     iPhone 上顶栏更高、导航栏还有 home 条安全区，固定扣 118px 不够，最后几项会被导航栏盖住、拖上来又弹回去。
+     现在：可用高度 = 导航栏顶边 − 侧边栏当前顶边（没吸顶时更低，吸顶后不低于吸顶位置）− 10px。 */
+  const railEl=document.getElementById('v9StockRail');
+  const nav=document.querySelector('.bottom-nav');
+  let fitQueued=false;
+  function fitRail(){
+    fitQueued=false;
+    if(!railEl||!railEl.getClientRects().length)return; // 库存页没显示时跳过
+    const css=getComputedStyle(document.documentElement);
+    const stickyTop=(parseFloat(css.getPropertyValue('--cassola-topbar-h'))||76)+(parseFloat(css.getPropertyValue('--v9-toolbar-h'))||64)+8;
+    const top=Math.max(railEl.getBoundingClientRect().top,stickyTop);
+    const navTop=nav&&nav.getClientRects().length?nav.getBoundingClientRect().top:window.innerHeight;
+    const bottom=Math.min(navTop,window.visualViewport?window.visualViewport.height:window.innerHeight);
+    railEl.style.maxHeight=Math.max(160,Math.floor(bottom-top-10))+'px';
+  }
+  function queueFit(){if(!fitQueued){fitQueued=true;requestAnimationFrame(fitRail)}}
+  window.addEventListener('scroll',queueFit,{passive:true});
   window.addEventListener('resize',measure);
+  window.addEventListener('orientationchange',measure);
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',queueFit);
+  if('ResizeObserver' in window){
+    if(toolbar)new ResizeObserver(measure).observe(toolbar);
+    if(nav)new ResizeObserver(queueFit).observe(nav);
+    const view=document.getElementById('view-stock');
+    if(view)new ResizeObserver(queueFit).observe(view); // 切回库存页时也会触发
+  }
   measure();
 
   renderStock();
