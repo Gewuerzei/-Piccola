@@ -761,6 +761,7 @@ sku.unitsPerOrder  // 1 个订货单位 = 几个库存单位
 - 侧边栏只改显示：不写 SKU 的 category / supplier / sortRank。`#categoryFilter` 隐藏但保留、固定「全部」，因为旧代码仍会读它。
 - 卡片上的操作都在面板里，按钮必须继续用 `data-action="operate|order|set"` 和 `data-v3-edit`，由 `app.js` / `v03-ui.js` 的全局点击处理。不要给侧边栏按钮用 `data-supplier`（那是订货页标签的全局处理器）。
 - 拖动排序只允许在侧边栏选「全部」且无搜索时出现，列表里只能有卡片。
+- 侧边栏高度由 `fitRail()` 按 `.bottom-nav` 实际顶边实时计算（v0.9.2）。不要再用固定的 `100dvh - Npx` 去算它。
 
 ### 一次性数据修正（v0.8.2）
 - 只在 Pietro 明确要求改某几个 SKU、又不方便逐个手动编辑时使用。写法见 `v03-core.js` 的 `V82_SUPPLIER_FIX`：按 SKU id + 旧值精确匹配，每台设备只执行一次（`cassola_inventory_fixes_v01` 记录修正 id），绝不按名字模糊匹配，不动库存 / 订单 / 历史。

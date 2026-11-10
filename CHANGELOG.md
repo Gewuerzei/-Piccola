@@ -2,6 +2,16 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.9.2 · 侧边栏最后几项被导航栏盖住
+**2026-11-10** · 由 Claude Opus 在分支 `opus/v0.9.2-rail-fit` 完成
+
+- Pietro iPhone 实机截图：侧边栏最后两个分类看不到，往上拖会弹回去、被底部导航栏盖住。根因：侧边栏高度用固定值扣掉 118px，没算到 iPhone 更高的顶栏、导航栏的 home 条安全区，也没算到页面还没滑动时侧边栏位置更低。
+- `v09-stock-rail.js`：侧边栏高度改为实时计算 = 底部导航栏顶边 − 侧边栏当前顶边 − 10px（滑动、旋转、键盘、导航栏 / 搜索栏尺寸变化、切回库存页、每次重绘时更新）。CSS 里的固定值只作后备。
+- PWA cache **v114**。
+- 验证（Chromium 390×844、390×664、375×600；页面顶部、滑动中、滑到底、供应商模式）：侧边栏底边和最后一项都在导航栏上方，无页面错误。
+
+---
+
 ## Inventory v0.9.1 · 库存页美化
 **2026-11-10** · 由 Claude Opus 在分支 `opus/v0.9.1-stock-polish` 完成，Pietro 同意直接上线
 
