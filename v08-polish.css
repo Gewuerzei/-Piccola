@@ -132,3 +132,14 @@
   background:color-mix(in srgb,var(--accent) 16%,transparent);
   border-color:color-mix(in srgb,var(--text) 14%,transparent)
 }
+
+/* ---------- v0.9.3 · 已结案订单的遗留员工收货任务提示（receipt-stale-guard.js）---------- */
+.v93-stale-receipt{
+  display:flex;flex-direction:column;gap:12px;margin:0 0 14px;padding:16px;border-radius:24px;
+  background:rgba(255,190,90,.11);border:1px solid rgba(255,190,90,.32)
+}
+.v93-stale-copy{display:flex;flex-direction:column;gap:5px}
+.v93-stale-copy strong{font-size:15px}
+.v93-stale-copy small{color:var(--muted);font-size:12.5px;line-height:1.45}
+.v93-stale-receipt .btn{width:100%;max-width:none;margin:0;min-height:52px}
+:root[data-theme="light"] .v93-stale-receipt{background:rgba(214,140,30,.10);border-color:rgba(214,140,30,.30)}

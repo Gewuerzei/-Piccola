@@ -175,6 +175,7 @@ Employee Mode 当前：
 - 如果授权后订单包装换算发生变化，员工提交不得直接应用，必须拒绝并重新授权。
 - 收货授权 / submission 使用 Supabase `employee_receipt_tasks` 表；生命周期：
   `authorized → submitted → accepted / rejected`，另有 `revoked`。
+- 订单结案时遗留的 `authorized` 收货任务由 `receipt-stale-guard.js` 提示撤销（v0.9.3）：刚结案时弹窗确认，已下单页顶部汇总一键撤销。它只撤销本机已结案订单的 authorized 任务，不碰 submitted。
 - 收货任务不是 canonical Inventory Head；它属于 Cloud 协作 / inbox 层。Supervisor 确认到本机后，仍需按原规则由 Supervisor 自己上传 Inventory Cloud。
 - 离线 receipt submission 进入 `cassola_cloud_outbox_v01`，恢复网络后仍然必须员工主动点“上传待发送”，禁止静默提交。若任务在离线期间被 Supervisor 撤销，员工下一次**手动** flush 时该 receipt outbox 行会标记为失效并移除，不会偷偷入库。
 
