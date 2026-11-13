@@ -2,6 +2,20 @@
 
 All notable changes to the Cassola PWA suite are recorded here.
 
+## Inventory v0.9.3 · 已结案订单的员工收货任务不再遗留
+**2026-11-13** · 由 Claude Opus 在分支 `opus/v0.9.3-stale-receipts` 完成
+
+- **问题**：Pietro 发现 Gazi 的员工端还挂着旧收货任务。生产核对：`employee_receipt_tasks` 里 `b8a86ec2…` 是 10/30 大兴订单（`e6ca5e86…`）给 Maki 岗位的授权，Gazi 10/30 领取后没有提交；这张订单 11/01 已由 Supervisor 本机收货结案，但订单结案不会自动撤销 Cloud 授权（v0.7.9 只加了手动管理入口），所以一直留在员工端。
+- **生产数据（Pietro 要求）**：按 Edge `receipt_revoke` 的同样写法撤销了这一条（status → revoked，reviewed_by=supervisor，备注「订单已于 2026-11-01 结案…」），只匹配 `status='authorized'` 且无 submission 的这一行；库存、订单、历史未动。撤销后 Cloud 已无 authorized 任务。Gazi 点「🔄 刷新收货」或下次联网刷新后任务消失。
+- **新文件 `receipt-stale-guard.js`**：
+  1. Supervisor 本机有订单刚结案（每次全量重绘后比较已结案订单）时，若 Cloud 上这张订单还有「已授权 · 未提交」的员工收货任务，立即弹窗询问是否一起撤销。
+  2. 「订货 → 已下单」顶部显示所有「订单已结案、授权还在」的遗留任务（谁 · 供应商 · 日期），「↩️ 全部撤销」二次确认后撤销。打开已下单、重新联网、启动 4 秒后都会检查（最多每分钟一次）。
+  - 只用现有 Supervisor API（`listReceiptTasks` / `revokeReceiptTask`）；已提交（submitted）的任务不碰，仍走收货审核；离线或 Cloud 出错时静默跳过。
+- 样式在 `v08-polish.css`；`index.html`、`sw.js`（cache **v115**）。无 Edge / 表结构变更。
+- 验证（Chromium，模拟 Cloud）：已结案订单的授权显示提示、未结案的不显示；全部撤销调用 revoke 且提示消失；本机把未结案订单收货结案后立即弹窗并撤销；离线不报错；无页面错误。
+
+---
+
 ## Inventory v0.9.2 · 侧边栏最后几项被导航栏盖住
 **2026-11-10** · 由 Claude Opus 在分支 `opus/v0.9.2-rail-fit` 完成
 
