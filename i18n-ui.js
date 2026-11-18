@@ -247,5 +247,18 @@ window.CASSOLA_I18N_UI={
   "Staff 个人任务":{it:"Conteggio personale",bn:"ব্যক্তিগত গণনা"},
   "组合盘货 · {n} SKU":{it:"Conteggio misto · {n} SKU",bn:"মিশ্র গণনা · {n} SKU"},
   "岗位 {name}":{it:"Ruolo {name}",bn:"পদ: {name}"},
-  "个人任务":{it:"compiti personali",bn:"ব্যক্তিগত কাজ"}
+  "个人任务":{it:"compiti personali",bn:"ব্যক্তিগত কাজ"},
+  "当前没有有效盘货任务。":{it:"Nessun conteggio attivo.",bn:"এখন কোনো সক্রিয় গণনার কাজ নেই।"},
+  "云端已收到 · 待采用":{it:"Ricevuto · in attesa di approvazione",bn:"জমা হয়েছে · অনুমোদনের অপেক্ষায়"},
+  "主管已采用":{it:"Approvato dal responsabile",bn:"দায়িত্বপ্রাপ্ত ব্যক্তি অনুমোদন করেছেন"},
+  "主管已退回":{it:"Respinto dal responsabile",bn:"দায়িত্বপ্রাপ্ত ব্যক্তি ফেরত দিয়েছেন"},
+  "已由新版替代":{it:"Sostituito da un nuovo invio",bn:"নতুন জমা দিয়ে প্রতিস্থাপিত"},
+  "发送待处理项 ({n})":{it:"Invia in coda ({n})",bn:"জমা দেওয়ার অপেক্ষায় ({n})"},
+  "刷新盘货":{it:"Aggiorna conteggi",bn:"গণনার তালিকা হালনাগাদ করুন"},
+  "已刷新盘货任务":{it:"Conteggi aggiornati",bn:"গণনার তালিকা হালনাগাদ হয়েছে"},
+  "本机已保存 · 等联网后发送":{it:"Salvato sul dispositivo · invia quando torni online",bn:"ডিভাইসে সংরক্ষিত · ইন্টারনেট এলে পাঠান"},
+  "{n} 项已获云端确认":{it:"Conferma ricevuta per {n} invii",bn:"{n}টি জমা দেওয়ার নিশ্চয়তা পাওয়া গেছে"},
+  "{n} 项对应任务已结束，仍保留在本机":{it:"{n} attività chiuse · dati conservati su questo dispositivo",bn:"{n}টি কাজ শেষ · তথ্য ডিভাইসে সংরক্ষিত"},
+  "{n} 项未确认，仍保留在本机":{it:"{n} invii senza conferma · dati conservati sul dispositivo",bn:"{n}টি জমা নিশ্চিত নয় · তথ্য ডিভাইসে সংরক্ষিত"},
+  "云端未确认 · 本机仍保留":{it:"Conferma non ricevuta · dati conservati sul dispositivo",bn:"নিশ্চয়তা পাওয়া যায়নি · তথ্য ডিভাইসে সংরক্ষিত"}
 };

@@ -31,6 +31,7 @@
   let taskOptionsCache=null;
   let taskRowsCache=[];
   let taskBasketSelectors=[];
+  let taskPrioritySkuIds=null,taskPublisherRequest=0;
   let importCandidate=null;
   let suppressClickUntil=0;
   const avatarUrlCache=new Map();
@@ -1648,7 +1649,9 @@
     const roleLock=roleHasActive?'<div class="staff-task-conflict">⚠️ 这个岗位已经有有效盘货任务。岗位任务采用冻结快照，先撤销旧任务，再发布新版本。</div>':'';
     const conflict=!isRole&&conflicts.length?'<div class="staff-task-conflict">⚠️ '+conflicts.length+' 个 SKU 已在这个员工的其他有效任务中。发布前要先撤销旧任务或从篮子移除重叠条件。</div>':'';
     const content=rows.length?'<div class="staff-task-preview-head"><b>最终 '+rows.length+' 个 SKU</b><span>发布后冻结</span></div><div class="staff-task-preview-chips">'+rows.slice(0,16).map(x=>'<span>'+esc(x.name)+'</span>').join('')+(rows.length>16?'<span>＋'+(rows.length-16)+'</span>':'')+'</div>':'<div class="empty">任务篮子还是空的。</div>';
-    box.innerHTML=warning+roleLock+conflict+content;
+    const missing=(taskPrioritySkuIds||[]).filter(id=>!taskMatches('sku',id).length).length;
+    const missingNote=missing?'<div class="staff-task-conflict">'+missing+' 个重点 SKU 未出现在云端目录。同步对应库存区后可加入。</div>':'';
+    box.innerHTML=warning+roleLock+conflict+missingNote+content;
     const btn=document.getElementById('staffTaskPublish');if(btn)btn.disabled=!rows.length||!ready||roleHasActive||(!isRole&&!!conflicts.length);
   }
   function renderTaskRows(){
@@ -1679,44 +1682,41 @@
       ?'👥 任务绑定岗位 ID；今天谁持有该岗位的 Employee PIN，谁就能接到同一份共享盘货任务。不是给当前所有人员各发一份。'
       :'👤 只发给指定员工。想让人员轮换，请改选「岗位共享」。';
   }
-  async function openTaskPublisher(personId){
-    const p=personById(personId);if(!p)return;
-    taskPublisherPersonId=personId;taskPublisherRoleId=null;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
+  async function openCountTaskPublisher(personId,roleId,prioritySkuIds=null){
+    const p=personId?personById(personId):null,role=roleId?roleById(roleId):null;
+    if(!p&&!role)return;
+    const request=++taskPublisherRequest;
+    taskPublisherPersonId=personId;taskPublisherRoleId=roleId;
+    taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];taskPrioritySkuIds=prioritySkuIds;
     syncTaskRecipientPicker();
     const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList'),basket=document.getElementById('staffTaskBasket');
-    document.getElementById('staffTaskTitle').textContent='📋 '+p.name+' · 发布个人盘货任务';
-    document.getElementById('staffTaskLabel').value='';
+    document.getElementById('staffTaskTitle').textContent=role?'📋 '+role.icon+' '+role.name+' · 岗位盘货任务':'📋 '+p.name+' · 发布个人盘货任务';
+    document.getElementById('staffTaskLabel').value=prioritySkuIds?'重点盘货':'';
     preview.innerHTML='<div class="empty">正在读取 Cloud Inventory…</div>';list.innerHTML='<div class="empty">正在读取已有任务…</div>';basket.innerHTML='';
     dlg._accessReady=false;document.getElementById('staffTaskPublish').disabled=true;if(!dlg.open)dlg.showModal();
     if(!cloudReady()){preview.innerHTML='<div class="empty">先连接 Supervisor Cloud 才能发布任务。</div>';list.innerHTML='';return}
     try{
-      const [opts,tasks,access]=await Promise.all([
-        window.CassolaCloud.inventoryTaskOptions(),
-        window.CassolaCloud.listInventoryTasks(personId),
-        window.CassolaCloud.staffAccessGet(personId,p.name)
-      ]);
-      taskOptionsCache=opts;taskRowsCache=tasks.tasks||[];dlg._accessReady=!!access.credential?.active;
+      const cloud=window.CassolaCloud;
+      const [opts,tasks,access]=await Promise.all([cloud.inventoryTaskOptions(),
+        role?cloud.listRoleInventoryTasks(roleId):cloud.listInventoryTasks(personId),
+        p?cloud.staffAccessGet(personId,p.name):null]);
+      if(request!==taskPublisherRequest)return;
+      taskOptionsCache=opts;taskRowsCache=tasks.tasks||[];dlg._accessReady=!!role||!!access?.credential?.active;
+      taskBasketSelectors=(prioritySkuIds||[]).filter(id=>taskMatches('sku',id).length).map(value=>({type:'sku',value}));
       fillTaskSelector();renderTaskBasket();renderTaskRows();
-    }catch(err){preview.innerHTML='<div class="empty">读取任务资料失败：'+esc(err?.message||'未知错误')+'</div>'}
+    }catch(err){
+      if(request===taskPublisherRequest)preview.innerHTML='<div class="empty">读取任务资料失败：'+esc(err?.message||'未知错误')+'</div>';
+    }
   }
-  async function openRoleTaskPublisher(roleId){
-    const role=roleById(roleId);if(!role)return;
-    taskPublisherPersonId=null;taskPublisherRoleId=roleId;taskOptionsCache=null;taskRowsCache=[];taskBasketSelectors=[];
-    syncTaskRecipientPicker();
-    const dlg=document.getElementById('staffTaskDialog'),preview=document.getElementById('staffTaskPreview'),list=document.getElementById('staffTaskList'),basket=document.getElementById('staffTaskBasket');
-    document.getElementById('staffTaskTitle').textContent='📋 '+role.icon+' '+role.name+' · 岗位盘货任务';
-    document.getElementById('staffTaskLabel').value='';
-    preview.innerHTML='<div class="empty">正在读取 Cloud Inventory…</div>';list.innerHTML='<div class="empty">正在读取岗位任务…</div>';basket.innerHTML='';
-    dlg._accessReady=cloudReady();document.getElementById('staffTaskPublish').disabled=true;if(!dlg.open)dlg.showModal();
-    if(!cloudReady()){preview.innerHTML='<div class="empty">先连接 Supervisor Cloud 才能设置岗位任务。</div>';list.innerHTML='';return}
-    try{
-      const [opts,tasks]=await Promise.all([
-        window.CassolaCloud.inventoryTaskOptions(),
-        window.CassolaCloud.listRoleInventoryTasks(roleId)
-      ]);
-      taskOptionsCache=opts;taskRowsCache=tasks.tasks||[];dlg._accessReady=true;
-      fillTaskSelector();renderTaskBasket();renderTaskRows();
-    }catch(err){preview.innerHTML='<div class="empty">读取岗位任务失败：'+esc(err?.message||'未知错误')+'</div>'}
+  function openTaskPublisher(personId,prioritySkuIds=null){return openCountTaskPublisher(personId,null,prioritySkuIds);}
+  function openRoleTaskPublisher(roleId,prioritySkuIds=null){return openCountTaskPublisher(null,roleId,prioritySkuIds);}
+  function openPriorityCountTask(skuIds,area){
+    const department=area==='bar'?'sala':area;
+    if(DEPARTMENT_KEY[department]&&weekDepartment!==department&&!activateDepartment(department))return;
+    const person=state.people.find(p=>p.active!==false),role=state.roles[0];
+    if(!person&&!role){toast('先在 Staff 添加员工或岗位');return;}
+    window.CassolaHub.openStaff();
+    return person?openTaskPublisher(person.id,skuIds):openRoleTaskPublisher(role.id,skuIds);
   }
   async function publishPersonTask(){
     if((!taskPublisherPersonId&&!taskPublisherRoleId)||!cloudReady())return;
@@ -2314,15 +2314,15 @@
       const selected=e.target.value;
       if(selected==='role'){
         const role=document.getElementById('staffTaskRolePicker').value||state.roles[0]?.id;
-        if(role)openRoleTaskPublisher(role);
+        if(role)openRoleTaskPublisher(role,taskPrioritySkuIds);
         else{e.target.value='person';toast('请先在 Staff → 岗位里建立岗位');}
       }else{
         const person=document.getElementById('staffTaskPersonPicker').value||state.people.find(p=>p.active!==false)?.id;
-        if(person)openTaskPublisher(person);
+        if(person)openTaskPublisher(person,taskPrioritySkuIds);
       }
     });
-    document.getElementById('staffTaskRolePicker').addEventListener('change',e=>{if(e.target.value)openRoleTaskPublisher(e.target.value)});
-    document.getElementById('staffTaskPersonPicker').addEventListener('change',e=>{if(e.target.value)openTaskPublisher(e.target.value)});
+    document.getElementById('staffTaskRolePicker').addEventListener('change',e=>{if(e.target.value)openRoleTaskPublisher(e.target.value,taskPrioritySkuIds)});
+    document.getElementById('staffTaskPersonPicker').addEventListener('change',e=>{if(e.target.value)openTaskPublisher(e.target.value,taskPrioritySkuIds)});
     document.getElementById('staffTaskList').addEventListener('click',e=>{const b=e.target.closest('[data-staff-task-revoke]');if(b)revokePersonTask(b.dataset.staffTaskRevoke)});
     document.getElementById('staffDeletePerson').addEventListener('click',deletePerson);
     document.getElementById('staffPhotoInput').addEventListener('change',async e=>{
@@ -2378,5 +2378,5 @@
   window.addEventListener('cassola-cloud-staff-change',()=>{if(state){renderStaffCloudState();renderPeople()}});
   document.addEventListener('cassola-cloud-reconnected',()=>{if(state)renderStaffCloudState()});
   document.addEventListener('DOMContentLoaded',init);
-  window.CassolaStaff={show,hide,render:renderAll,departmentWorkspacesEnabled:()=>true,activateImportedDepartment,taskRoles:()=>state?.roles?.map(r=>({id:r.id,name:r.name,icon:r.icon}))||[],applyCloudState,applyVerifiedRestWeek,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
+  window.CassolaStaff={show,hide,render:renderAll,departmentWorkspacesEnabled:()=>true,activateImportedDepartment,taskRoles:()=>state?.roles?.map(r=>({id:r.id,name:r.name,icon:r.icon}))||[],openPriorityCountTask,applyCloudState,applyVerifiedRestWeek,saveCloudRollback,restoreCloudRollback,cloudRollbackInfo,cloudSnapshot:()=>snapshot(state)};
 })();

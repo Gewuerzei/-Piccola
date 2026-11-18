@@ -573,3 +573,11 @@ body[data-cassola-mode="staff"]>nav.bottom-nav{display:none!important}
 .cassola-employee-receipt-sync small{color:var(--muted);font-size:10px;line-height:1.45;flex:1;min-width:0}
 .cassola-employee-receipt-sync .btn{flex:0 0 auto;min-height:42px;font-size:11px}
 @media(max-width:420px){.cassola-employee-receipt-sync{flex-direction:column;align-items:stretch}.cassola-employee-receipt-sync .btn{width:100%}}
+
+.cassola-employee-sync{margin-bottom:12px;padding:10px;border:1px solid var(--line);border-radius:17px;background:var(--panel)}
+.cassola-employee-sync-actions{display:flex;flex-wrap:wrap;gap:8px}
+.cassola-employee-sync-actions .btn{flex:1 1 auto;min-height:44px}
+.cassola-employee-sync-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:8px}
+.cassola-employee-sync-row small{color:var(--muted)}
+.cassola-employee-sync-row b{font-size:12px;text-align:end}
+.cassola-employee-sync .cassola-employee-upload-notice{margin-top:8px}

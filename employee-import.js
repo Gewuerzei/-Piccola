@@ -38,6 +38,22 @@
       .filter(x=>x.effectiveKey===key&&x.status==='active')
       .sort((a,b)=>new Date(b.submittedAt)-new Date(a.submittedAt))[0]||null;
   }
+  function laterStockChanges(rows,data){
+    const since=new Map(rows.map(({s,countedAt})=>[
+      String(s.id),new Date(countedAt||data.date+'T00:00:00').getTime()
+    ]));
+    const conflicts=new Map();
+    for(const h of (state.history||[])){
+      if(!h||h.employeeSuperseded)continue;
+      if(!['arrival','loss','transfer','count'].includes(h.type)&&!(h.type==='adjust'&&v3ParseCount(h)))continue;
+      const at=new Date(h.at).getTime();
+      for(const id of (h.type==='transfer'?[h.skuId,h.targetId]:[h.skuId])){
+        const key=String(id),previous=conflicts.get(key);
+        if(at>=since.get(key)&&(!previous||at>new Date(previous.at).getTime()))conflicts.set(key,h);
+      }
+    }
+    return conflicts;
+  }
   function validate(data,options={}){
     if(!data||data.format!=='cassola-employee-count-v1')throw new Error('不是员工盘货包');
     if(data.role!=='employee')throw new Error('角色不是 employee');
@@ -64,7 +80,9 @@
       if(!scopeAllows(effectiveScope,s))throw new Error(`${s.name} 不属于该员工责任区`);
       const qty=Number(item.qty);
       if(!Number.isFinite(qty)||qty<0)throw new Error(`${s.name} 的数量无效`);
-      rows.push({s,qty,old:Number(s.qty)||0});
+      const countedAt=typeof item.countedAt==='string'&&validTime(item.countedAt)&&
+        new Date(item.countedAt)<=new Date(data.submittedAt)?new Date(item.countedAt).toISOString():null;
+      rows.push({s,qty,countedAt,old:Number(s.qty)||0});
     }
     if(Array.isArray(data.scopeSkuIds)){
       const scopeIds=[...new Set(data.scopeSkuIds.map(String))];
@@ -101,7 +119,7 @@
     const incomingAt=new Date(data.submittedAt).getTime();
     const activeAt=active?new Date(active.submittedAt).getTime():-Infinity;
     const stale=!!active&&incomingAt<=activeAt;
-    return{record,scope:effectiveScope,rows,events,active,stale,effectiveKey:expectedKey};
+    return{record,scope:effectiveScope,rows,events,active,stale,conflicts:laterStockChanges(rows,data),effectiveKey:expectedKey};
   }
 
   function diffClass(delta){
@@ -119,9 +137,9 @@
     pending={data,validation:v,cloudSubmissionId:options.cloudSubmissionId||null};
     const changed=v.rows.filter(x=>x.qty!==x.old),same=v.rows.length-changed.length;
     const activeText=v.active?`${v.active.credentialId} · ${new Date(v.active.submittedAt).toLocaleString('zh-CN',{hour:'2-digit',minute:'2-digit'})}`:'无';
-    const mode=v.stale?'stale':'ready';
     const banner=v.stale
       ?'<div class="ei-banner stale"><strong>⛔ 不是最新版</strong><span>本机已有同责任区同一天更晚的 active 提交。不会覆盖库存。</span></div>'
+      :v.conflicts.size?'<div class="ei-banner stale"><strong>⚠️ '+v.conflicts.size+' 个 SKU 的账面在盘货后变动</strong><span>请核对标出的库存变动，退回这份盘货并重盘相关 SKU。旧盘货缺少实盘时间时，按盘货当天起检查。</span></div>'
       :'<div class="ei-banner ready"><strong>✅ 可采用</strong><span>确认后只更新这个责任区包里列出的 SKU。</span></div>';
     document.getElementById('eiImportSummary').innerHTML=`
       ${banner}
@@ -135,12 +153,14 @@
       <div class="ei-stats"><div><span>提交 SKU</span><b>${v.rows.length}</b></div><div><span>有差异</span><b>${changed.length}</b></div><div><span>库存变动</span><b>${v.events.length}</b></div></div>
       ${v.events.length?'<div class="ei-event-list"><div class="ei-event-head">📉 员工报告的报损 / 转化</div>'+v.events.map(e=>'<div class="ei-event-row"><div><strong>'+(e.type==='loss'?'🗑️ 报损':'🔄 内部转化')+' · '+esc(e.source.name)+'</strong><small>'+esc(e.note||'无备注')+'</small></div><b>'+esc(e.qty)+' '+esc(e.source.unit||'')+(e.target?' → '+esc(e.target.name):'')+'</b></div>').join('')+'</div>':''}
       <div class="ei-diff-list">${v.rows.map(x=>{
-        const delta=x.qty-x.old,cls=diffClass(delta);
-        return `<div class="ei-diff-row ${cls}"><div><strong>${esc(x.s.name)}</strong><small>${esc(x.s.spec||'无规格')}</small></div><div class="ei-values"><span>${fmt(x.old)} → <b>${fmt(x.qty)}</b> ${esc(x.s.unit)}</span><em>${fmtSigned(delta)}</em></div></div>`;
+        const delta=x.qty-x.old,conflict=v.conflicts.get(String(x.s.id));
+        const countTime=x.countedAt?' · 实盘 '+new Date(x.countedAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+        const movement=conflict?'<small>⚠️ '+esc(new Date(conflict.at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+' · '+esc(conflict.text)+'</small>':'';
+        return `<div class="ei-diff-row ${conflict?'large':diffClass(delta)}"><div><strong>${esc(x.s.name)}</strong><small>${esc(x.s.spec||'无规格')}${esc(countTime)}</small>${movement}</div><div class="ei-values"><span>${fmt(x.old)} → <b>${fmt(x.qty)}</b> ${esc(x.s.unit)}</span><em>${fmtSigned(delta)}</em></div></div>`;
       }).join('')}</div>
     `;
     const accept=document.getElementById('eiAcceptBtn');
-    accept.classList.toggle('hidden',v.stale);
+    accept.classList.toggle('hidden',v.stale||v.conflicts.size>0);
     document.getElementById('eiImportDialog').showModal();
   }
 
@@ -152,6 +172,10 @@
     // legacy access registry. Manual JSON imports still pass no Cloud ID.
     try{v=validate(pending.data,{cloudSubmissionId:pending.cloudSubmissionId})}catch(err){alert('导入状态已经变化，请重新选择文件：'+err.message);return}
     if(v.stale){showToast('这不是当天最新版');return}
+    if(v.conflicts.size){
+      const {data,cloudSubmissionId}=pending;
+      preview(data,{cloudSubmissionId});return;
+    }
     if(!confirm(`采用 ${v.scope.label||v.scope.id} · ${pending.data.date} 的员工盘货？`))return;
     const now=stamp(),submissionId=pending.data.submissionId;
     const supersededIds=[];
@@ -179,14 +203,15 @@
         addHistory('transfer',e.source.id,`-${fmt(e.qty)} ${e.source.unit}（员工报告）`,e.note||'员工盘货内部转化',{...common,targetId:e.target.id,text2:`+${fmt(e.qty)} ${e.target.unit}`});
       }
     });
-    v.rows.forEach(({s,qty,old})=>{
+    v.rows.forEach(({s,qty,old,countedAt})=>{
       s.qty=qty;
       addHistory('count',s.id,`${fmt(old)} → ${fmt(qty)} ${s.unit}`,`员工盘货 · ${v.scope.label||v.scope.id} · ${pending.data.credentialId}`,{
-        batch,employeeSubmissionId:submissionId,employeeScopeId:v.scope.id,employeeCredentialId:pending.data.credentialId
+        batch,employeeSubmissionId:submissionId,employeeScopeId:v.scope.id,employeeCredentialId:pending.data.credentialId,
+        ...(countedAt?{at:countedAt,countedAt,appliedAt:now}:{})
       });
       if(old!==qty)changed++;
     });
-    state.employeeSubmissions.push({
+    const record={
       submissionId,
       effectiveKey:v.effectiveKey,
       date:pending.data.date,
@@ -197,11 +222,16 @@
       scope:JSON.parse(JSON.stringify(v.scope)),
       status:'active',
       deviceRevision:Number(pending.data.deviceRevision)||0,
-      counts:v.rows.map(x=>({skuId:x.s.id,qty:x.qty})),
+      counts:v.rows.map(x=>({skuId:x.s.id,qty:x.qty,...(x.countedAt?{countedAt:x.countedAt}:{})})),
       events:v.events.map(e=>({id:e.id,type:e.type,skuId:e.source.id,qty:e.qty,targetId:e.target?.id||null,note:e.note,recordedAt:e.recordedAt})),
       changedCount:changed,
-      eventCount:v.events.length
-    });
+      eventCount:v.events.length,
+      ...(pending.cloudSubmissionId?{
+        cloudSubmissionId:pending.cloudSubmissionId,
+        cloudReviewActorId:window.CassolaCloud?.session?.()?.id||null
+      }:{})
+    };
+    state.employeeSubmissions.push(record);
     saveState();
     const cloudSubmissionId=pending.cloudSubmissionId;
     document.getElementById('eiImportDialog').close();
@@ -209,10 +239,10 @@
     renderAll();
     refresh();
     showToast(`已采用员工盘货 · ${changed} 项变化 · ${v.events.length} 条变动`);
-    if(cloudSubmissionId&&window.CassolaCloud?.reviewEmployee){
-      window.CassolaCloud.reviewEmployee(cloudSubmissionId,'accepted','Applied to Supervisor local ledger')
-        .then(()=>{if(typeof showToast==='function')showToast('☁️ 云端员工盘货已标记采用')})
-        .catch(err=>console.warn('Cloud employee review sync failed',err));
+    if(cloudSubmissionId&&window.CassolaCloud?.confirmAppliedEmployeeReview){
+      window.CassolaCloud.confirmAppliedEmployeeReview(record)
+        .then(()=>showToast('☁️ 云端员工盘货已标记采用'))
+        .catch(()=>showToast('已入账 · 等待同步云端采用状态'));
     }
   }
 
