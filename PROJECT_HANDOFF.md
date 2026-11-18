@@ -3,6 +3,8 @@
 > 给下一次维护这个项目的 Piccola / 开发者看的交接文档。  
 > **先读本文件，再读 `CHANGELOG.md`，最后核对 `main` 当前代码。仓库代码优先于聊天记忆。**
 
+> **2026-11-18 Inventory / Employee v0.9.4 · PWA cache v116：**个人盘货采用时由数据库触发器关闭任务，重算员工 SKU 范围，补关历史已采用任务。员工端保留本机未确认的待发送记录，联网前台每 30 秒刷新；本机已入账的云端采用失败时由原主管补记。盘货保存各 SKU 实盘时间，出现后续库存变动时审核会阻止整份覆盖。订货建议区分及时、未确认和来不及的在途数量；「发重点盘货」预填现有 Staff 个人或岗位任务，再由主管发布。
+
 > **2026-11-10 Inventory v0.9.0：**库存页改为左侧边栏（分类 / 供应商开关）+ 精简卡片（名字、规格、箱规、数量）+ 点卡片弹出操作面板。代码在 `v09-stock-rail.js` / `v09-stock-rail.css`，它们再次覆盖 `renderStock`。v0.9.1 美化：货架式侧边栏、吸顶分组标题、磨砂吸顶栏。PWA cache v113。
 
 > **2026-11-08 Inventory v0.8.2：**Scampi大 / Scampi小 / Philadelphia 供应商改为 Cattel/Lodi（一次性本机修正，只改仍为「米兰」的这 3 个 SKU；修正后须手动上传 Sushi）。库存页「供应商」排序显示分组标题；库存卡直接显示「📦 1箱 = N盒」。PWA cache v111。
@@ -205,7 +207,7 @@ Supervisor 导入员工盘货包时必须遵守：
 - 员工端导出完整责任区快照，并携带 `scopeSkuIds`
 - `effectiveKey = scopeId:date` 定义“同责任区同一天”
 - 同一个 effectiveKey 只允许一个 `status = active`
-- 新包只有 `submittedAt` 晚于当前 active 时才可覆盖
+- 新包只有 `submittedAt` 晚于当前 active 时才可覆盖。各 SKU 有实盘时间就与实际库存变动比较，旧包则按业务日当天起核对。发现后续收货、报损、转换、调账或实盘时阻止采用，保留本机账面。
 - 采用新版时旧 active 改为 `superseded`，保留历史
 - 只有 Supervisor 明确点击“采用最新版”才修改正式库存
 - 应用库存变化时继续写标准 `history`，并附 employee submission / scope / credential 元数据
@@ -1188,7 +1190,7 @@ Hub 只负责模块入口，不堆业务按钮。
 当前 cache：
 
 ```text
-cassola-suite-v106
+cassola-suite-v116
 ```
 
 当前 CORE 必须包含：

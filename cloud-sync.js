@@ -18,6 +18,9 @@
   ];
   let token=null,credential=null,lastStatus=null,lastNoticeSig='',refreshTimer=null,employeeCatalog=null,employeeReceiptTasks=null,employeeInventoryTasks=null,reconnectCode=null;
   let receiptTaskLastCheckedAt=null,receiptTaskCheckFailed=false;
+  let outboxFlush=null,statusRequest=0,lastAppliedStatus=0;
+  let retryingReviews=false;
+  const applyingReviews=new Set();
 
   const clone=v=>JSON.parse(JSON.stringify(v));
   const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -71,12 +74,29 @@
   }
   function cacheEmployeeInventoryTasks(credentialId,rows){
     const id=String(credentialId||'');if(!id||!Array.isArray(rows))return;
-    const all=readInventoryTaskCache();all[id]={updatedAt:new Date().toISOString(),rows:clone(rows)};
+    const all=readInventoryTaskCache();all[id]={...all[id],updatedAt:new Date().toISOString(),rows:clone(rows)};
     localStorage.setItem(EMPLOYEE_INVENTORY_TASK_KEY,JSON.stringify(all));
   }
   function cachedEmployeeInventoryTasks(credentialId){
     const row=readInventoryTaskCache()[String(credentialId||'')];
     return Array.isArray(row?.rows)?clone(row.rows):[];
+  }
+  function employeeSubmissionStatuses(credentialId){
+    return readInventoryTaskCache()[String(credentialId||'')]?.submissions||[];
+  }
+  function rememberEmployeeSubmissions(credentialId,rows){
+    if(!credentialId||!rows.length)return;
+    const all=readInventoryTaskCache(),old=all[credentialId]||{};
+    const merged=new Map((old.submissions||[]).map(row=>[row.submission_id,row]));
+    for(const row of rows){
+      if(!row.submission_id)continue;
+      const prior=merged.get(row.submission_id);
+      if(row.status==='pending'&&prior&&prior.status!=='pending')continue;
+      merged.set(row.submission_id,{...prior,...row});
+    }
+    const submissions=[...merged.values()].sort((a,b)=>String(b.submitted_at).localeCompare(String(a.submitted_at))).slice(0,12);
+    all[credentialId]={...old,submissions};
+    localStorage.setItem(EMPLOYEE_INVENTORY_TASK_KEY,JSON.stringify(all));
   }
   function readOutbox(){
     try{const x=JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');return Array.isArray(x)?x:[]}catch(_){return[]}
@@ -90,9 +110,6 @@
     const id=String(credentialId||payload?.credentialId||credential?.id||'');
     if(!id)throw new Error('credential_required');
     let rows=readOutbox();
-    if(type==='employee_submission'){
-      rows=rows.filter(x=>!(x.type===type&&x.credentialId===id&&x.payload?.effectiveKey===payload?.effectiveKey));
-    }
     if(type==='sku_proposal'&&payload?.proposalId){
       rows=rows.filter(x=>!(x.type===type&&x.credentialId===id&&x.payload?.proposalId===payload.proposalId));
     }
@@ -104,7 +121,10 @@
     window.dispatchEvent(new CustomEvent('cassola-cloud-outbox-change',{detail:{count:outboxCount(id)}}));
     return rows[rows.length-1];
   }
-  function queueEmployeeSubmission(payload){return queueOutbox('employee_submission',payload,payload?.credentialId)}
+  function queueEmployeeSubmission(payload){
+    const queued=readOutbox().find(row=>row.type==='employee_submission'&&row.credentialId===payload.credentialId&&row.payload?.effectiveKey===payload.effectiveKey);
+    return queued||queueOutbox('employee_submission',payload,payload.credentialId);
+  }
   function queueSkuProposal(payload,credentialId){
     const id=credentialId||credential?.id||window.CassolaHub?.session?.()?.id;
     return queueOutbox('sku_proposal',payload,id);
@@ -280,6 +300,9 @@
       if(!target){
         target={...incoming,items:[],receiptBatches:[]};
         delete target.status;delete target.partial;
+      }else if(incoming.expectedArrivalChangedAt&&incoming.expectedArrivalChangedAt>String(target.expectedArrivalChangedAt||'')){
+        target.expectedArrivalOn=incoming.expectedArrivalOn||null;
+        target.expectedArrivalChangedAt=incoming.expectedArrivalChangedAt;
       }
       const itemMap=new Map((target.items||[]).map(i=>[String(i.skuId),i]));
       (incoming.items||[]).forEach(i=>itemMap.set(String(i.skuId),clone(i)));
@@ -353,15 +376,21 @@
   }
   async function refreshStatus({silent=false}={}){
     if(!token)return null;
+    const forToken=token,request=++statusRequest;
     let data;
     try{data=await api('status',{localBases:bases()},6500)}
     catch(err){
-      if(role()==='employee'){
+      if(token===forToken&&request>=lastAppliedStatus&&role()==='employee'&&!receiptTaskCheckFailed){
         receiptTaskCheckFailed=true;
         window.dispatchEvent(new CustomEvent('cassola-cloud-employee-tasks-change',{detail:{receiptRefreshFailed:true}}));
       }
       throw err;
     }
+    if(token!==forToken||request<lastAppliedStatus)return null;
+    lastAppliedStatus=request;
+    const priorEmployeeState=role()==='employee'?JSON.stringify([
+      employeeReceiptTasks,employeeInventoryTasks,credential?.scope,employeeSubmissionStatuses(credential?.id),receiptTaskCheckFailed
+    ]):'';
     lastStatus=data;
     if(role()==='employee'){
       employeeCatalog=data.catalogReady?(Array.isArray(data.scopeCatalog)?clone(data.scopeCatalog):[]):null;
@@ -372,15 +401,22 @@
       if(credential?.id){
         cacheEmployeeReceiptTasks(credential.id,employeeReceiptTasks);
         cacheEmployeeInventoryTasks(credential.id,employeeInventoryTasks);
+        rememberEmployeeSubmissions(credential.id,Array.isArray(data.latestSubmissions)?data.latestSubmissions:[]);
       }
       if(credential){
         credential.scope=data.credentialScope||credential.scope||null;
         credential.staffPersonId=data.staffPersonId||credential.staffPersonId||null;
       }
-      window.dispatchEvent(new CustomEvent('cassola-cloud-employee-tasks-change',{detail:{receiptCount:employeeReceiptTasks.length,inventoryCount:employeeInventoryTasks.length,scope:clone(data.credentialScope||null),staffPersonId:data.staffPersonId||null}}));
+      const nextEmployeeState=JSON.stringify([
+        employeeReceiptTasks,employeeInventoryTasks,credential?.scope,employeeSubmissionStatuses(credential?.id),receiptTaskCheckFailed
+      ]);
+      if(priorEmployeeState!==nextEmployeeState){
+        window.dispatchEvent(new CustomEvent('cassola-cloud-employee-tasks-change',{detail:{receiptCount:employeeReceiptTasks.length,inventoryCount:employeeInventoryTasks.length,scope:clone(data.credentialScope||null),staffPersonId:data.staffPersonId||null}}));
+      }
     }
     renderCloudUi();
     if(!silent)maybeNotice(data);
+    if(role()==='supervisor')retryAppliedEmployeeReviews().catch(err=>console.warn('Employee review sync failed',err));
     return data;
   }
   function maybeNotice(data){
@@ -715,34 +751,49 @@
     return data;
   }
 
-  async function flushOutbox(){
+  function flushOutbox(rowId=''){
+    if(outboxFlush)return outboxFlush;
+    outboxFlush=sendQueuedRows(rowId).finally(()=>{outboxFlush=null});
+    return outboxFlush;
+  }
+  async function sendQueuedRows(rowId){
     if(!token||role()!=='employee')throw new Error('cloud_employee_session_required');
-    const id=credential?.id,all=readOutbox(),mine=all.filter(x=>x.credentialId===id);
+    const id=credential?.id,forToken=token;
+    const mine=readOutbox().filter(x=>x.credentialId===id&&(!rowId||x.id===rowId));
     if(!mine.length)return{sent:0,failed:0};
-    let sent=0,failed=0,expired=0,remaining=all.slice();
+    let sent=0,failed=0,expired=0;
+    const confirmed=new Set();
     for(const row of mine){
+      if(token!==forToken)break;
       try{
         if(row.type==='employee_submission')await api('employee_submit',{payload:row.payload},12000);
         else if(row.type==='sku_proposal')await api('employee_sku_proposal',{proposal:row.payload,deviceId:deviceId()},10000);
         else if(row.type==='employee_receipt')await api('receipt_submit',{taskId:row.payload?.taskId,payload:row.payload?.payload},12000);
         else continue;
-        remaining=remaining.filter(x=>x.id!==row.id);sent++;
       }catch(err){
-        if(err?.data?.error==='duplicate_submission'||err?.data?.error==='duplicate_proposal'||err?.data?.error==='duplicate_receipt_submission'){
-          remaining=remaining.filter(x=>x.id!==row.id);sent++;continue;
+        const code=err?.data?.error;
+        if(!['duplicate_submission','duplicate_proposal','duplicate_receipt_submission'].includes(code)){
+          if(row.type==='employee_submission'&&code==='inventory_task_not_active'){
+            if(token===forToken)await refreshStatus({silent:true}).catch(()=>{});
+            const known=employeeSubmissionStatuses(id).some(s=>s.submission_id===row.payload?.submissionId);
+            if(known){confirmed.add(row.id);sent++;}
+            else expired++;
+          }else if(row.type==='employee_receipt'&&code==='receipt_task_not_authorized'){
+            expired++;
+          }else failed++;
+          continue;
         }
-        if(row.type==='employee_receipt'&&err?.data?.error==='receipt_task_not_authorized'){
-          remaining=remaining.filter(x=>x.id!==row.id);expired++;continue;
-        }
-        if(row.type==='employee_submission'&&err?.data?.error==='inventory_task_not_active'){
-          remaining=remaining.filter(x=>x.id!==row.id);expired++;continue;
-        }
-        failed++;
+      }
+      confirmed.add(row.id);sent++;
+      if(row.type==='employee_submission'){
+        const payload=row.payload;
+        rememberEmployeeSubmissions(id,[{submission_id:payload.submissionId,submitted_at:payload.submittedAt,
+          effective_key:payload.effectiveKey,status:'pending',label:payload.scope?.label}]);
       }
     }
-    writeOutbox(remaining);
+    if(confirmed.size)writeOutbox(readOutbox().filter(x=>!confirmed.has(x.id)));
     window.dispatchEvent(new CustomEvent('cassola-cloud-outbox-change',{detail:{count:outboxCount(id)}}));
-    await refreshStatus({silent:true}).catch(()=>{});
+    if(token===forToken)refreshStatus({silent:true}).catch(()=>{});
     return{sent,failed,expired};
   }
   async function reviewEmployee(id,decision,note=''){
@@ -750,6 +801,42 @@
     const data=await api('employee_review',{id,decision,note},8000);
     await refreshStatus({silent:true}).catch(()=>{});
     return data;
+  }
+  function needsEmployeeReview(entry){
+    return !!(entry.status==='active'&&entry.cloudSubmissionId&&!entry.cloudReviewedAt&&entry.cloudReviewActorId===credential?.id);
+  }
+  function markEmployeeReviewed(entry,reviewedAt){
+    entry.cloudReviewedAt=reviewedAt||new Date().toISOString();
+    try{saveState()}catch(err){delete entry.cloudReviewedAt;throw err;}
+  }
+  async function confirmAppliedEmployeeReview(entry){
+    const id=entry.cloudSubmissionId;
+    if(!needsEmployeeReview(entry)||role()!=='supervisor'||applyingReviews.has(id))return;
+    applyingReviews.add(id);
+    try{
+      const response=await api('employee_review',{id,decision:'accepted',note:'Applied to Supervisor local ledger'},8000);
+      markEmployeeReviewed(entry,response.submission?.reviewedAt);
+      refreshStatus({silent:true}).catch(()=>{});
+    }finally{applyingReviews.delete(id);}
+  }
+  async function retryAppliedEmployeeReviews(){
+    if(retryingReviews)return;
+    const entries=(state.employeeSubmissions||[]).filter(entry=>needsEmployeeReview(entry)&&!applyingReviews.has(entry.cloudSubmissionId));
+    if(!entries.length)return;
+    retryingReviews=true;
+    const forToken=token;
+    try{
+      const data=await api('employee_pending',{statuses:['pending','accepted','superseded']},10000);
+      if(forToken!==token)return;
+      const byId=new Map((data.submissions||[]).map(s=>[String(s.id),s]));
+      for(const entry of entries){
+        if(forToken!==token)break;
+        const row=byId.get(String(entry.cloudSubmissionId));
+        if(!row||String(row.submission_id)!==String(entry.submissionId)||!needsEmployeeReview(entry))continue;
+        if(row.status==='pending')await confirmAppliedEmployeeReview(entry);
+        else markEmployeeReviewed(entry,row.reviewed_at);
+      }
+    }finally{retryingReviews=false;}
   }
   async function openPending(){
     const dlg=document.getElementById('cloudPendingDialog'),box=document.getElementById('cloudPendingBody');
@@ -767,6 +854,7 @@
     }catch(e){box.innerHTML='<div class="empty">读取失败：'+esc(e.message)+'</div>'}
   }
   function cloudSubmissionPayload(s){
+    const countTimes=new Map((Array.isArray(s.payload?.counts)?s.payload.counts:[]).map(row=>[String(row.skuId),row.countedAt]));
     return{
       format:'cassola-employee-count-v1',
       date:s.business_date,
@@ -780,7 +868,8 @@
       latestRule:'submittedAt',
       deviceRevision:s.device_revision||0,
       scopeSkuIds:(s.items||[]).map(i=>i.sku_id),
-      counts:(s.items||[]).map(i=>({skuId:i.sku_id,name:i.sku_name,qty:Number(i.qty),unit:i.unit||'',spec:i.spec||''})),
+      counts:(s.items||[]).map(i=>({skuId:i.sku_id,name:i.sku_name,qty:Number(i.qty),unit:i.unit||'',spec:i.spec||'',
+        countedAt:countTimes.get(String(i.sku_id))})),
       events:Array.isArray(s.payload?.events)?s.payload.events:[]
     };
   }
@@ -870,7 +959,13 @@
       const restore=e.target.closest('[data-cloud-restore]');if(restore){await restoreVersion(restore.dataset.cloudRestore);return}
       const review=e.target.closest('[data-cloud-review]');if(review){await reviewPending(review.dataset.cloudReview);return}
       const reject=e.target.closest('[data-cloud-reject]');if(reject){if(confirm('拒绝这份员工盘货？')){await reviewEmployee(reject.dataset.cloudReject,'rejected');await openPending()}return}
-      const mark=e.target.closest('[data-cloud-mark-accepted]');if(mark){await reviewEmployee(mark.dataset.cloudMarkAccepted,'accepted','Local copy was already applied');await openPending();return}
+      const mark=e.target.closest('[data-cloud-mark-accepted]');if(mark){
+        const id=mark.dataset.cloudMarkAccepted;
+        const entry=(state.employeeSubmissions||[]).find(row=>row.cloudSubmissionId===id&&needsEmployeeReview(row));
+        if(entry)await confirmAppliedEmployeeReview(entry);
+        else await reviewEmployee(id,'accepted','Local copy was already applied');
+        await openPending();return;
+      }
     }catch(err){
       console.error('cloud action',err);
       alert('Cloud 操作失败：'+(err?.data?.detail||err?.message||'未知错误'));
@@ -878,16 +973,19 @@
   });
 
   function startTimer(){
-    stopTimer();refreshTimer=setInterval(()=>{if(document.visibilityState==='visible'&&token)refreshStatus({silent:false}).catch(()=>{})},300000);
+    stopTimer();refreshTimer=setInterval(()=>{if(document.visibilityState==='visible'&&token&&navigator.onLine)refreshStatus({silent:false}).catch(()=>{})},role()==='employee'?30000:300000);
   }
   function stopTimer(){if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null}}
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&token)refreshStatus({silent:false}).catch(()=>{})});
-  window.addEventListener('online',()=>{if(!token&&reconnectCode)reconnect().then(()=>window.dispatchEvent(new CustomEvent('cassola-cloud-reconnected'))).catch(()=>{})});
+  window.addEventListener('online',()=>{
+    if(token)refreshStatus({silent:true}).catch(()=>{});
+    else if(reconnectCode)reconnect().then(()=>window.dispatchEvent(new CustomEvent('cassola-cloud-reconnected'))).catch(()=>{});
+  });
   document.addEventListener('DOMContentLoaded',injectUi);
 
   window.CassolaCloud={
     login,logout,connected,role,refreshStatus,upload,download,checkpoint,
-    submitEmployee,reviewEmployee,openPending,
+    submitEmployee,reviewEmployee,confirmAppliedEmployeeReview,openPending,
     submitSkuProposal,listSkuProposals,reviewSkuProposal,
     listEmployeeDirectory,claimRoleReceiptTask,authorizeReceiptTask,revokeReceiptTask,listReceiptTasks,submitEmployeeReceipt,listReceiptPending,reviewReceiptTask,
     staffAccessGet,staffAccessCreate,staffAccessRegenerate,staffAccessSetActive,staffAccessSetRole,syncStaffRoleRoster,
@@ -896,6 +994,7 @@
     staffUpload,staffDownload,staffDepartmentUpload,staffDepartmentDownload,staffStatus,staffHistory,staffLegacyVersions,staffLegacyVersionState,
     inventoryRollbackInfo,restoreInventoryRollback,
     queueEmployeeSubmission,queueSkuProposal,queueEmployeeReceipt,employeeReceiptQueued,flushOutbox,outboxCount,
+    employeeSubmissionStatuses,
     rememberAccessCode,reconnect,cachedIdentity,
     captureScope,mergeScope,meta:readMeta,deviceId,
     session:()=>credential?clone(credential):null,

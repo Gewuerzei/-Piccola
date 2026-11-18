@@ -218,8 +218,12 @@ document.getElementById('v3Category').addEventListener('change',()=>v8SyncSkuCat
 document.getElementById('v3CopyVariant').addEventListener('click',v3CopyAsVariant);
 document.getElementById('v3DeleteSku').addEventListener('click',e=>{e.preventDefault();v3Delete()});
 document.getElementById('v3SuggestBtn').addEventListener('click',v3Generate);
+document.getElementById('v3FocusCountBtn').addEventListener('click',v3OpenPriorityCount);
 document.getElementById('v3PlaceBtn').addEventListener('click',v3Place);
-document.getElementById('v3PlacedList').addEventListener('change',e=>{if(e.target.classList.contains('v3-receive-qty')){const r=e.target.closest('[data-v3-order]');v3Qty(r.dataset.v3Order,r.dataset.v3Item,e.target.value)}});
+document.getElementById('v3PlacedList').addEventListener('change',e=>{
+  if(e.target.matches('[data-v4-arrival-date]'))v4SetExpectedArrival(e.target.dataset.v4ArrivalDate,e.target.value);
+  else if(e.target.classList.contains('v3-receive-qty')){const r=e.target.closest('[data-v3-order]');v3Qty(r.dataset.v3Order,r.dataset.v3Item,e.target.value);}
+});
 /* v0.8: typing waits briefly before re-rendering; programmatic searches (global search,
    analytics jump) are not trusted events and still render immediately. */
 var v8SearchTimer=0;

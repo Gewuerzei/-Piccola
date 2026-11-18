@@ -147,6 +147,13 @@
 .ei-banner{padding:11px 12px;border-radius:16px;display:flex;flex-direction:column;gap:3px}.ei-banner strong{font-size:11px}.ei-banner span{font-size:9px;line-height:1.4;color:var(--muted)}
 .ei-banner.ready{background:rgba(155,231,173,.05);border:1px solid rgba(155,231,173,.14)}.ei-banner.ready strong{color:var(--good)}
 .ei-banner.stale{background:rgba(255,141,145,.05);border:1px solid rgba(255,141,145,.14)}.ei-banner.stale strong{color:var(--danger)}
+
+.v3-order-focus-count{grid-column:1/-1}
+.v3-inbound-review{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.v3-inbound-review summary{min-height:30px;align-content:center;cursor:pointer;font-weight:750}
+.v3-inbound-review p,.v3-inbound-review ul{color:var(--muted);font-size:13px}
+.v4-arrival-date{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;color:var(--muted);font-size:12px}
+.v4-arrival-date input{min-height:44px;width:auto;max-width:65%}
 .ei-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px}.ei-meta>div,.ei-stats>div{padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid var(--line)}.ei-meta span,.ei-stats span{display:block;color:var(--muted);font-size:8px}.ei-meta b,.ei-stats b{display:block;margin-top:3px;font-size:10.5px}
 .ei-latest{padding:8px 10px;border-radius:13px;background:rgba(255,255,255,.02);color:var(--muted);font-size:9px}
 .ei-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}

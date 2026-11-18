@@ -336,18 +336,40 @@ function v3RenderOrder(){
 renderOrder=v3RenderOrder;
 
 function v4DraftRow(x){
-  const a=v4AreaMeta(v4AreaOf(x)),orderQty=v5StockToOrderQty(x,state.order[x.id])??0,pack=v5PackLabel(x),suggested=v5SuggestedOrderQty(x);
-  return `<article class="sku-card order-row"><div class="order-left"><span class="count-mini-icon">${skuVisual(x)}</span><div><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta"><span class="meta-pill spec">${escapeHtml(x.spec||'无规格')}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span><span class="meta-pill">${a.icon} ${escapeHtml(a.label)}</span>${pack?`<span class="meta-pill">📦 ${escapeHtml(pack)}</span>`:''}${typeof v45PricePill==='function'?v45PricePill(x):''}${suggested>0?`<span class="meta-pill v3-suggest">建议 ${fmt(suggested)}${escapeHtml(v5OrderUnit(x))}</span>`:''}</div></div></div><div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(orderQty)}" type="text" inputmode="decimal" autocomplete="off"><span>${escapeHtml(v5OrderUnit(x))}</span></div><button class="icon-btn" data-remove-order="${x.id}">✕</button></article>`;
+  const a=v4AreaMeta(v4AreaOf(x)),orderQty=v5StockToOrderQty(x,state.order[x.id])??0,pack=v5PackLabel(x),suggested=v5SuggestedOrderQty(x),inbound=v3InboundHint(x);
+  return `<article class="sku-card order-row"><div class="order-left"><span class="count-mini-icon">${skuVisual(x)}</span><div><div class="sku-name">${escapeHtml(x.name)}</div><div class="sku-meta"><span class="meta-pill spec">${escapeHtml(x.spec||'无规格')}</span><span class="meta-pill">${escapeHtml(x.supplier)}</span><span class="meta-pill">${a.icon} ${escapeHtml(a.label)}</span>${pack?`<span class="meta-pill">📦 ${escapeHtml(pack)}</span>`:''}${typeof v45PricePill==='function'?v45PricePill(x):''}${suggested>0?`<span class="meta-pill v3-suggest">建议 ${fmt(suggested)}${escapeHtml(v5OrderUnit(x))}</span>`:''}</div>${inbound?`<small class="v3-stock-hint">${escapeHtml(inbound)}</small>`:''}</div></div><div class="input-unit"><input class="order-input" data-id="${x.id}" value="${fmt(orderQty)}" type="text" inputmode="decimal" autocomplete="off"><span>${escapeHtml(v5OrderUnit(x))}</span></div><button class="icon-btn" data-remove-order="${x.id}">✕</button></article>`;
 }
 function v3RenderDraft(){
   const ids=Object.keys(state.order).filter(id=>Number(state.order[id])>0);
   const rows=ids.map(id=>sku(id)).filter(Boolean).filter(x=>!(state.hiddenSkuIds||[]).includes(x.id)).filter(x=>activeSupplier==='全部'||x.supplier===activeSupplier);
   document.getElementById('orderList').innerHTML=rows.length?v4AreaRows(rows,v4DraftRow):'<div class="empty">还没有订货草稿 🗿</div>';
+  const review=v3Skus().filter(x=>(activeSupplier==='全部'||x.supplier===activeSupplier)&&v3Suggestion(x)>0&&v3Inbound(x).uncertain>0);
+  document.getElementById('v3InboundReview').innerHTML=review.length?`<details class="v3-inbound-review"><summary>🚚 ${review.length} 项在途待核对</summary><p>有未确认到货日或已延期的数量。核对「已下单」，再决定是否补订。</p><ul>${review.map(x=>`<li>${escapeHtml(x.name)}${x.spec?' · '+escapeHtml(x.spec):''} · ${fmt(v3Inbound(x).uncertain)}${escapeHtml(x.unit||'')}</li>`).join('')}</ul></details>`:'';
 }
 function v3Generate(){
-  let n=0;
-  v3Skus().forEach(s=>{const q=v5SuggestedStockQty(s);if(q>0&&!state.order[s.id]){state.order[s.id]=q;n++}});
-  saveState();renderAll();showToast(n?`已加入 ${n} 个建议`:'目前没有可计算的新建议');
+  let n=0,review=0;
+  for(const s of v3Skus()){
+    const q=v5SuggestedStockQty(s);
+    if(!(q>0)||state.order[s.id])continue;
+    if(v3Inbound(s).uncertain>0){review++;continue;}
+    state.order[s.id]=q;n++;
+  }
+  saveState();renderAll();
+  showToast(review?`已加入 ${n} 项 · ${review} 项在途待核对`:n?`已加入 ${n} 个建议`:'目前没有可计算的新建议');
+}
+function v3PriorityCountSkus(){
+  const levels=['zero','red','yellow'],cutoff=Date.now()-2*86400000;
+  return v3Skus()
+    .filter(s=>v4AreaOf(s)===v4AreaFilter&&(activeSupplier==='全部'||s.supplier===activeSupplier))
+    .map(s=>({id:s.id,level:levels.indexOf(v3Level(s)),at:Date.parse(v3LastCountAt(s))||0}))
+    .filter(x=>x.level>=0&&x.at<cutoff)
+    .sort((a,b)=>a.level-b.level||a.at-b.at)
+    .slice(0,8).map(x=>x.id);
+}
+function v3OpenPriorityCount(){
+  const ids=v3PriorityCountSkus();
+  if(!ids.length){showToast('当前区域和供应商没有缺货或偏低、且超过两天未实盘的 SKU');return;}
+  window.CassolaStaff?.openPriorityCountTask(ids,v4AreaFilter);
 }
 function v3Place(){
   const entries=Object.entries(state.order).filter(([,v])=>Number(v)>0).map(([id,v])=>({s:sku(id),v:Number(v)})).filter(x=>x.s&&!(state.hiddenSkuIds||[]).includes(x.s.id)).filter(x=>activeSupplier==='全部'||x.s.supplier===activeSupplier);
@@ -494,6 +516,7 @@ function v4PlacedCard(o,archived=false){
     (settled.length?`<div class="v4-settled-fold"><button type="button" data-v4-toggle-settled="${escapeHtml(o.id)}">${expanded?'▴ 收起':'▾ 查看'}已处理 ${settled.length} 项</button>${expanded?`<div class="v4-settled-body">${v4OrderAreaSections(o,'settled')}</div>`:''}</div>`:'');
   return `<article class="v3-placed-card ${done?'done':'v4-open-order'} ${archived?'v4-archived-order':''}" data-v4-order-card="${escapeHtml(o.id)}">
     <div class="v3-placed-head"><div><div class="eyebrow">${escapeHtml(o.supplier||'订单')}</div><h3>${new Date(o.createdAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</h3><small class="v4-batch-count">${batches?('已保存 '+batches+' 次收货'):'尚未入库'}</small></div><span>${status}</span></div>
+    ${done?'':`<label class="v4-arrival-date">预计到货 <input type="date" value="${escapeHtml(o.expectedArrivalOn||'')}" data-v4-arrival-date="${escapeHtml(o.id)}"></label>`}
     ${body}
     <div class="v4-order-footer">
       <button class="btn secondary" data-v4-copy-order="${escapeHtml(o.id)}">📋 复制订单</button>
@@ -944,6 +967,15 @@ function v3Step(orderId,skuId,d){
   item.actualQty=Math.max(min,Math.round(((Number(item.actualQty)||0)+d*step)*1000)/1000);
   item.lineStatus='pending';item.dirty=true;
   saveState();v3RenderPlaced();
+}
+function v4SetExpectedArrival(orderId,value){
+  const order=state.placedOrders.find(o=>o.id===orderId);
+  if(!order||v4OrderDone(order))return;
+  if(value&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))))return;
+  if((order.expectedArrivalOn||'')===value)return;
+  order.expectedArrivalOn=value||null;
+  order.expectedArrivalChangedAt=stamp();
+  saveState();showToast(value?'已保存预计到货日期':'已清除预计到货日期');
 }
 function v3Qty(orderId,skuId,v){
   const {o,item}=v3OrderItem(orderId,skuId);if(!o||!item||o.status==='received'||(v4LineClosed(item)&&!item.dirty))return;
